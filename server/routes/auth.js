@@ -36,6 +36,19 @@ router.post("/join", async (req, res) => {
     now.getTime() + CONTEST_DURATION_MIN * 60 * 1000
   );
 
+  // //check if the user has an active session with that token already.
+  // const active = await pool.query(
+  // `SELECT * FROM user_sessions
+  //  WHERE user_id = $1 AND end_time > NOW()`,
+  // [user.id]
+  // );
+
+  // if (active.rows.length > 0) {
+  // return res.status(403).json({
+  //   error: "This token is already in use on another device.",
+  //   });
+  // }
+
   await pool.query(
     "INSERT INTO user_sessions(user_id, join_time, end_time) VALUES ($1, $2, $3)",
     [user.id, now, endTime]
@@ -54,6 +67,7 @@ router.post("/join", async (req, res) => {
   }
 
   res.json({
+    userId: user.id,
     team: user.team_name,
     college: user.college,
     endTime,

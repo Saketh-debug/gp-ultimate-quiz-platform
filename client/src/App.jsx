@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState } from 'react';
 import Login from "./pages/Login";
 import Contest from "./pages/Contest";
+import { FiArrowRight, FiAward, FiCode, FiUsers, FiZap, FiChevronRight } from 'react-icons/fi';
 
 function App() {
-  const [session, setSession] = useState(null);
+    const [session, setSession] = useState(null);
 
   if (!session) {
     return <Login onJoin={setSession} />;

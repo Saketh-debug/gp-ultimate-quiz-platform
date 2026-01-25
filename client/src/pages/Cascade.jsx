@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 
 function Cascade() {
   return (
@@ -168,10 +169,12 @@ function Cascade() {
       {/* ACTION FOOTER */}
       <div className="fixed bottom-0 left-0 right-0 bg-background-dark/80 backdrop-blur-lg border-t border-white/10">
         <div className="max-w-xl mx-auto p-6">
+          <Link to="/">
           <button className="w-full py-4 rounded-xl bg-primary text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 active:scale-[0.98]">
             ENTER THE CASCADE
             <span className="material-symbols-outlined">play_arrow</span>
           </button>
+          </Link>
           <p className="mt-3 text-center text-[10px] uppercase tracking-widest text-white/40">
             Confirming starts your 60-minute timer
           </p>

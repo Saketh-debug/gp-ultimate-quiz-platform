@@ -1,4 +1,5 @@
 import { useState } from "react";
+import {Link} from "react-router-dom";
 import { FiArrowRight, FiAward, FiCode, FiUsers, FiZap, FiChevronRight } from 'react-icons/fi';
 
 export default function Login({ onJoin }) {
@@ -28,7 +29,7 @@ export default function Login({ onJoin }) {
           </span>
 
           <h1 className="text-lg font-bold text-zinc-500 dark:text-white">
-            Opulence
+            AAC presents
           </h1>
 
           <span className="material-symbols-outlined text-zinc-900 dark:text-white">
@@ -137,12 +138,16 @@ export default function Login({ onJoin }) {
           </p>
 
           <div className="mt-8 flex justify-center gap-4">
-            <button className="h-14 px-8 rounded-lg bg-primary text-white font-bold hover:shadow-[0_0_25px_rgba(127,19,236,0.4)] transition">
-              Request Access
-            </button>
+            <Link to="/Rounds">
             <button className="h-14 px-8 rounded-lg border border-zinc-700 text-zinc-300">
               Review Rules
             </button>
+            </Link>
+            <Link to="/leaderboard">
+            <button className="h-14 px-8 rounded-lg bg-primary text-white font-bold hover:shadow-[0_0_25px_rgba(127,19,236,0.4)] transition">
+              LeaderBoard
+            </button>
+            </Link>
           </div>
         </section>
 

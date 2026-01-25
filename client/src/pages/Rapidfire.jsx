@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 
 function Rapidfire() {
   return (
@@ -131,10 +132,12 @@ function Rapidfire() {
       {/* BOTTOM ACTION */}
       <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background-dark via-background-dark to-transparent pt-10">
         <div className="max-w-xl mx-auto px-6 pb-6">
+          <Link to="/">
           <button className="w-full h-16 rounded-xl bg-primary text-lg font-bold flex items-center justify-center gap-3 hover:bg-primary/90 active:scale-[0.98] shadow-[0_10px_30px_rgba(127,19,236,0.3)]">
             <span className="material-symbols-outlined">play_arrow</span>
             START ROUND
           </button>
+          </Link>
           <p className="mt-4 text-center text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">
             Initiating secure session...
           </p>

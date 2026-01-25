@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 
 function Rounds() {
   return (
@@ -33,7 +34,7 @@ function Rounds() {
             </div>
 
             <p className="mt-2 text-xs text-[#ad92c9]">
-              Next up: Rapid Force
+              Next up: Rapid Fire
             </p>
           </div>
         </section>
@@ -70,7 +71,7 @@ function Rounds() {
                   <span className="material-symbols-outlined text-primary">
                     bolt
                   </span>
-                  <h4 className="text-xl font-bold">Rapid Force</h4>
+                  <h4 className="text-xl font-bold">Rapid Fire</h4>
                 </div>
 
                 <div className="flex gap-2 mt-3 flex-wrap">
@@ -85,10 +86,11 @@ function Rounds() {
                   </span>
                 </div>
               </div>
-
+              <Link to="/rapidfire">
               <button className="w-full h-12 bg-primary rounded-lg font-bold hover:bg-primary/90 transition">
-                Enter Round
+                Know More 
               </button>
+              </Link>
             </div>
           </div>
 
@@ -109,10 +111,11 @@ function Rounds() {
 
             <div className="p-5 space-y-4">
               <h4 className="text-xl font-bold">Coding Cascade</h4>
-
+              <Link to="/cascade">
               <button className="w-full h-12 rounded-lg bg-[#362348] text-sm font-bold">
-                Remind Me
+                Know More
               </button>
+              </Link>
             </div>
           </div>
 
@@ -132,13 +135,14 @@ function Rounds() {
             </div>
 
             <div className="p-5">
+              <Link to="/dsa">
               <button
-                disabled
                 className="w-full h-12 rounded-lg bg-[#1a1122] text-gray-500 flex items-center justify-center gap-2 font-bold"
               >
-                <span className="material-symbols-outlined text-sm">lock</span>
-                Locked
+                {/* <span className="material-symbols-outlined text-sm">lock</span> */}
+                Know More
               </button>
+              </Link>
             </div>
           </div>
 

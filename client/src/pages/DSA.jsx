@@ -1,191 +1,218 @@
-import React from 'react'
+import React from "react";
 
 function DSA() {
   return (
-     <div className="dark bg-background-dark text-slate-100 min-h-screen selection:bg-primary/30 font-display">
+    <div className="min-h-screen bg-[#0c0202] text-slate-100 font-['Space_Grotesk'] overflow-x-hidden">
+
+      {/* BACKGROUND GLOW */}
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-20%,rgba(244,63,94,0.15),transparent_60%)] z-0" />
+
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-background-dark/80 backdrop-blur-2xl border-b border-white/5">
-        <div className="max-w-[1440px] mx-auto px-12 h-24 flex items-center justify-between">
+      <header className="sticky top-0 z-50 backdrop-blur-2xl bg-[#0c0202]/90 border-b border-white/5">
+        <div className="max-w-[1440px] mx-auto px-12 h-20 flex items-center justify-between">
+
+          {/* LEFT */}
           <div className="flex items-center gap-8">
-            <button className="size-12 rounded-xl hover:bg-white/5 border border-white/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-slate-400 hover:text-primary">
+            <button className="size-10 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/5 transition">
+              <span className="material-symbols-outlined text-slate-400 hover:text-[#f43f5e]">
                 arrow_back
               </span>
             </button>
 
-            <div className="h-10 w-px bg-white/10" />
-
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-[10px] font-bold tracking-[0.3em] text-primary uppercase">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold tracking-[0.3em] text-[#f43f5e] uppercase">
                   Operation Opulence
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  LIVE
+                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 uppercase">
+                  Mars Sector
                 </span>
               </div>
-              <h1 className="text-2xl font-bold text-white">
-                Round 3 Deep Dive
+
+              <h1 className="text-xl font-bold text-white">
+                Round 3: Martian Ascent
               </h1>
             </div>
           </div>
 
+          {/* RIGHT */}
           <div className="flex items-center gap-6">
-            <div className="flex gap-8 px-8 py-3 bg-white/5 rounded-2xl border border-white/10">
-              <div>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                  Time Remaining
+
+            <div className="flex gap-8 px-6 py-2 bg-white/5 rounded-xl border border-white/10">
+              <div className="flex flex-col">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                  Window Closes
                 </span>
-                <span className="text-xl font-mono font-bold text-primary">
+                <span className="text-lg font-mono font-bold text-[#f43f5e]">
                   02:45:12
                 </span>
               </div>
 
-              <div className="border-l border-white/10 pl-8">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                  Current Score
+              <div className="border-l border-white/10 pl-6">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                  Current Pts
                 </span>
-                <span className="text-xl font-mono font-bold text-white">
-                  450 <span className="text-xs text-slate-500">pts</span>
+                <span className="text-lg font-mono font-bold text-white">
+                  450
                 </span>
               </div>
             </div>
 
-            <button className="bg-primary hover:bg-accent-neon text-white px-8 h-14 rounded-2xl font-bold flex items-center gap-3 shadow-2xl shadow-primary/40 transition-all hover:scale-[1.02] active:scale-95">
-              <span className="material-symbols-outlined">terminal</span>
-              RESUME CHALLENGE (Q3)
+            <button className="bg-[#f43f5e] hover:bg-red-500 text-white px-6 h-12 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-[#f43f5e]/20 transition hover:scale-[1.02] active:scale-95 text-sm uppercase tracking-widest">
+              <span className="material-symbols-outlined">rocket_launch</span>
+              INITIATE (Q3)
             </button>
+
           </div>
         </div>
       </header>
 
       {/* MAIN */}
-      <main className="max-w-[1440px] mx-auto px-12 py-10">
-        <div className="grid grid-cols-12 gap-8 mb-12">
-          {/* LEFT */}
-          <div className="col-span-7">
-            <h2 className="text-6xl font-bold mb-6 tracking-tighter text-white">
-              DSA <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-neon">
-                Challenge
-              </span>
-            </h2>
+      <main className="relative z-10 max-w-[1440px] mx-auto px-12 py-12">
 
-            <p className="text-slate-400 text-lg max-w-xl mb-10">
-              Test your algorithmic efficiency and data structure proficiency.
-            </p>
+        {/* HERO */}
+        <div className="rounded-[2.5rem] border border-white/5 p-14 mb-12 bg-[radial-gradient(circle_at_50%_120%,#450a0a_0%,transparent_70%)]">
 
-            <div className="flex gap-4">
-              <div className="flex-1 bg-card-dark p-6 rounded-3xl border border-white/5">
-                <p className="text-xs text-slate-500 uppercase font-bold">
-                  Total Potential Points
-                </p>
-                <p className="text-4xl font-bold text-white">
-                  1,500<span className="text-primary">.</span>
-                </p>
+          <div className="grid grid-cols-12 gap-12">
+
+            {/* LEFT */}
+            <div className="col-span-12 lg:col-span-7">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f43f5e]/10 border border-[#f43f5e]/20 mb-6">
+                <span className="size-2 rounded-full bg-[#f43f5e] animate-pulse" />
+                <span className="text-[10px] font-bold text-[#f43f5e] uppercase tracking-widest">
+                  Active Transmission
+                </span>
               </div>
 
-              <div className="flex-1 bg-card-dark p-6 rounded-3xl border border-white/5">
-                <p className="text-xs text-slate-500 uppercase font-bold">
-                  Time Allotted
-                </p>
-                <p className="text-4xl font-bold text-white">
-                  180<span className="text-primary text-2xl ml-1">min</span>
-                </p>
-              </div>
-            </div>
-          </div>
+              <h2 className="text-6xl font-bold mb-6 tracking-tight leading-[0.9]">
+                DSA <br />
+                <span className="bg-gradient-to-r from-[#f43f5e] to-[#fb923c] bg-clip-text text-transparent">
+                  Challenge
+                </span>
+              </h2>
 
-          {/* RIGHT */}
-          <div className="col-span-5">
-            <div className="bg-surface-dark p-8 rounded-[2rem] border border-primary/20">
-              <h3 className="text-xl font-bold uppercase tracking-widest mb-8">
-                Round Rules
-              </h3>
-
-              <ul className="space-y-6">
-                <li className="flex gap-4">
-                  <span className="material-symbols-outlined text-primary">
-                    done_all
-                  </span>
-                  <div>
-                    <p className="font-bold">8 Complex Questions</p>
-                    <p className="text-sm text-slate-400">
-                      Sequential access allowed.
-                    </p>
-                  </div>
-                </li>
-
-                <li className="flex gap-4">
-                  <span className="material-symbols-outlined text-primary">
-                    speed
-                  </span>
-                  <div>
-                    <p className="font-bold">Dynamic Difficulty</p>
-                    <p className="text-sm text-slate-400">
-                      Easy → Extreme
-                    </p>
-                  </div>
-                </li>
-
-                <li className="flex gap-4">
-                  <span className="material-symbols-outlined text-primary">
-                    calculate
-                  </span>
-                  <div>
-                    <p className="font-bold">Weighted Points</p>
-                    <p className="text-sm text-slate-400">
-                      Time + difficulty based
-                    </p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* TABLE */}
-        <div className="bg-card-dark rounded-[2rem] border border-white/5 overflow-hidden">
-          <div className="p-8 border-b border-white/5 flex justify-between">
-            <div>
-              <h3 className="text-2xl font-bold">Challenge Set</h3>
-              <p className="text-sm text-slate-500">
-                8 Curated Problems
+              <p className="text-slate-300 text-lg max-w-xl leading-relaxed">
+                Navigate the digital dunes. Solve algorithmic complexities to
+                establish a secure comm-link across the Martian surface.
               </p>
             </div>
 
-            {/* <div className="flex gap-3">
-              <button className="px-6 py-2.5 bg-primary text-white text-xs font-bold rounded-xl">
-                ALL
-              </button>
-              <button className="px-6 py-2.5 text-slate-400 hover:bg-white/5 rounded-xl">
-                IN PROGRESS
-              </button>
-              <button className="px-6 py-2.5 text-slate-400 hover:bg-white/5 rounded-xl">
-                COMPLETED
-              </button>
-            </div> */}
-          </div>
+            {/* RIGHT STATS */}
+            <div className="col-span-12 lg:col-span-5 flex flex-col justify-end gap-6">
+              <div className="grid grid-cols-2 gap-6">
 
-          {/* <div className="p-8 text-slate-400 text-sm">
-            (Table rows unchanged – logic-ready)
-          </div> */}
+                <div className="bg-white/[0.03] backdrop-blur-md p-8 rounded-[2rem] border border-white/10">
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">
+                    Max Resource
+                  </p>
+                  <p className="text-4xl font-bold text-white">
+                    1,500<span className="text-[#f43f5e]">.</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold">
+                    Points Available
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.03] backdrop-blur-md p-8 rounded-[2rem] border border-white/10">
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">
+                    Mission Time
+                  </p>
+                  <p className="text-4xl font-bold text-white">
+                    180
+                    <span className="text-[#f43f5e] text-lg ml-1">min</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold">
+                    Standard Duration
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
         </div>
+
+        {/* CONTENT GRID */}
+        <div className="grid grid-cols-12 gap-12">
+
+          {/* RULES */}
+          <aside className="col-span-12 lg:col-span-3">
+            <div className="bg-[#2d0a0a]/40 backdrop-blur-md p-10 rounded-[2rem] border border-white/5 sticky top-32">
+
+              <h3 className="text-xl font-bold mb-8">
+                Rules of Engagement
+              </h3>
+
+              <ul className="space-y-6 text-sm">
+                <li>
+                  <p className="font-bold text-white">
+                    8 Unique Problems
+                  </p>
+                  <p className="text-slate-400">
+                    Multi-difficulty challenges.
+                  </p>
+                </li>
+
+                <li>
+                  <p className="font-bold text-white">
+                    Variable Difficulty
+                  </p>
+                  <p className="text-slate-400">
+                    Easy → Critical scaling.
+                  </p>
+                </li>
+
+                <li>
+                  <p className="font-bold text-white">
+                    Partial Scoring
+                  </p>
+                  <p className="text-slate-400">
+                    Credits awarded per test case.
+                  </p>
+                </li>
+              </ul>
+
+            </div>
+          </aside>
+
+          {/* TABLE AREA */}
+          <section className="col-span-12 lg:col-span-9">
+            <div className="bg-[#1a0606]/60 backdrop-blur-xl rounded-[2rem] border border-white/5 overflow-hidden">
+
+              <div className="px-10 py-8 border-b border-white/5">
+                <h3 className="text-2xl font-bold">
+                  Challenge Protocols
+                </h3>
+                <p className="text-sm text-slate-500">
+                  8 Operational Modules
+                </p>
+              </div>
+
+              <div className="p-10 text-slate-400 text-sm">
+                (Challenge table content here — logic ready)
+              </div>
+
+            </div>
+          </section>
+
+        </div>
+
       </main>
 
       {/* FOOTER */}
-      <footer className="max-w-[1440px] mx-auto px-12 py-12 border-t border-white/5 mt-20">
-        <div className="flex justify-between text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em]">
-          <p>© 2024 OPULENCE CHALLENGE ENGINE</p>
+      <footer className="max-w-[1440px] mx-auto px-12 py-12 border-t border-white/5 mt-10">
+        <div className="flex justify-between text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em]">
+          <p>© 2024 OPULENCE MARS COMMAND</p>
           <div className="flex gap-10">
-            <a className="hover:text-primary">DOCUMENTATION</a>
-            <a className="hover:text-primary">LEADERBOARD</a>
-            <a className="hover:text-primary">SYSTEM LOGS</a>
+            <a className="hover:text-[#f43f5e]">MISSION DOCS</a>
+            <a className="hover:text-[#f43f5e]">GLOBAL LOGS</a>
+            <a className="hover:text-[#f43f5e]">ENCRYPTION KEYS</a>
           </div>
         </div>
       </footer>
+
     </div>
-  )
+  );
 }
 
-export default DSA
+export default DSA;

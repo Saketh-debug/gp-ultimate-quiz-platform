@@ -1,157 +1,198 @@
-import React from 'react'
+import React from "react";
 
 function Leaderboard() {
   return (
-    <div className="min-h-screen w-full bg-background-light dark:bg-background-dark">
-      <div className="relative min-h-screen w-full max-w-[1440px] mx-auto bg-background-light dark:bg-background-dark overflow-x-hidden">
+    <div className="min-h-screen font-['Space_Grotesk'] text-white bg-[linear-gradient(to_bottom,#d15b2c_0%,#7c2114_40%,#1a0b08_100%)]">
 
-        {/* Top App Bar */}
-        <div className="sticky top-0 z-50 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 justify-between">
-          <div className="text-primary flex size-12 items-center justify-start cursor-pointer">
-            <span className="material-symbols-outlined text-3xl">chevron_left</span>
+      {/* WRAPPER */}
+      <div className="min-h-screen bg-black/20 flex flex-col">
+
+        {/* HEADER */}
+        <header className="sticky top-0 z-50 h-20 px-12 flex items-center justify-between backdrop-blur-xl bg-black/30 border-b border-white/5">
+
+          <div className="flex items-center gap-4">
+            <div className="size-10 bg-[#d15b2c] rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined">rocket_launch</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Opulence <span className="text-[#f4a460]">Martian</span>
+            </h1>
           </div>
 
-          <h2 className="text-gray-900 dark:text-white text-lg font-bold flex-1 text-center">
-            Opulence Contest
-          </h2>
-
-          <button className="flex items-center justify-center size-12 text-primary">
-            <span className="material-symbols-outlined text-2xl">search</span>
-          </button>
-        </div>
-
-        {/* Round Selector */}
-        <div className="flex px-6 py-4 bg-background-light dark:bg-background-dark">
-          <div className="flex h-11 flex-1 rounded-xl bg-gray-200 dark:bg-[#362348] p-1">
+          {/* ROUND SWITCH */}
+          <div className="flex h-12 bg-black/40 rounded-full p-1 w-[420px] border border-white/5">
             {["Round 1", "Round 2", "Finals"].map((r, i) => (
-              <label
+              <button
                 key={r}
-                className={`flex cursor-pointer h-full grow items-center justify-center rounded-lg text-sm font-semibold transition-all ${
+                className={`flex-1 rounded-full text-sm font-semibold transition-all ${
                   i === 1
-                    ? "bg-white dark:bg-background-dark text-primary shadow-sm"
-                    : "text-gray-500 dark:text-[#ad92c9]"
+                    ? "bg-[#d15b2c] text-white shadow-lg"
+                    : "text-gray-400 hover:text-white"
                 }`}
               >
                 {r}
-                <input type="radio" className="hidden" />
-              </label>
+              </button>
             ))}
           </div>
-        </div>
 
-        {/* Podium */}
-        <div className="flex justify-center items-end gap-8 px-12 pt-10 pb-16 h-[420px]">
-          {/* 2nd */}
-          <Podium
-            rank={2}
-            name="Jordan M."
-            score="10,840"
-            color="silver"
-            size="small"
-          />
-
-          {/* 1st */}
-          <Podium
-            rank={1}
-            name="Alex Rivers"
-            score="12,450"
-            color="gold"
-            size="large"
-          />
-
-          {/* 3rd */}
-          <Podium
-            rank={3}
-            name="Sarah K."
-            score="9,210"
-            color="bronze"
-            size="small"
-          />
-        </div>
-
-        {/* Rankings */}
-        <div className="px-12">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold">Global Rankings</h3>
-            <span className="text-xs text-[#ad92c9] uppercase">
-              Round 2 • 2d left
-            </span>
-          </div>
-
-          <div className="space-y-3 pb-32">
-            <Row rank={4} name="Marcus_V" score="8,740" streak={12} />
-            <Row rank={5} name="Luna.Tech" score="7,215" streak={8} />
-            <Row rank={42} name="You (Me)" score="4,120" streak={15} highlight />
-            <Row rank={43} name="Zander_99" score="3,980" streak={4} />
-            <Row rank={44} name="PixelDev" score="3,750" streak={2} faded />
-          </div>
-        </div>
-
-        {/* Sticky Footer */}
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1440px] bg-background-light dark:bg-background-dark border-t border-white/10 p-6 flex justify-between items-center z-50">
-          <div className="flex gap-10">
-            <div>
-              <p className="text-[10px] text-[#ad92c9] uppercase">My Rank</p>
-              <p className="text-2xl font-black text-primary neon-text">#42</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-[#ad92c9] uppercase">Global %</p>
-              <p className="font-bold">Top 12%</p>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#d15b2c]/20 rounded-lg text-[#f4a460] text-sm font-bold border border-[#d15b2c]/30">
+              <span className="material-symbols-outlined text-sm">schedule</span>
+              2 DAYS LEFT
             </div>
           </div>
+        </header>
 
-          <button className="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-primary/25">
-            Claim Rewards
-          </button>
-        </div>
+        {/* MAIN */}
+        <main className="flex-1 max-w-[1600px] mx-auto w-full px-12 py-12 flex flex-col gap-16">
+
+          {/* PODIUM */}
+          <section className="flex items-end justify-center gap-12 pt-12">
+
+            <Podium rank={2} name="Jordan M." score="10,840 pts" type="silver" />
+            <Podium rank={1} name="Alex Rivers" score="12,450 pts" type="gold" large />
+            <Podium rank={3} name="Sarah K." score="9,210 pts" type="bronze" />
+
+          </section>
+
+          {/* GRID */}
+          <div className="grid grid-cols-12 gap-8">
+
+            {/* TABLE */}
+            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+
+              <div>
+                <h2 className="text-4xl font-black tracking-tight uppercase">
+                  Global Rankings
+                </h2>
+                <p className="text-[#f4a460]/70">
+                  Competition standings across the red planet
+                </p>
+              </div>
+
+              <div className="rounded-3xl overflow-hidden bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-black/40 text-[12px] font-black text-[#f4a460] uppercase tracking-[0.2em]">
+                      <th className="px-10 py-6 text-center">Rank</th>
+                      <th className="px-10 py-6">Player</th>
+                      <th className="px-10 py-6 text-right">Score</th>
+                      <th className="px-10 py-6 text-right">Max Streak</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-white/5">
+                    <Row rank={4} name="Marcus_V" score="8,740" streak={12} />
+                    <Row rank={5} name="Luna.Tech" score="7,215" streak={8} />
+                    <Row rank={42} name="You (Me)" score="4,120" streak={15} highlight />
+                    <Row rank={43} name="Zander_99" score="3,980" streak={4} />
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            {/* PERFORMANCE PANEL */}
+            <aside className="col-span-12 lg:col-span-4">
+              <div className="bg-black/30 backdrop-blur-xl border border-[#d15b2c]/20 rounded-[2rem] p-10 flex flex-col gap-10 shadow-2xl">
+
+                <h4 className="text-2xl font-black uppercase">
+                  Your Performance
+                </h4>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <Stat label="Global Rank" value="#42" highlight />
+                  <Stat label="Percentile" value="Top 12%" />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-300">Next Reward Tier</span>
+                    <span className="text-[#f4a460] font-bold uppercase">
+                      Ancient Relay
+                    </span>
+                  </div>
+
+                  <div className="w-full h-4 bg-black/40 rounded-full border border-white/5 p-1">
+                    <div className="w-[72%] h-full bg-gradient-to-r from-[#b44c3c] to-[#f4a460] rounded-full" />
+                  </div>
+
+                  <p className="text-sm text-center text-gray-400 mt-2">
+                    Reach <span className="text-[#f4a460] font-bold">4,960 pts</span> for Top 10%
+                  </p>
+                </div>
+
+                <button className="w-full bg-[#d15b2c] hover:bg-[#b44c3c] py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl">
+                  Extract Rewards
+                </button>
+
+              </div>
+            </aside>
+
+          </div>
+
+        </main>
+
+        {/* FOOTER */}
+        <footer className="border-t border-white/5 py-10 px-12 bg-black/30 backdrop-blur-xl">
+          <div className="max-w-[1600px] mx-auto flex justify-between text-gray-400 text-sm">
+            <p>© 2025 Opulence Mars Foundation</p>
+            <div className="flex gap-8">
+              <a className="hover:text-[#f4a460]">Colony Terms</a>
+              <a className="hover:text-[#f4a460]">Data Protocol</a>
+            </div>
+          </div>
+        </footer>
+
       </div>
     </div>
   );
 }
 
-/* ---------- Helpers ---------- */
+/* ---------- COMPONENTS ---------- */
 
-function Podium({ rank, name, score, color, size }) {
+function Podium({ rank, name, score, type, large }) {
+  const colors = {
+    gold: "border-[#FFD700]",
+    silver: "border-[#E2E8F0]",
+    bronze: "border-[#CD7F32]",
+  };
+
   return (
-    <div
-      className={`flex flex-col items-center ${
-        size === "large" ? "scale-110" : ""
-      }`}
-    >
-      <div
-        className={`rounded-full border-4 mb-3 ${
-          color === "gold"
-            ? "border-gold size-24"
-            : "border-" + color + " size-20"
-        }`}
-      />
-      <p className="font-bold">{name}</p>
-      <p className="text-primary font-semibold">{score}</p>
-      <span className="text-xs font-bold mt-1">#{rank}</span>
+    <div className={`flex flex-col items-center ${large ? "scale-110" : ""}`}>
+      <div className={`rounded-full border-4 ${colors[type]} ${large ? "size-44" : "size-32"} mb-4`} />
+      <h3 className={`font-bold ${large ? "text-2xl" : "text-xl"}`}>{name}</h3>
+      <p className="text-[#f4a460] font-bold">{score}</p>
+      <span className="mt-1 font-black">#{rank}</span>
     </div>
   );
 }
 
-function Row({ rank, name, score, streak, highlight, faded }) {
+function Row({ rank, name, score, streak, highlight }) {
   return (
-    <div
-      className={`flex items-center px-6 py-4 rounded-xl border ${
-        highlight
-          ? "bg-primary/20 border-primary/40"
-          : faded
-          ? "opacity-60"
-          : "bg-white dark:bg-white/5 border-white/10"
-      }`}
-    >
-      <span className="w-12 font-bold text-primary">{rank}</span>
-      <span className="flex-1 font-medium">{name}</span>
-      <span className="w-24 text-right font-bold">{score}</span>
-      <span className="w-16 text-right text-primary font-semibold flex items-center justify-end gap-1">
-        {streak}
-        <span className="material-symbols-outlined text-sm">bolt</span>
-      </span>
-    </div>
-  )
+    <tr className={`${highlight ? "bg-[#d15b2c]/15 border-l-4 border-[#f4a460]" : "hover:bg-white/5"} transition`}>
+      <td className="px-10 py-6 text-center font-bold text-[#f4a460]">{rank}</td>
+      <td className="px-10 py-6 font-bold">{name}</td>
+      <td className="px-10 py-6 text-right font-black">{score}</td>
+      <td className="px-10 py-6 text-right text-[#f4a460] font-bold">
+        {streak} ⚡
+      </td>
+    </tr>
+  );
 }
 
-export default Leaderboard
+function Stat({ label, value, highlight }) {
+  return (
+    <div className="bg-black/40 rounded-3xl p-6 border border-white/5">
+      <span className="text-[11px] text-[#f4a460]/60 uppercase font-bold block mb-2">
+        {label}
+      </span>
+      <span className={`text-4xl font-black ${highlight ? "text-[#f4a460]" : ""}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export default Leaderboard;
+  

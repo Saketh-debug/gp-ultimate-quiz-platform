@@ -1,187 +1,200 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React from "react";
+import { Link } from "react-router-dom";
 
 function Cascade() {
   return (
-    <div className="min-h-screen bg-background-dark text-white font-display">
+    <div className="min-h-screen bg-[#1a0b08] text-white font-['Space_Grotesk'] overflow-x-hidden">
 
-      {/* PAGE WIDTH */}
-      <div className="mx-auto max-w-6xl pb-40">
+      {/* BACKGROUND OVERLAY */}
+      <div className="fixed inset-0 pointer-events-none bg-gradient-to-tr from-[#7c2d12]/30 via-transparent to-[#ff4d20]/10 z-0" />
 
-        {/* TOP NAV */}
-        <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 bg-background-dark/90 backdrop-blur-md border-b border-white/5">
-          <button className="w-12 h-12 flex items-center justify-center">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
+      {/* NAV */}
+      <nav className="relative z-10 flex items-center justify-between px-12 py-8 max-w-[1600px] mx-auto">
+        <Link to="/" className="flex items-center gap-4 group">
+          <div className="size-10 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white/5 transition">
+            <span className="material-symbols-outlined text-white/70">
+              arrow_back
+            </span>
+          </div>
+          <span className="text-white/50 text-xs tracking-widest uppercase">
+            Dashboard
+          </span>
+        </Link>
 
-          <h2 className="text-lg font-bold tracking-tight">
-            Round 2: Coding Cascade
-          </h2>
-
-          <div className="w-12" />
+        <div className="flex items-center gap-3">
+          <div className="size-2.5 rounded-full bg-[#ff4d20] animate-pulse shadow-[0_0_10px_rgba(255,77,32,0.8)]"></div>
+          <span className="text-sm font-bold tracking-[0.3em] uppercase text-[#ff4d20]/80">
+            Martian Relay Active
+          </span>
         </div>
+      </nav>
 
-        {/* HEADER VISUAL */}
-        <section className="mt-6 px-6">
-          <div
-            className="relative min-h-[260px] rounded-xl overflow-hidden bg-cover bg-center"
-            style={{
-              backgroundImage:
-                'url("https://lh3.googleusercontent.com/aida-public/AB6AXuD6S9RvAGlw2Idj7uAbHjfP1lhdd9bDr4MEQKHTTw3RQYqdkHGiehvTA7QsGBMzzAq4H72erF0DjE1yewWeIRSuy5Ty0iO-NTCBgWH4WqPMwLW0IQAWbrj-PhERWMSlOXUgHekWPGLF1YApq3ZUTsogteuAAq8X-khaiHFXdX8nv0H6SDhkBssC3-o1_GqAAMwrqO1secDXmpvnd5lJFVCKme5xXsSJto0Co5z5yezNfVs5aF6alUAOhkPFBkGAc9hgESmN-eVSyuA")',
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(13,89,242,0.15),transparent)]" />
+      {/* MAIN */}
+      <main className="relative z-10 max-w-[1600px] mx-auto px-12 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
 
-            <div className="relative p-8">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 text-xs font-bold uppercase tracking-wider mb-2">
-                <span className="material-symbols-outlined text-sm">bolt</span>
-                Active Round
-              </span>
+          {/* LEFT SIDE */}
+          <div className="lg:col-span-5 space-y-10">
 
-              <h1 className="text-4xl font-bold tracking-tight">
-                Coding Cascade
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#ff4d20]/10 border border-[#ff4d20]/20 text-[#ff4d20] text-xs font-bold uppercase tracking-[0.25em]">
+                <span className="material-symbols-outlined text-sm">
+                  rocket_launch
+                </span>
+                Sector 2 Deployment
+              </div>
+
+              <h1 className="text-6xl font-bold leading-none tracking-tight">
+                Coding <br />
+                <span className="bg-gradient-to-r from-[#ff8c69] to-[#ff4d20] bg-clip-text text-transparent">
+                  Cascade
+                </span>
               </h1>
+
+              <p className="text-white/70 leading-relaxed max-w-lg">
+                Speed meets precision. Solve complex algorithmic problems in
+                sequence to build your multiplier. Every correct answer fuels
+                the cascade, but a mistake resets the flow.
+              </p>
             </div>
-          </div>
-        </section>
 
-        {/* DESCRIPTION */}
-        <section className="px-6 mt-6">
-          <p className="text-white/70 leading-relaxed max-w-3xl">
-            Speed meets precision. Solve complex algorithmic problems in sequence
-            to build your multiplier. Every correct answer fuels the cascade, but
-            a mistake resets the flow.
-          </p>
-        </section>
-
-        {/* QUICK STATS */}
-        <section className="px-6 mt-6 grid grid-cols-2 gap-6">
-          <div className="rounded-xl p-6 bg-[#222f49] border border-white/5">
-            <div className="flex items-center gap-2 text-primary mb-1">
-              <span className="material-symbols-outlined">schedule</span>
-              <span className="uppercase text-sm text-white/60 tracking-wider">
-                Duration
-              </span>
-            </div>
-            <p className="text-2xl font-bold">1 Hour</p>
-          </div>
-
-          <div className="rounded-xl p-6 bg-[#222f49] border border-white/5">
-            <div className="flex items-center gap-2 text-primary mb-1">
-              <span className="material-symbols-outlined">quiz</span>
-              <span className="uppercase text-sm text-white/60 tracking-wider">
-                Questions
-              </span>
-            </div>
-            <p className="text-2xl font-bold">15 Qs</p>
-          </div>
-        </section>
-
-        {/* STREAK INFOGRAPHIC */}
-        <section className="px-6 mt-10">
-          <div className="relative rounded-xl p-6 bg-primary/5 border border-primary/20 overflow-hidden">
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">
-                trending_up
-              </span>
-              Streak Multiplier Logic
-            </h3>
-
-            <div className="relative space-y-4">
-              {[
-                ["1x", "Base Points"],
-                ["1.5x", "3 Correct Streak"],
-                ["2.5x", "7+ Streak (Elite)"],
-              ].map(([value, label], i) => (
-                <div key={label} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary text-white font-bold flex items-center justify-center shadow-[0_0_15px_rgba(13,89,242,0.4)]">
-                    {value}
-                  </div>
-                  <div className="flex-1 h-px bg-white/10" />
-                  <span
-                    className={`text-sm ${
-                      i > 0 ? "text-primary font-medium" : "text-white/80"
-                    }`}
-                  >
-                    {label}
+            {/* QUICK STATS */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+                <div className="flex items-center gap-2 text-[#ff4d20]/70 mb-2">
+                  <span className="material-symbols-outlined">timer</span>
+                  <span className="text-xs uppercase tracking-widest font-bold">
+                    Duration
                   </span>
                 </div>
-              ))}
+                <p className="text-4xl font-bold">
+                  60{" "}
+                  <span className="text-lg text-white/40 font-light">
+                    mins
+                  </span>
+                </p>
+              </div>
 
-              <div className="absolute left-[19px] top-10 bottom-5 w-0.5 bg-gradient-to-b from-primary to-transparent -z-10" />
-            </div>
-
-            <div className="mt-8 p-4 bg-background-dark/50 rounded-lg border border-white/5">
-              <div className="flex items-start gap-3">
-                <span className="material-symbols-outlined text-amber-400">
-                  warning
-                </span>
-                <p className="text-xs text-white/60">
-                  Warning: Any incorrect submission or skipped question will
-                  immediately reset your multiplier to 1.0x.
+              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+                <div className="flex items-center gap-2 text-[#ff4d20]/70 mb-2">
+                  <span className="material-symbols-outlined">dataset</span>
+                  <span className="text-xs uppercase tracking-widest font-bold">
+                    Tasks
+                  </span>
+                </div>
+                <p className="text-4xl font-bold">
+                  15{" "}
+                  <span className="text-lg text-white/40 font-light">
+                    questions
+                  </span>
                 </p>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* RULES */}
-        <section className="px-6 mt-10">
-          <h3 className="text-lg font-bold mb-4">Round Rules</h3>
+            {/* START PANEL */}
+            <div className="bg-black/40 backdrop-blur-xl border border-[#ff4d20]/20 rounded-3xl p-10">
+              <h3 className="text-xl font-bold mb-3">
+                Initiate Descent?
+              </h3>
 
-          <div className="space-y-4">
-            {[
-              [
-                "check_circle",
-                "Sequential Order",
-                "Questions must be answered in order. You cannot revisit previous questions once submitted.",
-              ],
-              [
-                "terminal",
-                "Languages Allowed",
-                "Python, C++, Java, and Rust are supported for this round.",
-              ],
-              [
-                "history",
-                "Auto-Submission",
-                "Your session will automatically submit at the 60-minute mark.",
-              ],
-            ].map(([icon, title, desc]) => (
-              <div key={title} className="flex gap-4">
-                <div className="w-8 h-8 flex items-center justify-center bg-white/5 rounded">
-                  <span className="material-symbols-outlined text-primary text-sm">
-                    {icon}
+              <p className="text-white/50 mb-8 text-sm">
+                Verify uplink stability before beginning. The cascade sequence
+                starts immediately after authorization.
+              </p>
+
+              <Link to="/">
+                <button className="w-full bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition shadow-[0_0_30px_rgba(255,77,32,0.25)]">
+                  AUTHORIZE ENTRY
+                  <span className="material-symbols-outlined">
+                    chevron_right
                   </span>
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">{title}</p>
-                  <p className="text-xs text-white/50">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
+                </button>
+              </Link>
 
-      {/* ACTION FOOTER */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background-dark/80 backdrop-blur-lg border-t border-white/10">
-        <div className="max-w-xl mx-auto p-6">
-          <Link to="/">
-          <button className="w-full py-4 rounded-xl bg-primary text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 active:scale-[0.98]">
-            ENTER THE CASCADE
-            <span className="material-symbols-outlined">play_arrow</span>
-          </button>
-          </Link>
-          <p className="mt-3 text-center text-[10px] uppercase tracking-widest text-white/40">
-            Confirming starts your 60-minute timer
-          </p>
+              <p className="text-center text-[10px] uppercase tracking-[0.3em] text-white/30 mt-4">
+                Biometric sync enabled
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE */}
+          <div className="lg:col-span-7 space-y-8">
+
+            {/* STREAK LOGIC */}
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-12">
+              <h3 className="text-2xl font-bold mb-10 flex items-center gap-3">
+                <span className="material-symbols-outlined text-[#ff4d20]">
+                  stacked_line_chart
+                </span>
+                Streak Multiplier Logic
+              </h3>
+
+              <div className="space-y-8">
+                {[
+                  ["1.0x", "Base Points", "Nominal scoring for initial solves."],
+                  ["1.5x", "Cascade Surge", "Unlocked at 3 consecutive solutions."],
+                  ["2.5x", "Red Planet Velocity", "7+ streak. Maximum scoring efficiency."],
+                ].map(([mult, title, desc]) => (
+                  <div key={mult} className="flex gap-6 items-start">
+                    <div className="w-14 h-14 rounded-xl bg-[#ff4d20]/10 border border-[#ff4d20]/40 flex items-center justify-center font-bold text-[#ff4d20]">
+                      {mult}
+                    </div>
+                    <div>
+                      <h4 className="font-bold">{title}</h4>
+                      <p className="text-sm text-white/50">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-10 p-6 bg-red-950/40 border border-red-500/30 rounded-xl flex gap-4">
+                <span className="material-symbols-outlined text-red-400">
+                  warning
+                </span>
+                <p className="text-sm text-red-100/70">
+                  Any incorrect submission or skipped question resets the multiplier to 1.0x.
+                </p>
+              </div>
+            </div>
+
+            {/* RULES */}
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-10">
+              <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#ff4d20]">
+                  security
+                </span>
+                Mission Protocol
+              </h3>
+
+              <div className="grid md:grid-cols-3 gap-8">
+                {[
+                  ["account_tree", "Sequential Order", "Questions must be solved in order."],
+                  ["terminal", "Languages Allowed", "Python, C++, Java, Rust supported."],
+                  ["history", "Auto Submission", "Session ends automatically at 60 minutes."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title}>
+                    <div className="w-12 h-12 rounded-xl bg-[#ff4d20]/10 flex items-center justify-center mb-3">
+                      <span className="material-symbols-outlined text-[#ff4d20]">
+                        {icon}
+                      </span>
+                    </div>
+                    <h4 className="font-bold">{title}</h4>
+                    <p className="text-sm text-white/50">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
         </div>
-      </div>
+      </main>
+
+      {/* FOOTER */}
+      <footer className="max-w-[1600px] mx-auto px-12 py-12 text-white/20 text-xs uppercase tracking-[0.4em]">
+        © 2025 Opulence Systems // Mars Surface Deployment
+      </footer>
     </div>
-  )
+  );
 }
 
-export default Cascade
+export default Cascade;

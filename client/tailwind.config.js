@@ -6,11 +6,14 @@ export default {
   darkMode: "class",
   theme: {
     extend: {
-      colors: {
-        primary: "#7f13ec",
-        "background-light": "#f7f6f8",
-        "background-dark": "#191022",
-      },
+       colors: {
+    primary: "#e65100",
+    "background-dark": "#0a0505",
+    "panel-dark": "#1a0d0d",
+    "border-dark": "#3d1f1f",
+    "martian-text": "#fbe9e7",
+    "martian-muted": "#a1887f",
+  },
       fontFamily: {
         display: ["Space Grotesk", "sans-serif"],
       },

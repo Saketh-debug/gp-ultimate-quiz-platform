@@ -1,6 +1,5 @@
 import { useState } from "react";
-import {Link} from "react-router-dom";
-import { FiArrowRight, FiAward, FiCode, FiUsers, FiZap, FiChevronRight } from 'react-icons/fi';
+import { Link } from "react-router-dom";
 
 export default function Login({ onJoin }) {
   const [token, setToken] = useState("");
@@ -18,81 +17,93 @@ export default function Login({ onJoin }) {
   }
 
   return (
-    <div className="min-h-screen bg-background-dark text-white font-display">
-      {/* PAGE WIDTH */}
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-[#1a0805] text-white font-['Space_Grotesk'] overflow-x-hidden">
+      {/* BACKGROUND GLOW */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-orange-600/30 via-[#4a0e05] to-[#1a0805]" />
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-orange-500/20 blur-[160px]" />
+      </div>
 
-        {/* TOP NAV */}
-        <div className="flex items-center justify-between px-6 py-4">
-          <span className="material-symbols-outlined text-primary text-3xl">
-            terminal
+      <div className="max-w-[1440px] mx-auto px-10">
+
+        {/* TOP BAR */}
+        <header className="flex items-center justify-between py-10">
+          <span className="material-symbols-outlined text-orange-400 text-3xl">
+            rocket_launch
           </span>
 
-          <h1 className="text-lg font-bold text-zinc-500 dark:text-white">
-            AAC presents
-          </h1>
+          <p className="text-sm uppercase tracking-[0.4em] text-orange-200/70 font-bold">
+            AAC PRESENTS
+          </p>
 
-          <span className="material-symbols-outlined text-zinc-900 dark:text-white">
+          <span className="material-symbols-outlined text-white/70 text-3xl">
             account_circle
           </span>
-        </div>
+        </header>
 
         {/* HERO */}
-        <section
-          className="relative flex flex-col items-center justify-center min-h-[70vh] py-24 rounded-2xl overflow-hidden"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(25,16,34,0.75), rgba(25,16,34,0.95)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-G9cgn4QexccJ52P5QtteZaTN6Wra5hT61N0SGWs_-FuW2E3nZNeZGa4la3Cnvx4qnFuV1meCoDw6SWNKhrHukZqSwKHZcCebAGabhzL8UBBSDRyN_GsuNipJO2e2ClHuCz5pbNwphbtQ7SRNSVZzw2_FP05PUjGfcbq5U0-vCgo6iwcj1-t_TKdaexQwk7cRO2PUFdPTAMfq8Wn6zQwN7hoBTQ_IzRAFHe4sFdeSzd8XNAsi-tKeEvnpub6Qi1jhc4ijURakYVo")',
-          }}
-        >
-          <h2 className="text-6xl lg:text-7xl font-black tracking-tight">
-            OPULENCE
-          </h2>
+        <section className="grid grid-cols-12 gap-16 items-center min-h-[70vh]">
+          {/* LEFT */}
+          <div className="col-span-7">
+            <h1 className="text-[96px] font-black tracking-tighter leading-none drop-shadow-[4px_4px_0_rgba(0,0,0,0.35)]">
+              OPULENCE
+            </h1>
 
-          <p className="mt-4 text-lg uppercase tracking-widest text-zinc-400">
-            The ultimate high-stakes coding arena
-          </p>
+            <p className="mt-4 text-xl tracking-[0.3em] text-orange-200 font-bold">
+              19TH JULY, 2025
+            </p>
 
-          {/* ACCESS INPUT */}
-          <div className="mt-10 w-full max-w-xl">
-            <div className="flex h-16 rounded-xl overflow-hidden bg-zinc-900/80 border border-zinc-800 backdrop-blur">
-              <div className="flex items-center px-4 text-zinc-500">
-                <span className="material-symbols-outlined">key</span>
-              </div>
-
-              <input
-                placeholder="Enter Access Token..."
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                className="flex-1 bg-transparent px-4 text-white placeholder:text-zinc-500 focus:outline-none"
-              />
-
-              <button className="px-8 bg-primary text-white font-bold hover:bg-primary/90 transition" onClick={handleJoin}>
-                Join
-              </button>
-            </div>
+            <p className="mt-8 max-w-xl text-orange-200/60 text-lg leading-relaxed">
+              Enter your access token to initiate secure uplink and begin the
+              high-stakes coding challenge.
+            </p>
           </div>
 
-          <p className="mt-3 text-xs uppercase tracking-wider text-zinc-500">
-            Invite-only participation
-          </p>
+          {/* RIGHT – JOIN BOX */}
+          <div className="col-span-5">
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+              <div className="flex h-16 rounded-xl overflow-hidden bg-black/40 border border-white/10">
+                <div className="flex items-center px-4 text-orange-400">
+                  <span className="material-symbols-outlined">key</span>
+                </div>
+
+                <input
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="ENTER ACCESS TOKEN"
+                  className="flex-1 bg-transparent px-4 text-white placeholder:text-orange-200/40 focus:outline-none"
+                />
+
+                <button
+                  onClick={handleJoin}
+                  className="px-10 bg-orange-600 hover:bg-orange-500 font-bold transition shadow-lg shadow-orange-500/30"
+                >
+                  JOIN
+                </button>
+              </div>
+
+              <p className="mt-4 text-[11px] uppercase tracking-[0.5em] text-orange-300/40 text-center font-bold">
+                Secure uplink established
+              </p>
+            </div>
+          </div>
         </section>
 
         {/* STATS */}
-        <section className="flex gap-6 mt-12 px-6">
+        <section className="grid grid-cols-3 gap-10 mt-24">
           {[
-            ["Prize Pool", "$100,000"],
-            ["Participants", "2,400+"],
-            ["Duration", "48 Hours"],
+            ["PRIZE POOL", "$100,000"],
+            ["PARTICIPANTS", "2,400+"],
+            ["DURATION", "48 HOURS"],
           ].map(([label, value]) => (
             <div
               key={label}
-              className="flex-1 rounded-xl bg-zinc-900/70 backdrop-blur-md border border-zinc-800 p-6 hover:bg-zinc-900/90 transition"
+              className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-10"
             >
-              <p className="text-xs uppercase tracking-wider text-zinc-400 font-bold">
+              <p className="text-xs uppercase tracking-[0.4em] text-orange-400 font-bold">
                 {label}
               </p>
-              <p className="mt-1 text-2xl font-black text-primary">
+              <p className="mt-3 text-4xl font-black text-white">
                 {value}
               </p>
             </div>
@@ -100,66 +111,79 @@ export default function Login({ onJoin }) {
         </section>
 
         {/* ARENA */}
-        <section className="mt-20 px-6">
-          <h3 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-white">
-            THE ARENA
-          </h3>
-          <p className="mt-4 max-w-3xl text-zinc-600 dark:text-zinc-400">
-            Where code meets high-stakes competition. Only the elite survive the
-            most rigorous challenges ever devised.
-          </p>
+        <section className="mt-32">
+          <div className="flex items-center gap-12 mb-16 border-l-4 border-orange-500 pl-8">
+            <div>
+              <h2 className="text-5xl font-black tracking-tight uppercase mb-4">
+                THE ARENA
+              </h2>
+              <p className="text-orange-200/60 max-w-2xl text-lg">
+                Where code meets planetary-scale competition. Only the most
+                precise engineers survive.
+              </p>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-white/20 to-transparent" />
+          </div>
 
-          <div className="grid grid-cols-3 gap-6 mt-10">
+          <div className="grid grid-cols-3 gap-10">
             {[
-              ["shield", "Security", "Fully encrypted environments ensure absolute integrity and fair play."],
-              ["bolt", "Performance", "Ultra low-latency evaluation engines for real-time judge feedback."],
-              ["lock", "Exclusivity", "Restricted access protocol for verified high-tier software engineers."],
+              ["security", "Absolute Security", "Encrypted, isolated execution environments."],
+              ["bolt", "Performance", "Ultra-low latency real-time judging."],
+              ["verified_user", "Exclusivity", "Invite-only elite participation."],
             ].map(([icon, title, desc]) => (
               <div
                 key={title}
-                className="rounded-xl bg-zinc-900/70 backdrop-blur-md border border-zinc-800 p-6"
+                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-10"
               >
-                <div className="w-fit p-3 rounded-lg bg-primary/10 text-primary">
-                  <span className="material-symbols-outlined">{icon}</span>
+                <div className="w-14 h-14 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/30">
+                  <span className="material-symbols-outlined text-orange-400 text-3xl">
+                    {icon}
+                  </span>
                 </div>
-                <h4 className="mt-4 font-bold text-lg">{title}</h4>
-                <p className="mt-2 text-sm text-zinc-400">{desc}</p>
+
+                <h3 className="mt-6 text-xl font-black uppercase">
+                  {title}
+                </h3>
+                <p className="mt-3 text-orange-200/50 leading-relaxed">
+                  {desc}
+                </p>
               </div>
             ))}
           </div>
         </section>
 
         {/* CTA */}
-        <section className="mt-24 text-center">
-          <h3 className="text-4xl font-black">Ready to dominate?</h3>
-          <p className="mt-4 max-w-2xl mx-auto text-zinc-400">
-            The arena waits for no one. Request an invite today and prove your
-            worth among the global elite.
+        <section className="mt-32 text-center">
+          <h2 className="text-5xl font-black tracking-tight">
+            READY TO DOMINATE?
+          </h2>
+
+          <p className="mt-6 max-w-2xl mx-auto text-orange-200/60">
+            Finalize your uplink credentials before transmission windows close.
           </p>
 
-          <div className="mt-8 flex justify-center gap-4">
+          <div className="mt-10 flex justify-center gap-6">
             <Link to="/Rounds">
-            <button className="h-14 px-8 rounded-lg border border-zinc-700 text-zinc-300">
-              Review Rules
-            </button>
+              <button className="h-14 px-10 rounded-xl border border-white/20 text-white font-bold">
+                Review Rules
+              </button>
             </Link>
+
             <Link to="/leaderboard">
-            <button className="h-14 px-8 rounded-lg bg-primary text-white font-bold hover:shadow-[0_0_25px_rgba(127,19,236,0.4)] transition">
-              LeaderBoard
-            </button>
+              <button className="h-14 px-10 rounded-xl bg-orange-600 hover:bg-orange-500 font-bold shadow-lg shadow-orange-500/30">
+                Leaderboard
+              </button>
             </Link>
           </div>
         </section>
 
         {/* FOOTER */}
-        <footer className="mt-24 py-6 border-t border-zinc-800 text-center">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            © 2024 Opulence Global Arena
+        <footer className="mt-32 py-10 border-t border-white/10 text-center">
+          <p className="text-[10px] uppercase tracking-[0.5em] text-orange-200/40 font-bold">
+            © 2025 OPULENCE MARTIAN ARENA
           </p>
         </footer>
-
       </div>
     </div>
-    
   );
 }

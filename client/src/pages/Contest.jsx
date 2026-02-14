@@ -2,10 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import Editor from "@monaco-editor/react";
 import axios from "axios";
-import { 
-  FiPlay, FiUpload, FiSettings, FiUser, FiClock, 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import {
+  FiPlay, FiUpload, FiSettings, FiUser, FiClock,
   FiChevronLeft, FiChevronRight, FiList, FiTerminal,
-  FiFileText, FiCheckCircle, FiCode, FiZap
+  FiFileText, FiCheckCircle, FiCode, FiZap, FiAlertCircle
 } from "react-icons/fi";
 
 // Configuration
@@ -13,9 +15,9 @@ const BACKEND_URL = "http://localhost:3100";
 const socket = io(BACKEND_URL);
 
 const LANGUAGE_IDS = {
-  python: 71, 
-  cpp: 54,    
-  java: 62,   
+  python: 71, // Python 3.8
+  cpp: 54,    // GCC 9.2
+  java: 62,   // OpenJDK 13
 };
 
 export default function Contest({ session }) {
@@ -23,25 +25,26 @@ export default function Contest({ session }) {
   const [language, setLanguage] = useState("python");
   const [currentQuestion, setCurrentQuestion] = useState(session.questions?.[0] || null);
   const [codes, setCodes] = useState({});
-  
+
   // Execution State
   const [customInput, setCustomInput] = useState("");
-  const [output, setOutput] = useState(""); 
+  const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [execTime, setExecTime] = useState(null);
-  const [statusMessage, setStatusMessage] = useState(""); 
+  const [statusMessage, setStatusMessage] = useState(""); // "Accepted", "Wrong Answer", "Error"
 
   // UI State
   const [leftTab, setLeftTab] = useState("description"); // description, editorial, solutions, submissions
   const [rightTab, setRightTab] = useState("testcase"); // testcase, result
   const [isProblemListOpen, setIsProblemListOpen] = useState(false);
-  
+
   // Resizing State
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
   const [editorHeight, setEditorHeight] = useState(60); // percentage
   const isResizingHorizontal = useRef(false);
   const isResizingVertical = useRef(false);
-  
+
+  // Lock to prevent multiple socket updates
   const isWaitingForResponse = useRef(false);
 
   /* ---------------- RESIZING LOGIC ---------------- */
@@ -53,7 +56,7 @@ export default function Contest({ session }) {
           setLeftPanelWidth(newWidth);
         }
       }
-      
+
       if (isResizingVertical.current) {
         const container = document.getElementById("right-panel-container");
         if (container) {
@@ -93,10 +96,10 @@ export default function Contest({ session }) {
     document.body.style.userSelect = "none";
   };
 
-  /* ---------------- SOCKET LOGIC ---------------- */
+  /* ---------------- SOCKET LOGIC (The Brain) ---------------- */
   useEffect(() => {
     if (session?.userId) {
-        socket.emit("join_user", session.userId);
+      socket.emit("join_user", session.userId);
     }
 
     const handleSubmissionResult = (data) => {
@@ -106,18 +109,27 @@ export default function Contest({ session }) {
 
       setIsRunning(false);
       isWaitingForResponse.current = false;
-      setRightTab("result");
+      setRightTab("result"); // Auto-switch to result tab
 
-      // Handle Output
+      // 1. ACCEPTED
       if (data.status === "ACCEPTED") {
-        const cleanOutput = data.stdout ? data.stdout.trimEnd() : "Program finished successfully (No Output).";
+        const cleanOutput = data.stdout ? data.stdout.trimEnd() : "Program finished successfully.";
         setOutput(cleanOutput);
         setExecTime(data.time);
         setStatusMessage("Accepted");
-      } else {
+      }
+      // 2. WRONG ANSWER (For Submit Mode)
+      else if (data.status === "WRONG_ANSWER") {
+        // Backend sends "Wrong Answer on Test Case X" in stderr or stdout
+        const errorDetail = data.stderr || data.stdout || "Output did not match expected result.";
+        setOutput(errorDetail);
+        setStatusMessage("Wrong Answer");
+      }
+      // 3. RUNTIME / COMPILATION ERROR
+      else {
         const errorMsg = data.stderr || data.error || data.stdout || "Unknown Error";
         setOutput(errorMsg);
-        setStatusMessage(data.status || "Runtime Error");
+        setStatusMessage(data.status || "Error");
       }
     };
 
@@ -132,25 +144,25 @@ export default function Contest({ session }) {
   function openQuestion(q) {
     setCurrentQuestion(q);
     setStatusMessage("");
-    setOutput(""); 
+    setOutput("");
     setExecTime(null);
     setLeftTab("description");
     setIsProblemListOpen(false);
   }
 
+  // MODE 1: RUN (Custom Input)
   async function handleRun() {
     if (!currentQuestion) {
-        alert("Please select a question first.");
-        return;
+      alert("Please select a question first.");
+      return;
     }
-    
+
     setIsRunning(true);
     setRightTab("result");
-    setOutput("Executing...");
+    setOutput("Running with Custom Input...");
     setExecTime(null);
     setStatusMessage("Running...");
-    
-    isWaitingForResponse.current = true; 
+    isWaitingForResponse.current = true;
 
     const code = codes[currentQuestion.id] || "";
     const langId = LANGUAGE_IDS[language];
@@ -161,7 +173,8 @@ export default function Contest({ session }) {
         problem_id: currentQuestion.id,
         language_id: langId,
         source_code: code,
-        stdin: customInput 
+        stdin: customInput, // <--- SEND CUSTOM INPUT
+        mode: "run"
       });
     } catch (error) {
       console.error(error);
@@ -171,8 +184,39 @@ export default function Contest({ session }) {
     }
   }
 
-  async function submit() {
-    alert("Submit functionality is disabled. Please use 'Run' to test your code.");
+  // MODE 2: SUBMIT (Hidden Test Cases)
+  async function handleSubmit() {
+    if (!currentQuestion) {
+      alert("Please select a question first.");
+      return;
+    }
+
+    setIsRunning(true);
+    setRightTab("result");
+    setOutput("🚀 Submitting to Judge0...\nRunning against hidden test cases...");
+    setExecTime(null);
+    setStatusMessage("Judging...");
+    isWaitingForResponse.current = true;
+
+    const code = codes[currentQuestion.id] || "";
+    const langId = LANGUAGE_IDS[language];
+
+    try {
+      await axios.post(`${BACKEND_URL}/submit`, {
+        user_id: session.userId,
+        problem_id: currentQuestion.id,
+        language_id: langId,
+        source_code: code,
+        stdin: "", // <--- EMPTY STDIN TRIGGERS "SUBMIT MODE" IN BACKEND
+        mode: "submit"
+      });
+    } catch (error) {
+      console.error(error);
+      setIsRunning(false);
+      setStatusMessage("Error");
+      setOutput("Submission Failed: Is the backend running?\n" + error.message);
+      isWaitingForResponse.current = false;
+    }
   }
 
   /* ================= UI RENDER ================= */
@@ -182,34 +226,34 @@ export default function Contest({ session }) {
       {/* TOP NAVIGATION BAR */}
       <nav className="h-[50px] bg-[#282828] border-b border-[#3e3e3e] flex items-center justify-between px-4 shrink-0 z-50">
         <div className="flex items-center gap-4 relative">
-          <div 
+          <div
             onClick={() => setIsProblemListOpen(!isProblemListOpen)}
             className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white cursor-pointer transition py-2"
           >
             <FiList className="text-lg" />
             <span>Problem List</span>
           </div>
-          
+
           {/* DROPDOWN PROBLEM LIST */}
           {isProblemListOpen && (
-            <div className="absolute top-12 left-0 w-80 bg-[#282828] border border-[#3e3e3e] rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-3 bg-[#333333] border-b border-[#3e3e3e] text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Select Mission
-                </div>
-                <div className="max-h-96 overflow-y-auto py-1">
-                    {(session.questions || []).map((q, i) => (
-                        <button
-                            key={q.id}
-                            onClick={() => openQuestion(q)}
-                            className={`w-full text-left px-4 py-3 text-sm hover:bg-[#3e3e3e] transition-colors flex items-center gap-3
+            <div className="absolute top-12 left-0 w-80 bg-[#282828] border border-[#3e3e3e] rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+              <div className="p-3 bg-[#333333] border-b border-[#3e3e3e] text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Select Mission
+              </div>
+              <div className="max-h-96 overflow-y-auto py-1">
+                {(session.questions || []).map((q, i) => (
+                  <button
+                    key={q.id}
+                    onClick={() => openQuestion(q)}
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-[#3e3e3e] transition-colors flex items-center gap-3
                                 ${currentQuestion?.id === q.id ? "text-orange-500 bg-[#333333]" : "text-gray-300"}`}
-                        >
-                            <span className="text-xs font-mono opacity-40">0{i + 1}</span>
-                            <span className="truncate">{q.title}</span>
-                            {currentQuestion?.id === q.id && <FiZap className="ml-auto text-orange-500" />}
-                        </button>
-                    ))}
-                </div>
+                  >
+                    <span className="text-xs font-mono opacity-40">0{i + 1}</span>
+                    <span className="truncate">{q.title}</span>
+                    {currentQuestion?.id === q.id && <FiZap className="ml-auto text-orange-500" />}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -219,21 +263,26 @@ export default function Contest({ session }) {
           </div>
         </div>
 
+        {/* ACTION BUTTONS (RUN & SUBMIT) */}
         <div className="flex items-center gap-3">
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#3e3e3e] hover:bg-[#4e4e4e] rounded text-sm font-medium transition disabled:opacity-50 min-w-[80px] justify-center"
+            className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition min-w-[80px] justify-center
+                ${isRunning ? "bg-[#3e3e3e] text-gray-500 cursor-not-allowed" : "bg-[#3e3e3e] hover:bg-[#4e4e4e] text-white"}`}
           >
             <FiPlay className={`text-xs ${isRunning ? 'animate-pulse' : 'text-green-500 fill-green-500'}`} />
             <span>{isRunning ? "Running" : "Run"}</span>
           </button>
+
           <button
-            onClick={submit}
-            className="flex items-center gap-2 px-4 py-1.5 bg-[#3e3e3e] hover:bg-[#4e4e4e] text-orange-500 rounded text-sm font-bold transition"
+            onClick={handleSubmit}
+            disabled={isRunning}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-bold transition
+                ${isRunning ? "bg-[#3e3e3e] text-gray-500 cursor-not-allowed" : "bg-[#3e3e3e] hover:bg-[#4e4e4e] text-orange-500"}`}
           >
             <FiUpload className="text-xs" />
-            <span>Submit</span>
+            <span>{isRunning ? "Judging..." : "Submit"}</span>
           </button>
         </div>
 
@@ -255,7 +304,7 @@ export default function Contest({ session }) {
       <div className="flex flex-1 overflow-hidden p-2 gap-0 bg-[#1a1a1a]">
 
         {/* LEFT PANEL: PROBLEM DESCRIPTION */}
-        <div 
+        <div
           style={{ width: `${leftPanelWidth}%` }}
           className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
         >
@@ -295,37 +344,32 @@ export default function Contest({ session }) {
                 </div>
 
                 <div className="prose prose-invert prose-sm max-w-none">
-                  <p className="text-[#eff1f6] leading-relaxed mb-8 whitespace-pre-wrap font-sans text-sm opacity-90">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code({ node, inline, className, children, ...props }) {
+                        return !inline ? (
+                          <pre className="bg-[#333333]/50 p-4 rounded-xl border border-[#3e3e3e] overflow-x-auto text-sm text-gray-300">
+                            <code {...props} className={className}>
+                              {children}
+                            </code>
+                          </pre>
+                        ) : (
+                          <code {...props} className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-orange-400 font-mono text-xs">
+                            {children}
+                          </code>
+                        )
+                      }
+                    }}
+                  >
                     {currentQuestion.description}
-                  </p>
-                  
-                  {/* Mock Examples if description doesn't have them */}
-                  {!currentQuestion.description?.includes("Example") && (
-                    <div className="space-y-6">
-                      <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e]">
-                        <h4 className="text-xs font-bold uppercase tracking-widest mb-3 text-orange-500/80">Example 1:</h4>
-                        <div className="font-mono text-sm space-y-2">
-                          <div className="flex gap-2">
-                            <span className="text-gray-500 font-bold w-12 shrink-0">Input:</span>
-                            <code className="text-gray-300">nums = [2,7,11,15], target = 9</code>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className="text-gray-500 font-bold w-12 shrink-0">Output:</span>
-                            <code className="text-gray-300">[0,1]</code>
-                          </div>
-                          <div className="flex gap-2 mt-2 pt-2 border-t border-white/5 text-xs text-gray-400 italic">
-                            <span>Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </ReactMarkdown>
                 </div>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-gray-500">
                 <div className="w-16 h-16 rounded-full bg-[#333333] flex items-center justify-center mb-4 border border-[#3e3e3e]">
-                    <FiList className="text-2xl opacity-50" />
+                  <FiList className="text-2xl opacity-50" />
                 </div>
                 <p className="text-sm font-medium">Select a mission from the list</p>
               </div>
@@ -334,45 +378,45 @@ export default function Contest({ session }) {
         </div>
 
         {/* HORIZONTAL RESIZE HANDLE */}
-        <div 
+        <div
           onMouseDown={startHorizontalResize}
           className="w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
         >
-          <div className="w-[3px] h-12 bg-gray-600 group-hover:bg-orange-500" />
+          <div className="w-[1px] h-8 bg-gray-600 group-hover:bg-orange-500" />
         </div>
 
         {/* RIGHT PANEL: EDITOR & CONSOLE */}
-        <div 
+        <div
           id="right-panel-container"
           style={{ width: `${100 - leftPanelWidth}%` }}
           className="flex flex-col gap-0 min-w-0 shrink-0"
         >
-          
+
           {/* TOP: EDITOR SECTION */}
-          <div 
+          <div
             style={{ height: `${editorHeight}%` }}
             className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg relative shrink-0"
           >
             <div className="h-10 bg-[#333333] flex items-center justify-between px-3 shrink-0 border-b border-[#3e3e3e]">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#282828] border border-[#3e3e3e]">
-                    <FiCode className="text-xs text-orange-500" />
-                    <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        className="bg-transparent text-[11px] font-bold text-gray-300 outline-none cursor-pointer hover:text-white transition uppercase tracking-wider"
-                    >
-                        <option value="python" className="bg-[#282828]">Python</option>
-                        <option value="cpp" className="bg-[#282828]">C++</option>
-                        <option value="java" className="bg-[#282828]">Java</option>
-                    </select>
+                  <FiCode className="text-xs text-orange-500" />
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="bg-transparent text-[11px] font-bold text-gray-300 outline-none cursor-pointer hover:text-white transition uppercase tracking-wider"
+                  >
+                    <option value="python" className="bg-[#282828]">Python</option>
+                    <option value="cpp" className="bg-[#282828]">C++</option>
+                    <option value="java" className="bg-[#282828]">Java</option>
+                  </select>
                 </div>
               </div>
               <div className="flex items-center gap-3 text-gray-500">
                 <FiSettings className="text-sm cursor-pointer hover:text-white" />
               </div>
             </div>
-            
+
             <div className="flex-1 relative bg-[#1e1e1e]">
               <Editor
                 height="100%"
@@ -399,7 +443,7 @@ export default function Contest({ session }) {
           </div>
 
           {/* VERTICAL RESIZE HANDLE */}
-          <div 
+          <div
             onMouseDown={startVerticalResize}
             className="h-2 hover:bg-orange-500/30 cursor-row-resize transition-colors duration-200 z-10 flex items-center justify-center group shrink-0"
           >
@@ -407,7 +451,7 @@ export default function Contest({ session }) {
           </div>
 
           {/* BOTTOM: CONSOLE SECTION */}
-          <div 
+          <div
             style={{ height: `${100 - editorHeight}%` }}
             className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
           >
@@ -431,14 +475,20 @@ export default function Contest({ session }) {
                 </button>
               </div>
               <div className="px-3">
-                 {statusMessage && (
-                   <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${statusMessage === "Accepted" ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"}`}>
-                            {statusMessage}
-                        </span>
-                        {execTime && <span className="text-[10px] text-gray-500 font-mono">{execTime}s</span>}
-                   </div>
-                 )}
+                {statusMessage && (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded border
+                        ${statusMessage === "Accepted" ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                          statusMessage === "Wrong Answer" ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                            statusMessage === "Running..." ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                              "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}`}
+                    >
+                      {statusMessage}
+                    </span>
+                    {execTime && <span className="text-[10px] text-gray-500 font-mono">{execTime}s</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -446,7 +496,7 @@ export default function Contest({ session }) {
               {rightTab === "testcase" ? (
                 <div className="flex flex-col h-full">
                   <span className="text-[10px] font-bold text-gray-600 uppercase mb-2 tracking-widest">Execution Input</span>
-                  <textarea 
+                  <textarea
                     className="flex-1 w-full bg-[#1e1e1e] p-4 font-mono text-sm text-gray-300 resize-none outline-none border border-[#3e3e3e] rounded-lg focus:border-orange-500/30 transition shadow-inner"
                     placeholder="Enter custom input here..."
                     value={customInput}
@@ -455,19 +505,19 @@ export default function Contest({ session }) {
                 </div>
               ) : (
                 <div className="flex flex-col h-full">
-                   <span className="text-[10px] font-bold text-gray-600 uppercase mb-2 tracking-widest">System Output</span>
-                   <div className="flex-1 w-full bg-[#1e1e1e] p-4 font-mono text-sm rounded-lg border border-[#3e3e3e] overflow-auto shadow-inner">
-                      {isRunning ? (
-                        <div className="flex items-center gap-3 text-orange-500/50 italic animate-pulse">
-                          <FiPlay className="animate-spin text-xs" />
-                          <span className="text-xs uppercase tracking-widest font-bold">Processing transmission...</span>
-                        </div>
-                      ) : (
-                        <pre className={`whitespace-pre-wrap ${statusMessage === "Accepted" ? "text-gray-300" : "text-red-400"}`}>
-                          {output || <span className="text-gray-700 italic opacity-50">Transmit code to receive feedback</span>}
-                        </pre>
-                      )}
-                   </div>
+                  <span className="text-[10px] font-bold text-gray-600 uppercase mb-2 tracking-widest">System Output</span>
+                  <div className="flex-1 w-full bg-[#1e1e1e] p-4 font-mono text-sm rounded-lg border border-[#3e3e3e] overflow-auto shadow-inner">
+                    {isRunning ? (
+                      <div className="flex items-center gap-3 text-orange-500/50 italic animate-pulse">
+                        <FiPlay className="animate-spin text-xs" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Processing transmission...</span>
+                      </div>
+                    ) : (
+                      <pre className={`whitespace-pre-wrap ${statusMessage === "Accepted" ? "text-gray-300" : "text-red-400"}`}>
+                        {output || <span className="text-gray-700 italic opacity-50">Transmit code to receive feedback</span>}
+                      </pre>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -12,9 +12,15 @@ export default function Login({ onJoin }) {
     });
 
     const data = await res.json();
-    if (res.ok) onJoin(data);
-    else alert(data.error);
-  }
+
+if (res.ok) {
+  localStorage.setItem("token", data.token);
+
+  onJoin(data);
+} else {
+  alert(data.error);
+}}
+
 
   return (
     <div className="min-h-screen bg-[#1a0805] text-white font-['Space_Grotesk'] overflow-x-hidden">

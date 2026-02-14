@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
@@ -5,24 +6,9 @@ const pool = require("../db");
 router.post("/join", async (req, res) => {
   try {
     const { token } = req.body;
-    const { contestStartTime, CONTEST_DURATION_MIN, JOIN_WINDOW_MIN } = req.contest;
+    const { contestStartTime, CONTEST_DURATION_MIN, JOIN_WINDOW_MIN } =req.app.locals;
 
-    // 1. Check if contest started
-    if (!contestStartTime) {
-      return res.status(400).json({ error: "Contest not started yet" });
-    }
-
-    const now = new Date();
-    const joinDeadline = new Date(
-      contestStartTime.getTime() + JOIN_WINDOW_MIN * 60 * 1000
-    );
-
-    // 2. Check time window
-    if (now > joinDeadline) {
-      return res.status(403).json({ error: "Join window closed" });
-    }
-
-    // 3. Validate user (Database Check)
+    // ✅ 1. Validate user FIRST
     const userRes = await pool.query(
       "SELECT * FROM users WHERE token = $1",
       [token]
@@ -34,7 +20,26 @@ router.post("/join", async (req, res) => {
 
     const user = userRes.rows[0];
 
-    // 4. Create session
+    // ✅ 2. Check if contest started (participants only)
+    if (!contestStartTime && user.role !== "admin") {
+      return res.status(400).json({ error: "Contest not started yet" });
+    }
+
+    const now = new Date();
+
+    // ✅ 3. Check join window
+    if (contestStartTime) {
+      const joinDeadline = new Date(
+        contestStartTime.getTime() +
+          JOIN_WINDOW_MIN * 60 * 1000
+      );
+
+      if (now > joinDeadline && user.role !== "admin") {
+        return res.status(403).json({ error: "Join window closed" });
+      }
+    }
+
+    // ✅ 4. Create session
     const endTime = new Date(
       now.getTime() + CONTEST_DURATION_MIN * 60 * 1000
     );
@@ -44,13 +49,13 @@ router.post("/join", async (req, res) => {
       [user.id, now, endTime]
     );
 
-    // 5. Assign questions
+    // ✅ 5. Assign questions
     const qRes = await pool.query(
       "SELECT id, title, description, avg_time FROM questions ORDER BY RANDOM() LIMIT 10"
     );
 
     if (qRes.rows.length === 0) {
-        return res.status(500).json({ error: "No questions found in DB" });
+      return res.status(500).json({ error: "No questions found in DB" });
     }
 
     for (const q of qRes.rows) {
@@ -60,8 +65,18 @@ router.post("/join", async (req, res) => {
       );
     }
 
+    // ✅ 6. Generate JWT
+    const jwtToken = jwt.sign(
+      {
+        id: user.id,
+        role: user.role || "participant",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "6h" }
+    );
+
     res.json({
-      userId: user.id,
+      token: jwtToken,
       team: user.team_name,
       college: user.college,
       endTime,
@@ -69,10 +84,11 @@ router.post("/join", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ JOIN ERROR:", err.message); // Look at this in your terminal!
+    console.error("❌ JOIN ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 module.exports = router;
 // const express = require("express");

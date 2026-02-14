@@ -94,39 +94,58 @@ export default function Contest({ session }) {
   };
 
   /* ---------------- SOCKET LOGIC ---------------- */
-  useEffect(() => {
-    if (session?.userId) {
-        socket.emit("join_user", session.userId);
+useEffect(() => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    socket.emit("register", { token });
+  }
+
+  const handleSubmissionResult = (data) => {
+    console.log("Socket received:", data);
+
+    if (!isWaitingForResponse.current) return;
+
+    setIsRunning(false);
+    isWaitingForResponse.current = false;
+    setRightTab("result");
+
+    if (data.status === "ACCEPTED") {
+      const cleanOutput = data.stdout
+        ? data.stdout.trimEnd()
+        : "Program finished successfully (No Output).";
+
+      setOutput(cleanOutput);
+      setExecTime(data.time);
+      setStatusMessage("Accepted");
+    } else {
+      const errorMsg =
+        data.stderr || data.error || data.stdout || "Unknown Error";
+
+      setOutput(errorMsg);
+      setStatusMessage(data.status || "Runtime Error");
     }
+  };
 
-    const handleSubmissionResult = (data) => {
-      console.log("Socket received:", data);
+  // ✅ NEW: force logout listener
+  const handleForceLogout = () => {
+    alert("You logged in from another device.");
 
-      if (!isWaitingForResponse.current) return;
+    localStorage.removeItem("token");
 
-      setIsRunning(false);
-      isWaitingForResponse.current = false;
-      setRightTab("result");
+    window.location.href = "/";
+  };
 
-      // Handle Output
-      if (data.status === "ACCEPTED") {
-        const cleanOutput = data.stdout ? data.stdout.trimEnd() : "Program finished successfully (No Output).";
-        setOutput(cleanOutput);
-        setExecTime(data.time);
-        setStatusMessage("Accepted");
-      } else {
-        const errorMsg = data.stderr || data.error || data.stdout || "Unknown Error";
-        setOutput(errorMsg);
-        setStatusMessage(data.status || "Runtime Error");
-      }
-    };
+  socket.on("submission_result", handleSubmissionResult);
+  socket.on("force_logout", handleForceLogout);
 
-    socket.on("submission_result", handleSubmissionResult);
+  return () => {
+    socket.off("submission_result", handleSubmissionResult);
+    socket.off("force_logout", handleForceLogout);
+  };
+}, []);
 
-    return () => {
-      socket.off("submission_result", handleSubmissionResult);
-    };
-  }, [session.userId]);
+
 
   /* ---------------- HANDLERS ---------------- */
   function openQuestion(q) {

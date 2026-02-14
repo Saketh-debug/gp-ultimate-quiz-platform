@@ -1,12 +1,13 @@
 // routes/question.js
+const authenticate = require("../middleware/verify");
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
 
 // Open a question (start timer if first time)
-router.post("/open", async (req, res) => {
-  const { userId, questionId } = req.body;
-
+router.post("/open", authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const { questionId } = req.body;
   try {
     // 1. Check if exam is over for this user
     const s = await pool.query(
@@ -50,9 +51,11 @@ module.exports = router;
 
 // <------------------------------------------------------------------------------->
 // Submit a question
-router.post("/submit", async (req, res) => {
-  try {
-    const { userId, questionId, isCorrect } = req.body;
+router.post("/submit", authenticate, async (req, res) => {
+  try{
+  const userId = req.user.id;
+  const { questionId, isCorrect } = req.body;
+
 
     // 1) Check if exam is over for this user
     const s = await pool.query(

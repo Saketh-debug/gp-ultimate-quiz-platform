@@ -20,8 +20,8 @@ const io = new Server(server, {
 });
 
 let contestStartTime = null;
-const CONTEST_DURATION_MIN = 60;
-const JOIN_WINDOW_MIN = 15;
+const CONTEST_DURATION_MIN = 300;
+const JOIN_WINDOW_MIN = 300;
 
 // Health check
 app.get("/", async (req, res) => {

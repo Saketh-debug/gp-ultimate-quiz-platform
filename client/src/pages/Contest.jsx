@@ -2,6 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import Editor from "@monaco-editor/react";
 import axios from "axios";
+import { 
+  FiPlay, FiUpload, FiSettings, FiUser, FiClock, 
+  FiChevronLeft, FiChevronRight, FiList, FiTerminal,
+  FiFileText, FiCheckCircle, FiCode, FiZap
+} from "react-icons/fi";
 
 // Configuration
 const BACKEND_URL = "http://localhost:3100";
@@ -16,7 +21,7 @@ const LANGUAGE_IDS = {
 export default function Contest({ session }) {
   // --- STATE ---
   const [language, setLanguage] = useState("python");
-  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(session.questions?.[0] || null);
   const [codes, setCodes] = useState({});
   
   // Execution State
@@ -27,9 +32,66 @@ export default function Contest({ session }) {
   const [statusMessage, setStatusMessage] = useState(""); 
 
   // UI State
-  const [isPanelExpanded, setIsPanelExpanded] = useState(false); // Controls bottom panel height
+  const [leftTab, setLeftTab] = useState("description"); // description, editorial, solutions, submissions
+  const [rightTab, setRightTab] = useState("testcase"); // testcase, result
+  const [isProblemListOpen, setIsProblemListOpen] = useState(false);
+  
+  // Resizing State
+  const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
+  const [editorHeight, setEditorHeight] = useState(60); // percentage
+  const isResizingHorizontal = useRef(false);
+  const isResizingVertical = useRef(false);
   
   const isWaitingForResponse = useRef(false);
+
+  /* ---------------- RESIZING LOGIC ---------------- */
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isResizingHorizontal.current) {
+        const newWidth = (e.clientX / window.innerWidth) * 100;
+        if (newWidth > 20 && newWidth < 80) {
+          setLeftPanelWidth(newWidth);
+        }
+      }
+      
+      if (isResizingVertical.current) {
+        const container = document.getElementById("right-panel-container");
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const newHeight = ((e.clientY - rect.top) / rect.height) * 100;
+          if (newHeight > 20 && newHeight < 85) {
+            setEditorHeight(newHeight);
+          }
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingHorizontal.current = false;
+      isResizingVertical.current = false;
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "auto";
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  const startHorizontalResize = () => {
+    isResizingHorizontal.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const startVerticalResize = () => {
+    isResizingVertical.current = true;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  };
 
   /* ---------------- SOCKET LOGIC ---------------- */
   useEffect(() => {
@@ -44,17 +106,18 @@ export default function Contest({ session }) {
 
       setIsRunning(false);
       isWaitingForResponse.current = false;
+      setRightTab("result");
 
       // Handle Output
       if (data.status === "ACCEPTED") {
         const cleanOutput = data.stdout ? data.stdout.trimEnd() : "Program finished successfully (No Output).";
         setOutput(cleanOutput);
         setExecTime(data.time);
-        setStatusMessage("Success");
+        setStatusMessage("Accepted");
       } else {
         const errorMsg = data.stderr || data.error || data.stdout || "Unknown Error";
         setOutput(errorMsg);
-        setStatusMessage(`Error: ${data.status}`);
+        setStatusMessage(data.status || "Runtime Error");
       }
     };
 
@@ -66,12 +129,13 @@ export default function Contest({ session }) {
   }, [session.userId]);
 
   /* ---------------- HANDLERS ---------------- */
-  async function openQuestion(q) {
+  function openQuestion(q) {
     setCurrentQuestion(q);
     setStatusMessage("");
     setOutput(""); 
     setExecTime(null);
-    setIsPanelExpanded(false); // Collapse panel when switching questions
+    setLeftTab("description");
+    setIsProblemListOpen(false);
   }
 
   async function handleRun() {
@@ -80,9 +144,8 @@ export default function Contest({ session }) {
         return;
     }
     
-    // 1. EXPAND PANEL & SHOW "RUNNING"
-    setIsPanelExpanded(true); 
     setIsRunning(true);
+    setRightTab("result");
     setOutput("Executing...");
     setExecTime(null);
     setStatusMessage("Running...");
@@ -114,180 +177,303 @@ export default function Contest({ session }) {
 
   /* ================= UI RENDER ================= */
   return (
-    <div className="h-screen flex flex-col bg-[#1a0805] text-white font-['Space_Grotesk']">
+    <div className="h-screen flex flex-col bg-[#1a1a1a] text-[#eff1f6] font-sans overflow-hidden">
 
-      {/* HEADER */}
-      <header className="h-14 bg-black/40 border-b border-white/10 flex items-center justify-between px-6 backdrop-blur-md shrink-0">
-        <div>
-          <h3 className="font-bold text-orange-500">{session.team || "Team Name"}</h3>
-          <p className="text-xs text-white/50">{session.college || "College"}</p>
+      {/* TOP NAVIGATION BAR */}
+      <nav className="h-[50px] bg-[#282828] border-b border-[#3e3e3e] flex items-center justify-between px-4 shrink-0 z-50">
+        <div className="flex items-center gap-4 relative">
+          <div 
+            onClick={() => setIsProblemListOpen(!isProblemListOpen)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white cursor-pointer transition py-2"
+          >
+            <FiList className="text-lg" />
+            <span>Problem List</span>
+          </div>
+          
+          {/* DROPDOWN PROBLEM LIST */}
+          {isProblemListOpen && (
+            <div className="absolute top-12 left-0 w-80 bg-[#282828] border border-[#3e3e3e] rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-3 bg-[#333333] border-b border-[#3e3e3e] text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    Select Mission
+                </div>
+                <div className="max-h-96 overflow-y-auto py-1">
+                    {(session.questions || []).map((q, i) => (
+                        <button
+                            key={q.id}
+                            onClick={() => openQuestion(q)}
+                            className={`w-full text-left px-4 py-3 text-sm hover:bg-[#3e3e3e] transition-colors flex items-center gap-3
+                                ${currentQuestion?.id === q.id ? "text-orange-500 bg-[#333333]" : "text-gray-300"}`}
+                        >
+                            <span className="text-xs font-mono opacity-40">0{i + 1}</span>
+                            <span className="truncate">{q.title}</span>
+                            {currentQuestion?.id === q.id && <FiZap className="ml-auto text-orange-500" />}
+                        </button>
+                    ))}
+                </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-gray-400">
+            <FiChevronLeft className="cursor-pointer hover:text-white" />
+            <FiChevronRight className="cursor-pointer hover:text-white" />
+          </div>
         </div>
-        <div className="text-orange-500 font-mono font-bold tracking-widest">
-            00:00:00
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRun}
+            disabled={isRunning}
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#3e3e3e] hover:bg-[#4e4e4e] rounded text-sm font-medium transition disabled:opacity-50 min-w-[80px] justify-center"
+          >
+            <FiPlay className={`text-xs ${isRunning ? 'animate-pulse' : 'text-green-500 fill-green-500'}`} />
+            <span>{isRunning ? "Running" : "Run"}</span>
+          </button>
+          <button
+            onClick={submit}
+            className="flex items-center gap-2 px-4 py-1.5 bg-[#3e3e3e] hover:bg-[#4e4e4e] text-orange-500 rounded text-sm font-bold transition"
+          >
+            <FiUpload className="text-xs" />
+            <span>Submit</span>
+          </button>
         </div>
-      </header>
 
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* SIDEBAR */}
-        <aside className="w-[350px] bg-black/20 border-r border-white/10 flex flex-col shrink-0">
-          <div className="p-4 border-b border-white/10">
-            <h3 className="text-xs font-bold text-orange-500/50 uppercase tracking-widest mb-2">
-                Mission Objectives
-            </h3>
-            <div className="flex flex-col gap-2">
-                {(session.questions || []).map((q, i) => (
-                    <button
-                    key={q.id}
-                    onClick={() => openQuestion(q)}
-                    className={`w-full text-left px-4 py-3 rounded border transition-all duration-200
-                        ${currentQuestion?.id === q.id 
-                        ? "bg-orange-500/10 border-orange-500 text-orange-100 shadow-[0_0_15px_rgba(249,115,22,0.1)]" 
-                        : "bg-white/5 border-transparent text-white/60 hover:bg-white/10 hover:text-white"}`}
-                    >
-                    <span className="text-xs font-mono opacity-50 mr-2">#{i + 1}</span>
-                    {q.title}
-                    </button>
-                ))}
+        <div className="flex items-center gap-4 text-gray-400">
+          <FiSettings className="cursor-pointer hover:text-white" />
+          <div className="flex items-center gap-2 text-sm font-mono bg-[#333333] px-3 py-1 rounded-full text-orange-400 border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]">
+            <FiClock />
+            <span>00:00:00</span>
+          </div>
+          <div className="flex items-center gap-2 hover:text-white cursor-pointer group transition">
+            <span className="text-xs font-medium hidden md:block text-gray-400 group-hover:text-white">{session.team || "Team"}</span>
+            <div className="w-8 h-8 rounded-full bg-[#3e3e3e] flex items-center justify-center border border-[#4e4e4e]">
+              <FiUser />
             </div>
           </div>
+        </div>
+      </nav>
 
-          <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex flex-1 overflow-hidden p-2 gap-0 bg-[#1a1a1a]">
+
+        {/* LEFT PANEL: PROBLEM DESCRIPTION */}
+        <div 
+          style={{ width: `${leftPanelWidth}%` }}
+          className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
+        >
+          {/* Tabs Header */}
+          <div className="h-10 bg-[#333333] flex items-center px-2 shrink-0 border-b border-[#3e3e3e]">
+            {[
+              { id: "description", label: "Description", icon: <FiFileText /> },
+              { id: "submissions", label: "Submissions", icon: <FiClock /> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setLeftTab(tab.id)}
+                className={`flex items-center gap-2 px-4 h-full text-xs font-medium border-b-2 transition
+                  ${leftTab === tab.id ? "border-orange-500 text-white bg-[#282828]" : "border-transparent text-gray-400 hover:text-gray-200"}`}
+              >
+                <span className={leftTab === tab.id ? "text-orange-500" : ""}>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[#4e4e4e]">
             {currentQuestion ? (
-              <>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+              <div className="max-w-3xl">
+                <h1 className="text-2xl font-black mb-3 tracking-tight">
                   {currentQuestion.title}
-                </h2>
-                <div className="h-1 w-10 bg-orange-500 mt-2 mb-6"/>
-                <p className="text-white/70 leading-relaxed font-sans text-sm">
-                  {currentQuestion.description}
-                </p>
-              </>
+                </h1>
+                <div className="flex items-center gap-3 mb-8">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">Easy</span>
+                  <span className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-300 transition">
+                    <FiSettings className="rotate-90 text-[10px]" /> Topics
+                  </span>
+                  <span className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-300 transition">
+                    <FiUser className="text-[10px]" /> Companies
+                  </span>
+                </div>
+
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <p className="text-[#eff1f6] leading-relaxed mb-8 whitespace-pre-wrap font-sans text-sm opacity-90">
+                    {currentQuestion.description}
+                  </p>
+                  
+                  {/* Mock Examples if description doesn't have them */}
+                  {!currentQuestion.description?.includes("Example") && (
+                    <div className="space-y-6">
+                      <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e]">
+                        <h4 className="text-xs font-bold uppercase tracking-widest mb-3 text-orange-500/80">Example 1:</h4>
+                        <div className="font-mono text-sm space-y-2">
+                          <div className="flex gap-2">
+                            <span className="text-gray-500 font-bold w-12 shrink-0">Input:</span>
+                            <code className="text-gray-300">nums = [2,7,11,15], target = 9</code>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-gray-500 font-bold w-12 shrink-0">Output:</span>
+                            <code className="text-gray-300">[0,1]</code>
+                          </div>
+                          <div className="flex gap-2 mt-2 pt-2 border-t border-white/5 text-xs text-gray-400 italic">
+                            <span>Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-white/20">
-                <span className="text-4xl mb-2">⚡</span>
-                <p>Select a transmission to decode</p>
+              <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                <div className="w-16 h-16 rounded-full bg-[#333333] flex items-center justify-center mb-4 border border-[#3e3e3e]">
+                    <FiList className="text-2xl opacity-50" />
+                </div>
+                <p className="text-sm font-medium">Select a mission from the list</p>
               </div>
             )}
           </div>
-        </aside>
+        </div>
 
-        {/* MAIN AREA */}
-        <section className="flex-1 flex flex-col min-w-0">
+        {/* HORIZONTAL RESIZE HANDLE */}
+        <div 
+          onMouseDown={startHorizontalResize}
+          className="w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+        >
+          <div className="w-[3px] h-12 bg-gray-600 group-hover:bg-orange-500" />
+        </div>
 
-          {/* LANGUAGE BAR */}
-          <div className="h-10 border-b border-white/10 bg-black/40 flex items-center justify-between px-4 shrink-0">
-            <span className="text-xs font-bold text-orange-500/50 uppercase tracking-widest">
-              source_code.{language}
-            </span>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-transparent border border-white/20 text-xs px-3 py-1 rounded text-white/70 focus:border-orange-500 outline-none"
-            >
-              <option value="python" className="text-black">Python</option>
-              <option value="cpp" className="text-black">C++</option>
-              <option value="java" className="text-black">Java</option>
-            </select>
-          </div>
-
-          {/* EDITOR (Flex-1 to take remaining space) */}
-          <div className="flex-1 relative bg-[#050303] min-h-0">
-            <Editor
-              height="100%"
-              language={language === "cpp" ? "cpp" : language}
-              theme="vs-dark"
-              value={currentQuestion ? codes[currentQuestion.id] || "" : ""}
-              onChange={(value) =>
-                currentQuestion &&
-                setCodes(prev => ({ ...prev, [currentQuestion.id]: value || "" }))
-              }
-              options={{
-                fontSize: 15,
-                fontFamily: "'JetBrains Mono', monospace",
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                padding: { top: 16 }
-              }}
-            />
-          </div>
-
-          {/* BOTTOM PANEL (Persistent Container) */}
+        {/* RIGHT PANEL: EDITOR & CONSOLE */}
+        <div 
+          id="right-panel-container"
+          style={{ width: `${100 - leftPanelWidth}%` }}
+          className="flex flex-col gap-0 min-w-0 shrink-0"
+        >
+          
+          {/* TOP: EDITOR SECTION */}
           <div 
-            className={`border-t border-white/10 bg-[#0a0505] flex flex-col transition-all duration-300 ease-in-out shrink-0
-              ${isPanelExpanded ? "h-[300px]" : "h-16"}`} // Collapsed: 64px, Expanded: 300px
+            style={{ height: `${editorHeight}%` }}
+            className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg relative shrink-0"
           >
-            {/* CONTROL BAR */}
-            <div className="h-16 flex items-center justify-between px-6 border-b border-white/5 shrink-0">
-              <button 
-                onClick={() => setIsPanelExpanded(!isPanelExpanded)}
-                className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/40 hover:text-white transition"
-              >
-                <span>{isPanelExpanded ? "▼ Collapse" : "▲ Expand Console"}</span>
-              </button>
-
-              <div className="text-xs font-mono">
-                {statusMessage && (
-                   <span className={statusMessage.includes("Error") ? "text-red-500" : "text-emerald-500"}>
-                     {statusMessage} {execTime && `(${execTime}s)`}
-                   </span>
-                )}
-              </div>
-
-              <div className="flex gap-4">
-                <button
-                  onClick={handleRun}
-                  disabled={isRunning}
-                  className={`px-6 py-1.5 border text-xs font-bold rounded transition uppercase tracking-wider flex items-center gap-2
-                      ${isRunning 
-                          ? "border-white/10 text-white/30 cursor-wait"
-                          : "border-orange-500/50 text-orange-500 hover:bg-orange-500/10"}`}
-                >
-                  {isRunning && <span className="animate-spin">⟳</span>}
-                  {isRunning ? "Running..." : "Run Code"}
-                </button>
-
-                <button
-                  onClick={submit}
-                  className="px-8 py-1.5 bg-orange-600 text-white text-xs font-bold rounded hover:bg-orange-500 shadow-lg shadow-orange-600/20 transition uppercase tracking-wider"
-                >
-                  Submit
-                </button>
-              </div>
-            </div>
-
-            {/* EXPANDED CONTENT (Input / Output Split) */}
-            <div className={`flex-1 flex overflow-hidden ${!isPanelExpanded && "hidden"}`}>
-              
-              {/* LEFT: INPUT */}
-              <div className="w-1/2 border-r border-white/10 flex flex-col p-4">
-                <h3 className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-2">
-                  Input
-                </h3>
-                <textarea 
-                  className="flex-1 w-full bg-white/5 p-3 font-mono text-sm text-white/80 resize-none outline-none border border-white/10 rounded focus:border-orange-500/50"
-                  placeholder="Enter input here..."
-                  value={customInput}
-                  onChange={(e) => setCustomInput(e.target.value)}
-                />
-              </div>
-
-              {/* RIGHT: OUTPUT */}
-              <div className="w-1/2 flex flex-col p-4 bg-black/20">
-                <h3 className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-2">
-                  Output
-                </h3>
-                <div className="flex-1 w-full overflow-auto rounded border border-white/5 bg-[#050303] p-3">
-                  <pre className={`font-mono text-sm whitespace-pre-wrap ${output.toLowerCase().includes("error") ? "text-red-400" : "text-emerald-400"}`}>
-                    {output || <span className="text-white/20 italic">Run code to see output...</span>}
-                  </pre>
+            <div className="h-10 bg-[#333333] flex items-center justify-between px-3 shrink-0 border-b border-[#3e3e3e]">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#282828] border border-[#3e3e3e]">
+                    <FiCode className="text-xs text-orange-500" />
+                    <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="bg-transparent text-[11px] font-bold text-gray-300 outline-none cursor-pointer hover:text-white transition uppercase tracking-wider"
+                    >
+                        <option value="python" className="bg-[#282828]">Python</option>
+                        <option value="cpp" className="bg-[#282828]">C++</option>
+                        <option value="java" className="bg-[#282828]">Java</option>
+                    </select>
                 </div>
               </div>
-
+              <div className="flex items-center gap-3 text-gray-500">
+                <FiSettings className="text-sm cursor-pointer hover:text-white" />
+              </div>
+            </div>
+            
+            <div className="flex-1 relative bg-[#1e1e1e]">
+              <Editor
+                height="100%"
+                language={language === "cpp" ? "cpp" : language}
+                theme="vs-dark"
+                value={currentQuestion ? codes[currentQuestion.id] || "" : ""}
+                onChange={(value) =>
+                  currentQuestion &&
+                  setCodes(prev => ({ ...prev, [currentQuestion.id]: value || "" }))
+                }
+                options={{
+                  fontSize: 14,
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 12 },
+                  cursorStyle: 'block',
+                  lineHeight: 22,
+                  renderLineHighlight: 'all'
+                }}
+              />
             </div>
           </div>
 
-        </section>
+          {/* VERTICAL RESIZE HANDLE */}
+          <div 
+            onMouseDown={startVerticalResize}
+            className="h-2 hover:bg-orange-500/30 cursor-row-resize transition-colors duration-200 z-10 flex items-center justify-center group shrink-0"
+          >
+            <div className="h-[1px] w-8 bg-gray-600 group-hover:bg-orange-500" />
+          </div>
+
+          {/* BOTTOM: CONSOLE SECTION */}
+          <div 
+            style={{ height: `${100 - editorHeight}%` }}
+            className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
+          >
+            <div className="h-10 bg-[#333333] flex items-center px-2 shrink-0 border-b border-[#3e3e3e] justify-between">
+              <div className="flex h-full">
+                <button
+                  onClick={() => setRightTab("testcase")}
+                  className={`flex items-center gap-2 px-4 h-full text-xs font-medium border-b-2 transition
+                    ${rightTab === "testcase" ? "border-orange-500 text-white bg-[#282828]" : "border-transparent text-gray-400 hover:text-gray-200"}`}
+                >
+                  <FiTerminal className={rightTab === "testcase" ? "text-orange-500" : "text-green-500"} />
+                  Testcase
+                </button>
+                <button
+                  onClick={() => setRightTab("result")}
+                  className={`flex items-center gap-2 px-4 h-full text-xs font-medium border-b-2 transition
+                    ${rightTab === "result" ? "border-orange-500 text-white bg-[#282828]" : "border-transparent text-gray-400 hover:text-gray-200"}`}
+                >
+                  <FiZap className={rightTab === "result" ? "text-orange-500" : "text-blue-500"} />
+                  Test Result
+                </button>
+              </div>
+              <div className="px-3">
+                 {statusMessage && (
+                   <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${statusMessage === "Accepted" ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"}`}>
+                            {statusMessage}
+                        </span>
+                        {execTime && <span className="text-[10px] text-gray-500 font-mono">{execTime}s</span>}
+                   </div>
+                 )}
+              </div>
+            </div>
+
+            <div className="flex-1 p-4 overflow-hidden flex flex-col bg-[#1a1a1a]/50">
+              {rightTab === "testcase" ? (
+                <div className="flex flex-col h-full">
+                  <span className="text-[10px] font-bold text-gray-600 uppercase mb-2 tracking-widest">Execution Input</span>
+                  <textarea 
+                    className="flex-1 w-full bg-[#1e1e1e] p-4 font-mono text-sm text-gray-300 resize-none outline-none border border-[#3e3e3e] rounded-lg focus:border-orange-500/30 transition shadow-inner"
+                    placeholder="Enter custom input here..."
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col h-full">
+                   <span className="text-[10px] font-bold text-gray-600 uppercase mb-2 tracking-widest">System Output</span>
+                   <div className="flex-1 w-full bg-[#1e1e1e] p-4 font-mono text-sm rounded-lg border border-[#3e3e3e] overflow-auto shadow-inner">
+                      {isRunning ? (
+                        <div className="flex items-center gap-3 text-orange-500/50 italic animate-pulse">
+                          <FiPlay className="animate-spin text-xs" />
+                          <span className="text-xs uppercase tracking-widest font-bold">Processing transmission...</span>
+                        </div>
+                      ) : (
+                        <pre className={`whitespace-pre-wrap ${statusMessage === "Accepted" ? "text-gray-300" : "text-red-400"}`}>
+                          {output || <span className="text-gray-700 italic opacity-50">Transmit code to receive feedback</span>}
+                        </pre>
+                      )}
+                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );

@@ -2,10 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import Editor from "@monaco-editor/react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { 
   FiPlay, FiUpload, FiSettings, FiUser, FiClock, 
   FiChevronLeft, FiChevronRight, FiList, FiTerminal,
-  FiFileText, FiCheckCircle, FiCode, FiZap
+  FiFileText, FiCheckCircle, FiCode, FiZap, FiTag, FiBriefcase, FiHelpCircle
 } from "react-icons/fi";
 
 // Configuration
@@ -300,45 +302,42 @@ useEffect(() => {
           <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[#4e4e4e]">
             {currentQuestion ? (
               <div className="max-w-3xl">
-                <h1 className="text-2xl font-black mb-3 tracking-tight">
-                  {currentQuestion.title}
-                </h1>
-                <div className="flex items-center gap-3 mb-8">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">Easy</span>
-                  <span className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-300 transition">
-                    <FiSettings className="rotate-90 text-[10px]" /> Topics
-                  </span>
-                  <span className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer hover:text-gray-300 transition">
-                    <FiUser className="text-[10px]" /> Companies
-                  </span>
+                <div className="flex items-center justify-between mb-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-white">
+                    {(session.questions?.findIndex(q => q.id === currentQuestion.id) + 1) || 1}. {currentQuestion.title}
+                  </h1>
+                  
                 </div>
 
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <p className="text-[#eff1f6] leading-relaxed mb-8 whitespace-pre-wrap font-sans text-sm opacity-90">
+               
+                  <h4 className="text-lg font-bold mb-4 text-white">Description</h4>  
+
+                <div className="prose prose-invert prose-sm max-w-none markdown-content">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
+                      code: ({ inline, children, ...props }) => {
+                        return inline ? (
+                          <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
+                            {children}
+                          </code>
+                        ) : (
+                          <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
+                            <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
+                          </div>
+                        );
+                      },
+                      strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                      em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
+                      h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
+                      h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
+                      li: ({ children }) => <li className="text-gray-300">{children}</li>
+                    }}
+                  >
                     {currentQuestion.description}
-                  </p>
-                  
-                  {/* Mock Examples if description doesn't have them */}
-                  {!currentQuestion.description?.includes("Example") && (
-                    <div className="space-y-6">
-                      <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e]">
-                        <h4 className="text-xs font-bold uppercase tracking-widest mb-3 text-orange-500/80">Example 1:</h4>
-                        <div className="font-mono text-sm space-y-2">
-                          <div className="flex gap-2">
-                            <span className="text-gray-500 font-bold w-12 shrink-0">Input:</span>
-                            <code className="text-gray-300">nums = [2,7,11,15], target = 9</code>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className="text-gray-500 font-bold w-12 shrink-0">Output:</span>
-                            <code className="text-gray-300">[0,1]</code>
-                          </div>
-                          <div className="flex gap-2 mt-2 pt-2 border-t border-white/5 text-xs text-gray-400 italic">
-                            <span>Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </ReactMarkdown>
                 </div>
               </div>
             ) : (
@@ -374,8 +373,17 @@ useEffect(() => {
           >
             <div className="h-10 bg-[#333333] flex items-center justify-between px-3 shrink-0 border-b border-[#3e3e3e]">
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#282828] border border-[#3e3e3e]">
+                <div className="flex items-center gap-2 px-2 py-1">
                     <FiCode className="text-xs text-orange-500" />
+                    <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">
+                        {language === "python" ? "Main.py" : language === "cpp" ? "Main.cpp" : "Main.java"}
+                    </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#282828] border border-[#3e3e3e]">
+                    <FiSettings className="text-xs text-gray-400" />
                     <select
                         value={language}
                         onChange={(e) => setLanguage(e.target.value)}
@@ -386,9 +394,6 @@ useEffect(() => {
                         <option value="java" className="bg-[#282828]">Java</option>
                     </select>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 text-gray-500">
-                <FiSettings className="text-sm cursor-pointer hover:text-white" />
               </div>
             </div>
             

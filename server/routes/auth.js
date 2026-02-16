@@ -50,7 +50,7 @@ router.post("/join", async (req, res) => {
     );
 
     if (qRes.rows.length === 0) {
-        return res.status(500).json({ error: "No questions found in DB" });
+      return res.status(500).json({ error: "No questions found in DB" });
     }
 
     for (const q of qRes.rows) {

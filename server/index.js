@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -18,6 +19,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
 });
+app.set("io", io); // Make io available in routes
 
 let contestStartTime = null;
 const CONTEST_DURATION_MIN = 300;
@@ -63,6 +65,11 @@ app.use((req, res, next) => {
 
 app.use("/auth", authRoutes);
 app.use("/question", questionRoutes);
+const rapidFireRoutes = require("./routes/rapidfire");
+app.use("/rapidfire", rapidFireRoutes);
+
+const adminRoutes = require("./routes/admin");
+app.use("/admin", adminRoutes);
 
 // Socket logic
 io.on("connection", (socket) => {
@@ -92,6 +99,6 @@ io.on("connection", (socket) => {
   });
 });
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

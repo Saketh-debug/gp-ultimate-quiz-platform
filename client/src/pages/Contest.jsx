@@ -11,7 +11,7 @@ import {
 } from "react-icons/fi";
 
 // Configuration
-const BACKEND_URL = "http://localhost:3100";
+const BACKEND_URL = import.meta.env.VITE_SUBMISSION_URL;
 const socket = io(BACKEND_URL);
 
 const LANGUAGE_IDS = {

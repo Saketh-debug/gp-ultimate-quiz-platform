@@ -5,7 +5,7 @@ export default function Login({ onJoin }) {
   const [token, setToken] = useState("");
 
   async function handleJoin() {
-    const res = await fetch("http://localhost:3000/auth/join", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),

@@ -118,7 +118,7 @@ function Rounds() {
 
               <Link to="/rapidfire">
                 <button className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-xl transition">
-                  Know More
+                  Join Round
                 </button>
               </Link>
             </div>
@@ -148,7 +148,7 @@ function Rounds() {
 
               <Link to="/cascade">
                 <button className="mt-6 w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-bold transition">
-                  Know More
+                  Join Round
                 </button>
               </Link>
             </div>
@@ -177,7 +177,7 @@ function Rounds() {
               </h4>
               <Link to="/dsa">
                 <button className="mt-6 w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-bold transition">
-                  Know More
+                  Join Round
                 </button>
               </Link>
             </div>

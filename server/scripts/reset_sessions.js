@@ -16,11 +16,15 @@ async function resetSessions() {
     try {
         console.log("🔌 Connecting to DB...");
 
-        // Truncate user_sessions and user_questions to clear all progress
-        console.log("🗑️  Clearing 'user_sessions' and 'user_questions'...");
-        await pool.query(`TRUNCATE TABLE user_sessions, user_questions RESTART IDENTITY CASCADE;`);
+        // Truncate user_sessions, user_questions, cascade, and dsa tables to clear all progress
+        console.log("🗑️  Clearing 'user_sessions', 'user_questions', 'cascade_sessions', 'cascade_user_questions', 'dsa_sessions', 'dsa_user_questions'...");
+        await pool.query(`TRUNCATE TABLE user_sessions, user_questions, cascade_sessions, cascade_user_questions, dsa_sessions, dsa_user_questions RESTART IDENTITY CASCADE;`);
 
-        console.log("✅ Sessions cleared. You can now join as a new user.");
+        // Reset all round scores to 0
+        console.log("🗑️  Resetting user scores...");
+        await pool.query(`UPDATE users SET rapidfire_score = 0, cascade_score = 0, dsa_score = 0;`);
+
+        console.log("✅ Sessions and scores cleared. You can now join as a new user.");
         process.exit(0);
 
     } catch (err) {

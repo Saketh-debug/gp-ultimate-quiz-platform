@@ -1,6 +1,44 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 function DSA() {
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  // Clear stale token on mount
+  useEffect(() => {
+    localStorage.removeItem("dsaToken");
+  }, []);
+
+  async function handleJoin() {
+    if (!token) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/dsa/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem("dsaToken", token); // Store for reload/resume
+        navigate("/dsa-contest", { state: { session: data } });
+      } else {
+        setError(data.error || "Failed to join");
+      }
+    } catch (err) {
+      setError("Connection error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0c0202] text-slate-100 font-['Space_Grotesk'] overflow-x-hidden">
 
@@ -13,11 +51,11 @@ function DSA() {
 
           {/* LEFT */}
           <div className="flex items-center gap-8">
-            <button className="size-10 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/5 transition">
+            <Link to="/" className="size-10 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/5 transition">
               <span className="material-symbols-outlined text-slate-400 hover:text-[#f43f5e]">
                 arrow_back
               </span>
-            </button>
+            </Link>
 
             <div className="flex flex-col">
               <div className="flex items-center gap-2 mb-1">
@@ -36,33 +74,11 @@ function DSA() {
           </div>
 
           {/* RIGHT */}
-          <div className="flex items-center gap-6">
-
-            <div className="flex gap-8 px-6 py-2 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex flex-col">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                  Window Closes
-                </span>
-                <span className="text-lg font-mono font-bold text-[#f43f5e]">
-                  02:45:12
-                </span>
-              </div>
-
-              <div className="border-l border-white/10 pl-6">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                  Current Pts
-                </span>
-                <span className="text-lg font-mono font-bold text-white">
-                  450
-                </span>
-              </div>
-            </div>
-
-            <button className="bg-[#f43f5e] hover:bg-red-500 text-white px-6 h-12 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-[#f43f5e]/20 transition hover:scale-[1.02] active:scale-95 text-sm uppercase tracking-widest">
-              <span className="material-symbols-outlined">rocket_launch</span>
-              INITIATE (Q3)
-            </button>
-
+          <div className="flex items-center gap-3">
+            <div className="size-2.5 rounded-full bg-[#f43f5e] animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.8)]"></div>
+            <span className="text-sm font-bold tracking-[0.3em] uppercase text-[#f43f5e]/80">
+              Central Hub Active
+            </span>
           </div>
         </div>
       </header>
@@ -92,24 +108,71 @@ function DSA() {
               </h2>
 
               <p className="text-slate-300 text-lg max-w-xl leading-relaxed">
-                Navigate the digital dunes. Solve algorithmic complexities to
+                Navigate the digital dunes. Solve complex algorithmic challenges to
                 establish a secure comm-link across the Martian surface.
               </p>
+
+              {/* START PANEL */}
+              <div className="mt-10 bg-black/40 backdrop-blur-xl border border-[#f43f5e]/20 rounded-3xl p-8 max-w-md">
+                <h3 className="text-xl font-bold mb-3">
+                  Initiate Ascent
+                </h3>
+
+                <p className="text-white/50 mb-6 text-sm">
+                  Enter your secure access token to authorize entry into the DSA challenge sequence.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex h-14 rounded-2xl overflow-hidden bg-black/60 border border-[#f43f5e]/30 shadow-inner focus-within:border-[#f43f5e]/80 transition-colors">
+                    <div className="flex items-center px-4 text-[#f43f5e]">
+                      <span className="material-symbols-outlined font-light">key</span>
+                    </div>
+
+                    <input
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+                      placeholder="ENTER ACCESS TOKEN"
+                      className="flex-1 bg-transparent px-2 text-white placeholder:text-[#f43f5e]/30 font-mono tracking-widest text-sm focus:outline-none"
+                    />
+
+                    <button
+                      onClick={handleJoin}
+                      disabled={loading || !token}
+                      className="px-6 bg-[#f43f5e] hover:bg-[#fb923c] text-white font-bold transition shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                      ) : (
+                        <>
+                          JOIN <span className="material-symbols-outlined text-sm">chevron_right</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {error && (
+                    <p className="text-red-500 text-xs font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
+                      {error}
+                    </p>
+                  )}
+                </div>
+              </div>
+
             </div>
 
             {/* RIGHT STATS */}
             <div className="col-span-12 lg:col-span-5 flex flex-col justify-end gap-6">
               <div className="grid grid-cols-2 gap-6">
-
                 <div className="bg-white/[0.03] backdrop-blur-md p-8 rounded-[2rem] border border-white/10">
                   <p className="text-[10px] text-slate-500 uppercase font-bold">
-                    Max Resource
+                    Tasks
                   </p>
                   <p className="text-4xl font-bold text-white">
-                    1,500<span className="text-[#f43f5e]">.</span>
+                    5<span className="text-[#f43f5e]">.</span>
                   </p>
                   <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold">
-                    Points Available
+                    Fixed Order Questions
                   </p>
                 </div>
 
@@ -118,14 +181,13 @@ function DSA() {
                     Mission Time
                   </p>
                   <p className="text-4xl font-bold text-white">
-                    180
+                    120
                     <span className="text-[#f43f5e] text-lg ml-1">min</span>
                   </p>
                   <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold">
                     Standard Duration
                   </p>
                 </div>
-
               </div>
             </div>
 
@@ -136,62 +198,57 @@ function DSA() {
         <div className="grid grid-cols-12 gap-12">
 
           {/* RULES */}
-          <aside className="col-span-12 lg:col-span-3">
-            <div className="bg-[#2d0a0a]/40 backdrop-blur-md p-10 rounded-[2rem] border border-white/5 sticky top-32">
-
-              <h3 className="text-xl font-bold mb-8">
+          <aside className="col-span-12 lg:col-span-4">
+            <div className="bg-[#2d0a0a]/40 backdrop-blur-md p-10 rounded-[2rem] border border-white/5">
+              <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#f43f5e]">
+                  security
+                </span>
                 Rules of Engagement
               </h3>
 
               <ul className="space-y-6 text-sm">
-                <li>
-                  <p className="font-bold text-white">
-                    8 Unique Problems
-                  </p>
-                  <p className="text-slate-400">
-                    Multi-difficulty challenges.
-                  </p>
+                <li className="flex gap-4">
+                  <span className="material-symbols-outlined text-[#f43f5e]">alt_route</span>
+                  <div>
+                    <p className="font-bold text-white">Free Navigation</p>
+                    <p className="text-slate-400 mt-1">Jump between any of the 5 questions at any time.</p>
+                  </div>
                 </li>
 
-                <li>
-                  <p className="font-bold text-white">
-                    Variable Difficulty
-                  </p>
-                  <p className="text-slate-400">
-                    Easy → Critical scaling.
-                  </p>
+                <li className="flex gap-4">
+                  <span className="material-symbols-outlined text-[#f43f5e]">terminal</span>
+                  <div>
+                    <p className="font-bold text-white">Languages</p>
+                    <p className="text-slate-400 mt-1">Python, C++, Java supported.</p>
+                  </div>
                 </li>
 
-                <li>
-                  <p className="font-bold text-white">
-                    Partial Scoring
-                  </p>
-                  <p className="text-slate-400">
-                    Credits awarded per test case.
-                  </p>
+                <li className="flex gap-4">
+                  <span className="material-symbols-outlined text-[#f43f5e]">hourglass_bottom</span>
+                  <div>
+                    <p className="font-bold text-white">Time Multipliers</p>
+                    <p className="text-slate-400 mt-1">Flat base points. Fast solving yields efficiency bonuses.</p>
+                  </div>
                 </li>
               </ul>
-
             </div>
           </aside>
 
           {/* TABLE AREA */}
-          <section className="col-span-12 lg:col-span-9">
-            <div className="bg-[#1a0606]/60 backdrop-blur-xl rounded-[2rem] border border-white/5 overflow-hidden">
-
-              <div className="px-10 py-8 border-b border-white/5">
-                <h3 className="text-2xl font-bold">
-                  Challenge Protocols
-                </h3>
-                <p className="text-sm text-slate-500">
-                  8 Operational Modules
-                </p>
+          <section className="col-span-12 lg:col-span-8">
+            <div className="bg-[#1a0606]/60 backdrop-blur-xl rounded-[2rem] border border-white/5 overflow-hidden h-full flex flex-col justify-center items-center p-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-[#f43f5e]/10 flex items-center justify-center mb-6">
+                <span className="material-symbols-outlined text-3xl text-[#f43f5e]">
+                  lock_open
+                </span>
               </div>
-
-              <div className="p-10 text-slate-400 text-sm">
-                (Challenge table content here — logic ready)
-              </div>
-
+              <h3 className="text-2xl font-bold mb-3">
+                Challenge Unlocked
+              </h3>
+              <p className="text-sm text-slate-500 max-w-sm">
+                Prepare your development environment. The contest begins as soon as you enter your access token.
+              </p>
             </div>
           </section>
 
@@ -204,9 +261,8 @@ function DSA() {
         <div className="flex justify-between text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em]">
           <p>© 2024 OPULENCE MARS COMMAND</p>
           <div className="flex gap-10">
-            <a className="hover:text-[#f43f5e]">MISSION DOCS</a>
-            <a className="hover:text-[#f43f5e]">GLOBAL LOGS</a>
-            <a className="hover:text-[#f43f5e]">ENCRYPTION KEYS</a>
+            <a className="hover:text-[#f43f5e] cursor-pointer">MISSION DOCS</a>
+            <a className="hover:text-[#f43f5e] cursor-pointer">GLOBAL LOGS</a>
           </div>
         </div>
       </footer>

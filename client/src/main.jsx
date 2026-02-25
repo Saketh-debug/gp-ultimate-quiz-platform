@@ -12,6 +12,10 @@ import './index.css'
 
 import RapidfireContest from './pages/RapidfireContest.jsx'
 import ProtectedContestRoute from './components/ProtectedContestRoute.jsx'
+import CascadeContest from './pages/CascadeContest.jsx'
+import ProtectedCascadeRoute from './components/ProtectedCascadeRoute.jsx'
+import DSAContest from './pages/DSAContest.jsx'
+import ProtectedDSARoute from './components/ProtectedDSARoute.jsx'
 import AdminLogin from './pages/AdminLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 
@@ -41,8 +45,16 @@ const router = createBrowserRouter([
         element: <Cascade />
     },
     {
+        path: "/cascade-contest",
+        element: <ProtectedCascadeRoute><CascadeContest /></ProtectedCascadeRoute>
+    },
+    {
         path: "/dsa",
         element: <DSA />
+    },
+    {
+        path: "/dsa-contest",
+        element: <ProtectedDSARoute><DSAContest /></ProtectedDSARoute>
     },
     {
         path: "/leaderboard",

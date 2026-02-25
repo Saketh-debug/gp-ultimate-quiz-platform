@@ -9,20 +9,20 @@ import {
   FiChevronLeft, FiChevronRight, FiList, FiTerminal,
   FiFileText, FiCheckCircle, FiCode, FiZap, FiAlertCircle
 } from "react-icons/fi";
+import {
+  LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
+  saveLastLanguage, getLastLanguage
+} from "../utils/codeStorage";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_SUBMISSION_URL;
 const socket = io(BACKEND_URL);
 
-const LANGUAGE_IDS = {
-  python: 71, // Python 3.8
-  cpp: 54,    // GCC 9.2
-  java: 62,   // OpenJDK 13
-};
+const STORAGE_PREFIX = "contest";
 
 export default function Contest({ session }) {
   // --- STATE ---
-  const [language, setLanguage] = useState("python");
+  const [language, setLanguage] = useState(getLastLanguage());
   const [currentQuestion, setCurrentQuestion] = useState(session.questions?.[0] || null);
   const [codes, setCodes] = useState({});
 
@@ -164,7 +164,7 @@ export default function Contest({ session }) {
     setStatusMessage("Running...");
     isWaitingForResponse.current = true;
 
-    const code = codes[currentQuestion.id] || "";
+    const code = codes[currentQuestion.id]?.[language] || "";
     const langId = LANGUAGE_IDS[language];
 
     try {
@@ -198,7 +198,7 @@ export default function Contest({ session }) {
     setStatusMessage("Judging...");
     isWaitingForResponse.current = true;
 
-    const code = codes[currentQuestion.id] || "";
+    const code = codes[currentQuestion.id]?.[language] || "";
     const langId = LANGUAGE_IDS[language];
 
     try {
@@ -403,12 +403,14 @@ export default function Contest({ session }) {
                   <FiCode className="text-xs text-orange-500" />
                   <select
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
+                    onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
                     className="bg-transparent text-[11px] font-bold text-gray-300 outline-none cursor-pointer hover:text-white transition uppercase tracking-wider"
                   >
                     <option value="python" className="bg-[#282828]">Python</option>
+                    <option value="c" className="bg-[#282828]">C</option>
                     <option value="cpp" className="bg-[#282828]">C++</option>
                     <option value="java" className="bg-[#282828]">Java</option>
+                    <option value="go" className="bg-[#282828]">Go</option>
                   </select>
                 </div>
               </div>
@@ -422,11 +424,15 @@ export default function Contest({ session }) {
                 height="100%"
                 language={language === "cpp" ? "cpp" : language}
                 theme="vs-dark"
-                value={currentQuestion ? codes[currentQuestion.id] || "" : ""}
-                onChange={(value) =>
-                  currentQuestion &&
-                  setCodes(prev => ({ ...prev, [currentQuestion.id]: value || "" }))
-                }
+                value={currentQuestion ? (codes[currentQuestion.id]?.[language] ?? getCodeOrBoilerplate(STORAGE_PREFIX, currentQuestion.id, language)) : ""}
+                onChange={(value) => {
+                  if (!currentQuestion) return;
+                  setCodes(prev => ({
+                    ...prev,
+                    [currentQuestion.id]: { ...prev[currentQuestion.id], [language]: value || "" }
+                  }));
+                  saveCode(STORAGE_PREFIX, currentQuestion.id, language, value || "");
+                }}
                 options={{
                   fontSize: 14,
                   fontFamily: "'JetBrains Mono', 'Fira Code', monospace",

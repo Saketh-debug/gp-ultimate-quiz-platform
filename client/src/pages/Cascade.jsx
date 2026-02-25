@@ -1,7 +1,44 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 function Cascade() {
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  // Clear stale token on mount
+  useEffect(() => {
+    localStorage.removeItem("cascadeToken");
+  }, []);
+
+  async function handleJoin() {
+    if (!token) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/cascade/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem("cascadeToken", token); // Store for reload/resume
+        navigate("/cascade-contest", { state: { session: data } });
+      } else {
+        setError(data.error || "Failed to join");
+      }
+    } catch (err) {
+      setError("Connection error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#1a0b08] text-white font-['Space_Grotesk'] overflow-x-hidden">
 
@@ -94,25 +131,51 @@ function Cascade() {
             {/* START PANEL */}
             <div className="bg-black/40 backdrop-blur-xl border border-[#ff4d20]/20 rounded-3xl p-10">
               <h3 className="text-xl font-bold mb-3">
-                Initiate Descent?
+                Initiate Descent
               </h3>
 
               <p className="text-white/50 mb-8 text-sm">
-                Verify uplink stability before beginning. The cascade sequence
-                starts immediately after authorization.
+                Enter your secure access token to authorize entry into the cascade sequence.
               </p>
 
-              <Link to="/">
-                <button className="w-full bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition shadow-[0_0_30px_rgba(255,77,32,0.25)]">
-                  AUTHORIZE ENTRY
-                  <span className="material-symbols-outlined">
-                    chevron_right
-                  </span>
-                </button>
-              </Link>
+              <div className="space-y-4">
+                <div className="flex h-16 rounded-2xl overflow-hidden bg-black/60 border border-[#ff4d20]/30 shadow-inner focus-within:border-[#ff4d20]/80 transition-colors">
+                  <div className="flex items-center px-5 text-[#ff4d20]">
+                    <span className="material-symbols-outlined font-light">key</span>
+                  </div>
 
-              <p className="text-center text-[10px] uppercase tracking-[0.3em] text-white/30 mt-4">
-                Biometric sync enabled
+                  <input
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+                    placeholder="ENTER ACCESS TOKEN"
+                    className="flex-1 bg-transparent px-2 text-white placeholder:text-[#ff4d20]/30 font-mono tracking-widest text-sm focus:outline-none"
+                  />
+
+                  <button
+                    onClick={handleJoin}
+                    disabled={loading || !token}
+                    className="px-8 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold transition shadow-[0_0_20px_rgba(255,77,32,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                    ) : (
+                      <>
+                        JOIN <span className="material-symbols-outlined text-sm">chevron_right</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="text-red-500 text-xs font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
+                    {error}
+                  </p>
+                )}
+              </div>
+
+              <p className="text-center text-[10px] uppercase tracking-[0.3em] text-white/30 mt-6">
+                Biometric sync active • Multiplier enabled
               </p>
             </div>
           </div>

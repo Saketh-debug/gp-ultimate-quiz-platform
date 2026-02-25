@@ -7,6 +7,10 @@ const ROUND_NAME = 'rapidfire';
 const GRACE_PERIOD_MINUTES = 30;
 const CONTEST_DURATION_MINUTES = 45;
 
+// Scoring Configuration (change BASE_POINTS to adjust scoring)
+const BASE_POINTS = 10;
+const QUESTION_DURATION = 180; // 3 minutes per question
+
 /**
  * Helper: Calculate remaining time for a specific question (3 mins max)
  */
@@ -123,10 +127,13 @@ router.post("/join", async (req, res) => {
                 timeLeft: getQuestionTimeLeft(q.start_time)
             }));
 
+            const totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - now) / 1000));
+
             res.json({
                 userId: user.id,
                 team: user.team_name,
                 endTime: session.end_time,
+                totalTimeLeft,
                 currentIndex,
                 questions: outputQuestions,
                 message: "Resumed session"
@@ -182,6 +189,7 @@ router.post("/join", async (req, res) => {
                 userId: user.id,
                 team: user.team_name,
                 endTime,
+                totalTimeLeft: CONTEST_DURATION_MINUTES * 60,
                 currentIndex: 0,
                 questions: outputQuestions,
                 message: "New session started"
@@ -235,8 +243,176 @@ router.post("/start-question", async (req, res) => {
             }
         }
 
-        res.json({ success: true, timeLeft: questionTimeLeft });
+        // Also compute totalTimeLeft from session end_time
+        const sessionRes = await pool.query(
+            "SELECT end_time FROM user_sessions WHERE user_id = $1 AND end_time > NOW()",
+            [userId]
+        );
+        const totalTimeLeft = sessionRes.rows.length > 0
+            ? Math.max(0, Math.floor((new Date(sessionRes.rows[0].end_time) - new Date()) / 1000))
+            : 0;
+
+        res.json({ success: true, timeLeft: questionTimeLeft, totalTimeLeft });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Lightweight time-check endpoint for visibility re-sync
+router.post("/time-check", async (req, res) => {
+    const { userId } = req.body;
+    try {
+        // 1. Get session end_time
+        const sessionRes = await pool.query(
+            "SELECT end_time FROM user_sessions WHERE user_id = $1 AND end_time > NOW()",
+            [userId]
+        );
+
+        if (sessionRes.rows.length === 0) {
+            return res.json({ totalTimeLeft: 0, questionTimeLeft: 0, contestEnded: true });
+        }
+
+        const endTime = new Date(sessionRes.rows[0].end_time);
+        const now = new Date();
+        const totalTimeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+
+        // 2. Find current question (auto-advance past expired ones, same logic as /join resume)
+        const qRes = await pool.query(
+            `SELECT uq.question_id, uq.start_time, uq.status, uq.sequence_order
+             FROM user_questions uq
+             WHERE uq.user_id = $1
+             ORDER BY uq.sequence_order ASC`,
+            [userId]
+        );
+
+        let currentIndex = -1;
+        for (let i = 0; i < qRes.rows.length; i++) {
+            const q = qRes.rows[i];
+            if (q.status === 'ACCEPTED' || q.status === 'TIMEOUT') continue;
+
+            if (q.start_time) {
+                const remaining = getQuestionTimeLeft(q.start_time);
+                if (remaining <= 0) {
+                    await pool.query(
+                        "UPDATE user_questions SET status = 'TIMEOUT' WHERE user_id = $1 AND question_id = $2",
+                        [userId, q.question_id]
+                    );
+                    continue;
+                }
+            }
+
+            currentIndex = i;
+            break;
+        }
+
+        if (currentIndex === -1) {
+            currentIndex = qRes.rows.length - 1;
+        }
+
+        // Auto-start timer for the current question if not started
+        const currentQ = qRes.rows[currentIndex];
+        let questionTimeLeft = 0;
+        if (currentQ && currentQ.status !== 'ACCEPTED' && currentQ.status !== 'TIMEOUT') {
+            if (!currentQ.start_time) {
+                await pool.query(
+                    "UPDATE user_questions SET start_time = NOW() WHERE user_id = $1 AND question_id = $2",
+                    [userId, currentQ.question_id]
+                );
+                questionTimeLeft = 180;
+            } else {
+                questionTimeLeft = getQuestionTimeLeft(currentQ.start_time);
+            }
+        }
+
+        res.json({ totalTimeLeft, questionTimeLeft, currentIndex });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Submit Result — called by frontend after load balancer confirms ACCEPTED
+// All scoring computed server-side from stored start_time
+router.post("/submit-result", async (req, res) => {
+    const { userId, questionId } = req.body;
+    try {
+        // 1. Fetch question data
+        const qRes = await pool.query(
+            "SELECT start_time, score_awarded FROM user_questions WHERE user_id = $1 AND question_id = $2",
+            [userId, questionId]
+        );
+
+        if (qRes.rows.length === 0) {
+            return res.status(404).json({ error: "Question not found for this user" });
+        }
+
+        const question = qRes.rows[0];
+
+        // 2. Idempotency: already scored? Return existing score
+        if (question.score_awarded > 0) {
+            const userRes = await pool.query(
+                "SELECT rapidfire_score FROM users WHERE id = $1",
+                [userId]
+            );
+            return res.json({
+                success: true,
+                message: "Already scored",
+                scoreAwarded: question.score_awarded,
+                totalRoundScore: userRes.rows[0]?.rapidfire_score || 0
+            });
+        }
+
+        // 3. Compute remaining time from server-side timestamps
+        let remainingTime = 0;
+        if (question.start_time) {
+            const now = new Date();
+            const elapsed = (now - new Date(question.start_time)) / 1000;
+            remainingTime = Math.max(0, QUESTION_DURATION - elapsed);
+        } else {
+            // start_time is NULL — should not happen, but award base points only
+            console.warn(`⚠️ submit-result: start_time is NULL for user ${userId}, question ${questionId}`);
+        }
+
+        // 4. Calculate score: base + time bonus
+        const score = Math.round(BASE_POINTS + 5 * (remainingTime / QUESTION_DURATION));
+
+        // 5. Atomic update — only if score_awarded is still 0 (prevents double-scoring)
+        const updateRes = await pool.query(
+            "UPDATE user_questions SET score_awarded = $1 WHERE user_id = $2 AND question_id = $3 AND score_awarded = 0 RETURNING score_awarded",
+            [score, userId, questionId]
+        );
+
+        if (updateRes.rows.length === 0) {
+            // Race condition: another request already scored this question
+            const userRes = await pool.query(
+                "SELECT rapidfire_score FROM users WHERE id = $1",
+                [userId]
+            );
+            return res.json({
+                success: true,
+                message: "Already scored (race)",
+                scoreAwarded: score,
+                totalRoundScore: userRes.rows[0]?.rapidfire_score || 0
+            });
+        }
+
+        // 6. Increment user's total rapidfire score (atomic)
+        const userUpdateRes = await pool.query(
+            "UPDATE users SET rapidfire_score = rapidfire_score + $1 WHERE id = $2 RETURNING rapidfire_score",
+            [score, userId]
+        );
+
+        const totalRoundScore = userUpdateRes.rows[0]?.rapidfire_score || 0;
+
+        console.log(`🏆 Rapidfire Score: User ${userId}, Q ${questionId} → +${score} pts (remaining: ${remainingTime.toFixed(1)}s) | Total: ${totalRoundScore}`);
+
+        res.json({
+            success: true,
+            scoreAwarded: score,
+            totalRoundScore
+        });
+
+    } catch (err) {
+        console.error("❌ RAPIDFIRE SUBMIT-RESULT ERROR:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

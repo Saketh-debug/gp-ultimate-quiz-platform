@@ -66,7 +66,12 @@ app.use((req, res, next) => {
 app.use("/auth", authRoutes);
 app.use("/question", questionRoutes);
 const rapidFireRoutes = require("./routes/rapidfire");
+const cascadeRoutes = require("./routes/cascade");
+const dsaRoutes = require("./routes/dsa");
+
+app.use("/cascade", cascadeRoutes);
 app.use("/rapidfire", rapidFireRoutes);
+app.use("/dsa", dsaRoutes);
 
 const adminRoutes = require("./routes/admin");
 app.use("/admin", adminRoutes);

@@ -1,0 +1,5 @@
+[dotenv@17.2.3] injecting env (6) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (6) from .env -- tip: ⚙️  override existing env vars with { override: true }
+🔌 DB Config: { host: '127.0.0.1', port: '5432', user: 'postgres', db: 'contest_db' }
+Server running on http://localhost:3000
+✅ DB connected

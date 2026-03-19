@@ -474,6 +474,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                             <h4 className="text-lg font-bold mb-4 text-white">Description</h4>
 
                             <div className="prose prose-invert prose-sm max-w-none markdown-content">
+                                <div className="problem-markdown">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypeRaw]}
@@ -500,6 +501,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                                 >
                                     {currentQuestion.description}
                                 </ReactMarkdown>
+                            </div>
                             </div>
                         </div>
                     </div>

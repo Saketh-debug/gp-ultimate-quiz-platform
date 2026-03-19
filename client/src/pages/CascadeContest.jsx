@@ -484,24 +484,22 @@ export default function CascadeContest({ session }) {
         .filter(q => q.ogIndex < highestForwardIndex && q.status !== 'ACCEPTED');
 
     return (
-        <div className="h-screen flex flex-col bg-[#110806] text-[#eff1f6] font-sans overflow-hidden">
+        <div className="h-screen flex flex-col bg-[#0d0605] text-[#eff1f6] font-sans overflow-hidden">
 
-            {/* --- CONTEST STOPPED OVERLAY --- */}
+            {/* Contest Stopped Overlay */}
             {contestStopped && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
-                    <div className="text-center">
-                        <div className="text-6xl mb-6">🛑</div>
-                        <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-widest">
-                            Contest Stopped
-                        </h1>
-                        <p className="text-gray-400 text-lg mb-8">
-                            The Coding Cascade has been stopped by the admin.<br />
-                            Your progress has been saved.<br />
-                            <span className="text-[#f4a460] font-bold">Your Score: {cascadeScore} pts (+ streak bonus on leaderboard)</span>
-                        </p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+                    <div className="text-center max-w-lg mx-auto px-6">
+                        <div className="text-5xl mb-4">🛑</div>
+                        <h1 className="text-3xl font-bold text-white mb-3">Contest Stopped</h1>
+                        <p className="text-white/60 mb-2">The Coding Cascade has been stopped by the admin.</p>
+                        <p className="text-white/60 mb-6">Your progress has been saved.</p>
+                        <div className="text-[#ff4d20] font-bold text-lg mb-6">
+                            Score: {cascadeScore} pts (+ streak bonus)
+                        </div>
                         <button
                             onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); navigate("/rounds"); }}
-                            className="px-8 py-3 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
+                            className="px-6 py-2.5 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-semibold rounded-lg transition-colors"
                         >
                             Return to Rounds
                         </button>
@@ -509,153 +507,156 @@ export default function CascadeContest({ session }) {
                 </div>
             )}
 
-            {/* --- GO BACK MODAL --- */}
+            {/* Go Back Modal */}
             {showGoBackModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(255,77,32,0.1)]">
-                        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                            <FiRotateCcw className="text-[#ff4d20]" /> Confirm Override
-                        </h2>
-                        <p className="text-gray-300 mb-6 font-light leading-relaxed">
-                            Going back to review skipped questions will immediately <strong className="text-[#ff4d20]">BREAK</strong> your current streak of <strong className="text-white">{currentStreak}</strong>.
-                            Your maximum streak of <span className="text-yellow-500 font-bold">{maxStreak}</span> is safely logged.
-                            <br /><br />
-                            You will only see unsolved questions. Are you sure you want to proceed?
+                    <div className="bg-[#1a0b08] border border-[#ff4d20]/30 rounded-lg p-6 max-w-md w-full mx-4">
+                        <div className="flex items-center gap-3 mb-4">
+                            <FiRotateCcw className="text-[#ff4d20] text-xl" />
+                            <h2 className="text-lg font-semibold text-white">Confirm Review Mode</h2>
+                        </div>
+                        <p className="text-white/70 mb-4 leading-relaxed">
+                            Going back will <span className="text-[#ff4d20] font-medium">break your current streak</span> of <span className="text-white font-medium">{currentStreak}</span>.
                         </p>
-                        <div className="flex gap-4">
-                            <button onClick={() => setShowGoBackModal(false)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition">Cancel</button>
-                            <button onClick={handleGoBack} className="flex-1 py-3 bg-[#ff4d20] hover:bg-[#ff623d] rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(255,77,32,0.4)]">
-                                Break Streak & Review <FiRotateCcw />
+                        <p className="text-white/70 mb-6 leading-relaxed">
+                            Your max streak of <span className="text-yellow-500 font-medium">{maxStreak}</span> is safely logged.
+                            You'll see only unsolved questions from previous nodes.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowGoBackModal(false)}
+                                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 rounded-lg font-medium transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleGoBack}
+                                className="flex-1 py-2.5 bg-[#ff4d20] hover:bg-[#ff623d] rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <FiRotateCcw size={16} />
+                                Continue
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-
-            {/* HEADER */}
-            <nav className="h-[70px] bg-[#1a0b08] border-b border-[#ff4d20]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#ff4d20]/5 to-transparent pointer-events-none" />
-
-                {/* Left Side: Brand & Question Number */}
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex flex-col">
-                        <span className="text-[#ff4d20] font-black tracking-widest uppercase italic text-sm">Coding Cascade</span>
-                        <span className="text-xs text-white/50 tracking-widest uppercase">Sector 2</span>
-                    </div>
-
-                    <div className="h-8 w-px bg-white/10"></div>
-
-                    <div className="bg-white/5 border border-white/10 px-4 py-1.5 rounded-lg flex items-center gap-3">
-                        <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Node</span>
-                        <span className="text-white font-bold">{currentIndex + 1} / 15</span>
-                        {isReviewMode && <span className="bg-yellow-500/20 text-yellow-500 text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-widest border border-yellow-500/30">Review</span>}
+            {/* Top Header */}
+            <header className="h-14 bg-[#1a0b08] border-b border-[#ff4d20]/20 flex items-center justify-between px-4 shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[#ff4d20] font-bold text-sm tracking-wide">CASCADE</span>
+                        <span className="text-white/20">|</span>
+                        <span className="text-white/50 text-xs">Problem {currentIndex + 1}</span>
                     </div>
                 </div>
 
-                {/* Center: Streak Counters */}
-                <div className="flex items-center gap-8 relative z-10 bg-black/40 px-8 py-2 rounded-2xl border border-white/5 shadow-inner">
-                    <div className="flex items-center gap-3">
-                        <div className={`size-10 rounded-full flex items-center justify-center border transition-all duration-300
-                            ${currentStreak > 0 ? "border-[#ff4d20] bg-[#ff4d20]/10 shadow-[0_0_15px_rgba(255,77,32,0.3)] animate-pulse" : "border-white/10 bg-white/5"}
-                        `}>
-                            <FiZap className={`text-xl ${currentStreak > 0 ? "text-[#ff4d20] fill-[#ff4d20]/20" : "text-white/30"}`} />
-                        </div>
-                        <div>
-                            <div className="flex items-baseline gap-2">
-                                <span className={`text-2xl font-black ${currentStreak > 0 ? "text-white" : "text-white/30"}`}>{currentStreak}</span>
-                                <span className="text-xs text-[#ff4d20] font-bold">({multiplier})</span>
+                <div className="flex items-center gap-6">
+                    {/* Streak Display */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-md flex items-center justify-center ${currentStreak > 0
+                                    ? 'bg-[#ff4d20]/10 border border-[#ff4d20]/30'
+                                    : 'bg-white/5 border border-white/10'
+                                }`}>
+                                <FiZap className={`text-sm ${currentStreak > 0 ? 'text-[#ff4d20]' : 'text-white/30'}`} />
                             </div>
-                            <div className="text-[9px] uppercase tracking-[0.2em] text-white/40 font-bold">Current Streak</div>
+                            <div>
+                                <div className="flex items-baseline gap-1">
+                                    <span className={`font-bold ${currentStreak > 0 ? 'text-white' : 'text-white/40'}`}>{currentStreak}</span>
+                                    <span className="text-[10px] text-[#ff4d20] font-medium">{multiplier}</span>
+                                </div>
+                                <div className="text-[9px] text-white/40 uppercase tracking-wide">Streak</div>
+                            </div>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-yellow-500/10 border border-yellow-500/30">
+                                <span className="material-symbols-outlined text-sm text-yellow-500">emoji_events</span>
+                            </div>
+                            <div>
+                                <div className="font-bold text-white">{maxStreak}</div>
+                                <div className="text-[9px] text-white/40 uppercase tracking-wide">Best</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="w-px h-10 bg-white/10"></div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-full flex items-center justify-center border border-yellow-500/30 bg-yellow-500/10 text-yellow-500">
-                            <span className="material-symbols-outlined text-xl">emoji_events</span>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-black text-white">{maxStreak}</div>
-                            <div className="text-[9px] uppercase tracking-[0.2em] text-white/40 font-bold">Max Logged</div>
+                    {/* Timer */}
+                    <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+                        <div className="text-right">
+                            <div className="text-[9px] text-white/40 uppercase tracking-wide">Time Remaining</div>
+                            <div className={`font-mono font-bold ${totalTimeLeft !== null && totalTimeLeft < 300 ? 'text-red-500' : 'text-[#ff4d20]'}`}>
+                                {totalTimeLeft !== null ? formatTime(totalTimeLeft) : '--:--'}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Right: Timer & Actions */}
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex flex-col items-center min-w-[80px]">
-                        <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Uplink Closes</span>
-                        <span className={`font-mono text-2xl font-black leading-none ${totalTimeLeft !== null && totalTimeLeft < 300 ? "text-red-500 animate-pulse" : "text-[#ff4d20]"}`}>
-                            {totalTimeLeft !== null ? formatTime(totalTimeLeft) : "--:--"}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 pl-4 border-l border-white/10">
                         <button
                             onClick={handleRun}
                             disabled={isRunning}
-                            className="flex items-center justify-center gap-2 size-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
-                            title="Run Code"
+                            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} />
+                            <FiPlay className={`text-sm ${isRunning ? 'animate-spin text-[#ff4d20]' : 'text-green-500'}`} />
+                            Run
                         </button>
                         <button
                             onClick={handleSubmit}
                             disabled={isRunning}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#ff4d20] to-[#e63e15] hover:from-[#ff623d] hover:to-[#ff4d20] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-[#ff4d20] hover:bg-[#ff623d] rounded-md text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isRunning ? "Transmitting..." : "Submit Node"} <FiUpload />
+                            <FiUpload size={16} />
+                            Submit
                         </button>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            {/* SECONDARY NAV (Navigation specific to Cascade) */}
-            <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-6 shrink-0 relative z-30">
-                <div className="flex gap-4">
+            {/* Problem Navigation Bar */}
+            <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4 shrink-0">
+                <div className="flex items-center gap-2">
                     {!isReviewMode && highestForwardIndex > 0 && (
                         <button
                             onClick={() => setShowGoBackModal(true)}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff4d20]/80 hover:text-[#ff4d20] transition bg-[#ff4d20]/5 hover:bg-[#ff4d20]/10 px-3 py-1.5 rounded"
+                            className="flex items-center gap-1.5 text-xs text-[#ff4d20] hover:text-[#ff623d] font-medium transition-colors"
                         >
-                            <FiRotateCcw /> Review Previous Nodes
+                            <FiRotateCcw size={14} />
+                            Review Previous
                         </button>
                     )}
                     {isReviewMode && (
                         <button
                             onClick={handleReturnForward}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 px-3 py-1.5 rounded animate-pulse"
+                            className="flex items-center gap-1.5 text-xs text-green-500 hover:text-green-400 font-medium transition-colors"
                         >
-                            Return to Forward Node <FiArrowRight />
+                            Return to Current
+                            <FiArrowRight size={14} />
                         </button>
                     )}
                 </div>
-
                 {!isReviewMode && currentIndex === highestForwardIndex && (
                     <button
                         onClick={handleSkip}
-                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition group"
+                        className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white font-medium transition-colors"
                     >
-                        Skip Node <FiSkipForward className="group-hover:translate-x-1 transition-transform" />
+                        Skip Problem
+                        <FiSkipForward size={14} />
                     </button>
                 )}
             </div>
 
-            {/* MAIN CONTENT */}
-            <div className="flex-1 flex overflow-hidden bg-[#0d0605]">
-
-                {/* IF REVIEW MODE: Show left sidebar list */}
+            {/* Main Content Area */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Review Mode Sidebar */}
                 {isReviewMode && (
-                    <div className="w-64 border-r border-[#ff4d20]/10 bg-[#140a08] flex flex-col shrink-0">
-                        <div className="p-4 border-b border-[#ff4d20]/10">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-white/50">Skipped Nodes</h3>
-                            <p className="text-[10px] text-white/30 mt-1">Select to resolve. Base points only.</p>
+                    <div className="w-56 bg-[#140a08] border-r border-[#ff4d20]/10 flex flex-col shrink-0">
+                        <div className="p-3 border-b border-[#ff4d20]/10">
+                            <div className="text-xs font-semibold text-white/50 uppercase tracking-wide">Previous Problems</div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {reviewQuestions.length === 0 ? (
-                                <div className="p-4 text-center text-xs text-white/20 italic">No unresolved nodes found.</div>
+                                <div className="p-4 text-center text-xs text-white/30">No problems to review</div>
                             ) : (
                                 reviewQuestions.map((q) => (
                                     <button
@@ -663,19 +664,14 @@ export default function CascadeContest({ session }) {
                                         onClick={() => {
                                             setCurrentIndex(q.ogIndex);
                                             resetEditorState();
-                                            // Persist viewing index for reload resilience
-                                            axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
-                                                userId: activeSession.userId,
-                                                currentViewingIndex: q.ogIndex
-                                            }).catch(() => { });
                                         }}
-                                        className={`w-full text-left px-4 py-3 rounded-lg text-sm flex justify-between items-center transition-colors border
-                                            ${currentIndex === q.ogIndex
-                                                ? "bg-[#ff4d20]/10 border-[#ff4d20]/30 text-white"
-                                                : "bg-white/5 border-transparent text-white/50 hover:bg-white/10"}`}
+                                        className={`w-full text-left px-3 py-2 rounded text-xs transition-colors ${currentIndex === q.ogIndex
+                                                ? 'bg-[#ff4d20]/10 text-white border border-[#ff4d20]/20'
+                                                : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                            }`}
                                     >
-                                        <span className="font-mono">N-{q.ogIndex + 1}</span>
-                                        <span className="truncate ml-3 flex-1">{q.title}</span>
+                                        <div className="font-mono text-[10px] text-white/40 mb-0.5">#{q.ogIndex + 1}</div>
+                                        <div className="truncate">{q.title}</div>
                                     </button>
                                 ))
                             )}
@@ -683,51 +679,106 @@ export default function CascadeContest({ session }) {
                     </div>
                 )}
 
-                {/* LEFT: DESCRIPTION */}
-                <div className={`${isReviewMode ? "w-1/3" : "w-1/2"} p-6 overflow-y-auto border-r border-[#ff4d20]/10 relative`}>
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                        <span className="text-8xl font-black font-mono">N{currentIndex + 1}</span>
-                    </div>
+                {/* Left Panel - Problem Statement */}
+                <div className={`${isReviewMode ? 'w-[42%]' : 'w-1/2'} flex flex-col border-r border-[#ff4d20]/10`}>
+                    <div className="flex-1 overflow-y-auto">
+                        <div className="p-5 space-y-5">
+                            {/* Problem Header */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                    <span className="px-2.5 py-1 bg-[#ff4d20]/10 border border-[#ff4d20]/20 rounded text-[#ff4d20] text-xs font-semibold">
+                                        {currentQuestion.base_points} pts
+                                    </span>
+                                    {currentQuestion.time_limit && (
+                                        <span className="px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-500 text-xs font-semibold flex items-center gap-1">
+                                            <FiZap size={12} />
+                                            {currentQuestion.time_limit}s
+                                        </span>
+                                    )}
+                                    {currentQuestion.status === 'ACCEPTED' && (
+                                        <span className="px-2.5 py-1 bg-green-500/10 border border-green-500/20 rounded text-green-500 text-xs font-semibold flex items-center gap-1">
+                                            <FiCheckCircle size={12} />
+                                            Solved
+                                        </span>
+                                    )}
+                                    {!currentQuestion.is_streak_eligible && (
+                                        <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded text-white/40 text-xs font-medium">
+                                            No Streak
+                                        </span>
+                                    )}
+                                </div>
+                                <h1 className="text-xl font-bold text-white">{currentQuestion.title}</h1>
+                            </div>
 
-                    <div className="mb-6 flex gap-3 flex-wrap">
-                        <span className="px-3 py-1 rounded bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20 text-xs font-bold tracking-widest uppercase">
-                            {currentQuestion.base_points} Base Pts
-                        </span>
-                        {currentQuestion.time_limit != null && (
-                            <span className="px-3 py-1 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-xs font-bold tracking-widest uppercase flex items-center gap-1">
-                                ⚡ TL: {currentQuestion.time_limit}s
-                            </span>
-                        )}
-                        {!currentQuestion.is_streak_eligible && (
-                            <span className="px-3 py-1 rounded bg-white/5 text-white/50 border border-white/10 text-xs font-bold tracking-widest uppercase">
-                                Non-Streak
-                            </span>
-                        )}
-                        {currentQuestion.status === 'ACCEPTED' && (
-                            <span className="px-3 py-1 rounded bg-green-500/10 text-green-500 border border-green-500/20 text-xs font-bold tracking-widest uppercase flex items-center gap-1">
-                                <FiCheckCircle /> Resolved
-                            </span>
-                        )}
-                    </div>
+                            {/* Problem Description */}
+                            <div className="bg-[#140a08]/50 rounded-lg border border-white/5">
+                                <div className="px-4 py-2.5 border-b border-white/5">
+                                    <div className="text-xs font-semibold text-white/50 uppercase tracking-wide">Description</div>
+                                </div>
+                                <div className="p-4">
+                                    <div className="prose prose-invert prose-sm max-w-none prose-p:text-white/80 prose-p:leading-relaxed prose-headings:text-white prose-strong:text-[#ff4d20] prose-code:text-white/90 prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                            {currentQuestion.description}
+                                        </ReactMarkdown>
+                                    </div>
+                                </div>
+                            </div>
 
+                            {/* Example */}
+                            {currentQuestion.examples && currentQuestion.examples.length > 0 && (
+                                <div className="bg-[#140a08]/50 rounded-lg border border-white/5">
+                                    <div className="px-4 py-2.5 border-b border-white/5">
+                                        <div className="text-xs font-semibold text-white/50 uppercase tracking-wide">Example</div>
+                                    </div>
+                                    <div className="p-4">
+                                        {currentQuestion.examples.slice(0, 1).map((example, idx) => (
+                                            <div key={idx} className="grid grid-cols-2 gap-3">
+                                                <div className="bg-black/40 rounded border border-white/5">
+                                                    <div className="px-3 py-1.5 border-b border-white/5">
+                                                        <div className="text-[10px] uppercase tracking-wide text-white/40 font-semibold">Input</div>
+                                                    </div>
+                                                    <pre className="p-3 text-xs font-mono text-white/80 whitespace-pre-wrap break-all">{example.input}</pre>
+                                                </div>
+                                                <div className="bg-black/40 rounded border border-white/5">
+                                                    <div className="px-3 py-1.5 border-b border-white/5">
+                                                        <div className="text-[10px] uppercase tracking-wide text-white/40 font-semibold">Output</div>
+                                                    </div>
+                                                    <pre className="p-3 text-xs font-mono text-[#ff4d20] whitespace-pre-wrap break-all">{example.output}</pre>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                    <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
-
-                    <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                            {currentQuestion.description}
-                        </ReactMarkdown>
+                            {/* Notes */}
+                            {currentQuestion.notes && (
+                                <div className="bg-[#140a08]/50 rounded-lg border border-white/5">
+                                    <div className="px-4 py-2.5 border-b border-white/5">
+                                        <div className="text-xs font-semibold text-white/50 uppercase tracking-wide">Notes</div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="prose prose-invert prose-sm max-w-none prose-p:text-white/70 prose-p:leading-relaxed">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                                {currentQuestion.notes}
+                                            </ReactMarkdown>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* RIGHT: EDITOR */}
-                <div className={`${isReviewMode ? "w-2/3" : "w-1/2"} flex flex-col`}>
-                    <div className="h-10 border-b border-[#ff4d20]/10 flex items-center justify-between px-4 bg-[#140a08]">
-                        <span className="text-xs font-bold text-white/30 uppercase tracking-widest">Compiler Matrix</span>
+                {/* Right Panel - Code Editor */}
+                <div className={`${isReviewMode ? 'w-[58%]' : 'w-1/2'} flex flex-col`}>
+                    {/* Editor Toolbar */}
+                    <div className="h-11 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4 shrink-0">
+                        <div className="text-xs font-semibold text-white/40 uppercase tracking-wide">Code Editor</div>
                         <select
                             value={language}
                             onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
-                            className="bg-black/50 text-xs text-[#ff4d20] font-bold tracking-wider px-3 py-1 rounded border border-[#ff4d20]/20 focus:outline-none uppercase"
+                            className="bg-black/40 text-xs text-white/80 font-medium px-3 py-1.5 rounded border border-white/10 focus:outline-none focus:border-[#ff4d20]/30 uppercase"
                         >
                             <option value="python">Python</option>
                             <option value="c">C</option>
@@ -737,7 +788,8 @@ export default function CascadeContest({ session }) {
                         </select>
                     </div>
 
-                    <div className="flex-1 bg-[#1e1e1e]">
+                    {/* Monaco Editor */}
+                    <div className="flex-1 bg-[#1e1e1e] min-h-0">
                         <Editor
                             height="100%"
                             language={language}
@@ -755,58 +807,76 @@ export default function CascadeContest({ session }) {
                                 minimap: { enabled: false },
                                 scrollBeyondLastLine: false,
                                 automaticLayout: true,
-                                padding: { top: 16 }
+                                padding: { top: 16, bottom: 16 },
+                                lineHeight: 1.6,
+                                wordWrap: 'on',
+                                renderWhitespace: 'none',
+                                cursorBlinking: 'smooth',
+                                smoothScrolling: true,
+                                fontFamily: 'JetBrains Mono, Fira Code, monospace',
+                                fontLigatures: true,
                             }}
                         />
                     </div>
 
-                    {/* CONSOLE */}
-                    <div className="h-[250px] bg-[#0d0605] border-t border-[#ff4d20]/20 flex flex-col shrink-0">
-                        <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center px-4 justify-between">
-                            <div className="flex items-center gap-6">
+                    {/* Console Panel */}
+                    <div className="h-52 bg-[#0d0605] border-t border-[#ff4d20]/20 flex flex-col shrink-0">
+                        {/* Tabs */}
+                        <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4">
+                            <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => setRightTab("input")}
-                                    className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
-                                        ${rightTab === "input" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${rightTab === "input"
+                                            ? 'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
+                                            : 'text-white/50 hover:text-white hover:bg-white/5'
+                                        }`}
                                 >
                                     Custom Input
                                 </button>
                                 <button
                                     onClick={() => setRightTab("result")}
-                                    className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
-                                        ${rightTab === "result" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${rightTab === "result"
+                                            ? 'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
+                                            : 'text-white/50 hover:text-white hover:bg-white/5'
+                                        }`}
                                 >
-                                    Telemetry
+                                    Output
                                 </button>
                             </div>
-
                             {statusMessage && (
-                                <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded 
-                                    ${statusMessage.includes("Accepted") ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-                                        statusMessage.includes("Running") ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
-                                            "bg-[#ff4d20]/20 text-[#ff4d20] border border-[#ff4d20]/30"}`}>
+                                <span className={`text-[10px] uppercase font-bold tracking-wide px-2.5 py-1 rounded ${statusMessage.includes("Accepted") ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                                        statusMessage.includes("Running") ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                            'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
+                                    }`}>
                                     {statusMessage}
                                 </span>
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-hidden relative">
+                        {/* Panel Content */}
+                        <div className="flex-1 overflow-hidden">
                             {rightTab === "input" ? (
                                 <textarea
                                     value={customInput}
                                     onChange={(e) => setCustomInput(e.target.value)}
-                                    placeholder="Enter test parameters..."
-                                    className="w-full h-full bg-[#0d0605] p-4 text-sm font-mono text-white/70 focus:outline-none resize-none placeholder:text-white/20"
+                                    placeholder="Enter test input here..."
+                                    className="w-full h-full bg-[#0d0605] p-4 text-sm font-mono text-white/80 focus:outline-none resize-none placeholder:text-white/20 leading-relaxed"
                                 />
                             ) : (
-                                <div className="absolute inset-0 p-4 font-mono text-sm overflow-auto text-white/70 bg-[#0d0605]">
+                                <div className="w-full h-full p-4 font-mono text-sm overflow-auto text-white/80 bg-[#0d0605]">
                                     {isRunning ? (
-                                        <div className="flex items-center gap-3 text-[#ff4d20]/50 italic animate-pulse">
-                                            <FiPlay className="animate-spin" /> Transmitting sequence...
+                                        <div className="flex items-center gap-2 text-[#ff4d20]/70">
+                                            <FiPlay className="animate-spin" />
+                                            <span>Running...</span>
                                         </div>
                                     ) : (
-                                        <pre className={`whitespace-pre-wrap ${statusMessage.includes("Wrong") || statusMessage.includes("Error") ? "text-[#ff4d20]" : statusMessage.includes("Accepted") ? "text-green-400" : ""}`}>
-                                            {output || <span className="opacity-30 italic text-white/30">System idle. Awaiting code execution.</span>}
+                                        <pre className={`whitespace-pre-wrap leading-relaxed ${statusMessage.includes("Wrong") || statusMessage.includes("Error") || statusMessage.includes("Limit")
+                                                ? 'text-[#ff4d20]'
+                                                : statusMessage.includes("Accepted")
+                                                    ? 'text-green-400'
+                                                    : ''
+                                            }`}>
+                                            {output || <span className="text-white/30">No output yet. Run or submit your code to see results.</span>}
                                         </pre>
                                     )}
                                 </div>
@@ -814,7 +884,6 @@ export default function CascadeContest({ session }) {
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     );

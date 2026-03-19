@@ -1,0 +1,21 @@
+/* INLINE CODE (variables like `I`, `n`, `names`) */
+.problem-markdown p code,
+.problem-markdown li code {
+  display: inline;
+  background: rgba(255,255,255,0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* CODE BLOCKS (Input / Output examples) */
+.problem-markdown pre { 
+  padding: 6px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.problem-markdown pre code {
+  background: none;
+  padding: 0;
+}

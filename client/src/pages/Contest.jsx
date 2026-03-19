@@ -14,6 +14,7 @@ import {
   LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
   saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
+import { formatErrorForDisplay } from "../utils/errorFormatter";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_SUBMISSION_URL;
@@ -128,9 +129,9 @@ export default function Contest({ session }) {
       }
       // 3. RUNTIME / COMPILATION ERROR
       else {
-        const errorMsg = data.stderr || data.error || data.stdout || "Unknown Error";
-        setOutput(errorMsg);
-        setStatusMessage(data.status || "Error");
+        const { label, message } = formatErrorForDisplay(data);
+        setOutput(message);
+        setStatusMessage(label);
       }
     };
 

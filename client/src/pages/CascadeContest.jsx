@@ -13,6 +13,7 @@ import {
     LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
+import { formatErrorForDisplay } from "../utils/errorFormatter";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -201,7 +202,12 @@ export default function CascadeContest({ session }) {
                 const hasError = data.status === 'ERROR' || data.status === 'FAILED';
                 const out = data.stdout || data.stderr || (hasError ? "Runtime Error" : "No output");
                 setOutput(out);
-                setStatusMessage(hasError ? (data.stderr || "Error") : "Run Complete");
+                if (hasError) {
+                    const { label } = formatErrorForDisplay(data);
+                    setStatusMessage(label);
+                } else {
+                    setStatusMessage("Run Complete");
+                }
                 return;
             }
 
@@ -209,9 +215,9 @@ export default function CascadeContest({ session }) {
 
             // Handle FAILED / ERROR from dispatcher (e.g. missing test cases, judge error)
             if (data.status === 'FAILED' || data.status === 'ERROR') {
-                const errorDetail = data.error || data.stderr || data.stdout || "Submission failed. Contact admin.";
-                setOutput(errorDetail);
-                setStatusMessage("Error");
+                const { label, message } = formatErrorForDisplay(data);
+                setOutput(message);
+                setStatusMessage(label);
                 return;
             }
 
@@ -273,14 +279,9 @@ export default function CascadeContest({ session }) {
                 const errorDetail = stderr || data.stdout || "Incorrect Answer. System streak preserved. Try again!";
                 setOutput(errorDetail);
 
-                // Distinguish TLE vs compile error vs plain wrong answer
-                const lowerStderr = stderr.toLowerCase();
-                const statusLabel =
-                    lowerStderr.includes('time limit') ? 'Time Limit Exceeded' :
-                        lowerStderr.includes('compile') || lowerStderr.includes('error:') || lowerStderr.includes('error on line') ? 'Compile Error' :
-                            data.status === 'FAILED' ? 'Judge Error' :
-                                'Wrong Answer';
-                setStatusMessage(statusLabel);
+                // Use the shared error classifier for consistent status labels
+                const { label } = formatErrorForDisplay(data);
+                setStatusMessage(label);
                 // WRONG ANSWER / TLE DOES NOT BREAK STREAK IN CASCADE. They can retry.
             }
         };

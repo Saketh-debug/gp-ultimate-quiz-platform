@@ -15,6 +15,7 @@ import {
     LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
+import { formatErrorForDisplay } from "../utils/errorFormatter";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -301,7 +302,12 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 const hasError = data.status === 'ERROR' || data.status === 'FAILED';
                 const out = data.stdout || data.stderr || (hasError ? "Runtime Error" : "No output");
                 setOutput(out);
-                setStatusMessage(hasError ? (data.stderr || "Error") : "Run Complete");
+                if (hasError) {
+                    const { label } = formatErrorForDisplay(data);
+                    setStatusMessage(label);
+                } else {
+                    setStatusMessage("Run Complete");
+                }
                 return;
             }
 
@@ -332,9 +338,9 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             }
             // 2. WRONG ANSWER / ERROR -> Stay and Retry
             else {
-                const errorDetail = data.stderr || data.stdout || "Incorrect Answer. Try again!";
-                setOutput(errorDetail);
-                setStatusMessage("Wrong Answer");
+                const { label, message } = formatErrorForDisplay(data);
+                setOutput(data.stderr || data.stdout || message);
+                setStatusMessage(label);
             }
         };
 

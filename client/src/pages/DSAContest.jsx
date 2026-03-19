@@ -13,6 +13,7 @@ import {
     LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
+import { formatErrorForDisplay } from "../utils/errorFormatter";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -223,15 +224,20 @@ export default function DSAContest({ session }) {
                 const hasError = data.status === 'ERROR' || data.status === 'FAILED';
                 const out = data.stdout || data.stderr || (hasError ? "Runtime Error" : "No output");
                 setOutput(out);
-                setStatusMessage(hasError ? (data.stderr || "Error") : "Run Complete");
+                if (hasError) {
+                    const { label } = formatErrorForDisplay(data);
+                    setStatusMessage(label);
+                } else {
+                    setStatusMessage("Run Complete");
+                }
                 return;
             }
 
             // Handle FAILED / ERROR from dispatcher (non-DSA path)
             if (data.status === 'FAILED' || data.status === 'ERROR') {
-                const errorDetail = data.error || data.stderr || data.stdout || "Submission failed. Contact admin.";
-                setOutput(errorDetail);
-                setStatusMessage("Error");
+                const { label, message } = formatErrorForDisplay(data);
+                setOutput(message);
+                setStatusMessage(label);
                 return;
             }
 

@@ -30,32 +30,28 @@ export function formatErrorForDisplay(data) {
 
 /**
  * Classifies an error into a human-readable label for the status badge.
- * Uses the formatted error string from the dispatcher to detect the type.
- * @param {string} stderr - The error output string
- * @param {string} status - The status string from the dispatcher (e.g. 'ERROR', 'FAILED')
- * @returns {string} - A human-readable label
+ * Matches the simplified headers from the dispatcher.
  */
 function classifyErrorLabel(stderr, status) {
     const lower = stderr.toLowerCase();
 
-    // The dispatcher prefixes errors with emoji-tagged headers
+    // Match dispatcher emoji-tagged headers (simplified — no compiler names)
     if (lower.includes('compilation error')) return 'Compilation Error';
     if (lower.includes('time limit exceeded')) return 'Time Limit Exceeded';
-    if (lower.includes('segmentation fault') || lower.includes('sigsegv')) return 'Runtime Error (SIGSEGV)';
-    if (lower.includes('floating point exception') || lower.includes('sigfpe')) return 'Runtime Error (SIGFPE)';
-    if (lower.includes('aborted') || lower.includes('sigabrt')) return 'Runtime Error (SIGABRT)';
+    if (lower.includes('segmentation fault')) return 'Runtime Error (SIGSEGV)';
+    if (lower.includes('floating point exception')) return 'Runtime Error (SIGFPE)';
+    if (lower.includes('aborted')) return 'Runtime Error (SIGABRT)';
     if (lower.includes('non-zero exit') || lower.includes('nzec')) return 'Runtime Error (NZEC)';
     if (lower.includes('runtime error')) return 'Runtime Error';
     if (lower.includes('internal judge error')) return 'Internal Error';
     if (lower.includes('exec format error')) return 'Exec Format Error';
 
-    // Fallback: detect from raw compiler markers
+    // Fallback: detect from raw compiler/runtime markers
     if (lower.includes('error:')) return 'Compilation Error';
     if (lower.includes('traceback')) return 'Runtime Error';
     if (lower.includes('exception')) return 'Runtime Error';
     if (lower.includes('panic:')) return 'Runtime Error';
 
-    // Use status as last resort
     if (status === 'FAILED') return 'Judge Error';
     if (status === 'ERROR') return 'Error';
 

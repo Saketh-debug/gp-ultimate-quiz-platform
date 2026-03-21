@@ -13,87 +13,46 @@ const LANG_MULTIPLIERS = {
     60: 1.5, // Go
 };
 
-// Language ID → Readable Name for error messages
-const LANGUAGE_NAMES = {
-    71: 'Python 3',
-    50: 'C (GCC)',
-    54: 'C++ (G++)',
-    62: 'Java (OpenJDK)',
-    60: 'Go',
-};
-
 /**
- * Constructs a detailed, language-specific error message from a Judge0 response.
- * Each compiler/runtime has its own error format — this preserves the native output.
+ * Constructs a clean error message from a Judge0 response.
+ * Preserves the native compiler/runtime output — no extra hints or compiler names.
+ *
+ * @param {Object} result    - Judge0 response data (with decoded fields)
+ * @param {number} languageId - Judge0 language ID
+ * @param {number|null} cpuLimit - The cpu_time_limit that was set, if any (for TLE override)
  *
  * Judge0 status IDs:
- *   3  = Accepted
- *   4  = Wrong Answer
- *   5  = Time Limit Exceeded
- *   6  = Compilation Error
- *   7  = Runtime Error (SIGSEGV)
- *   8  = Runtime Error (SIGXFSZ)
- *   9  = Runtime Error (SIGFPE)
- *   10 = Runtime Error (SIGABRT)
- *   11 = Runtime Error (NZEC)
- *   12 = Runtime Error (Other)
- *   13 = Internal Error
- *   14 = Exec Format Error
+ *   3  = Accepted       5  = TLE            6  = Compilation Error
+ *   7  = SIGSEGV        8  = SIGXFSZ        9  = SIGFPE
+ *   10 = SIGABRT        11 = NZEC           12 = Runtime Error (Other)
+ *   13 = Internal Error 14 = Exec Format Error
  */
-function formatErrorOutput(result, languageId) {
+function formatErrorOutput(result, languageId, cpuLimit = null) {
     const statusId = result.status?.id;
     const statusDesc = result.status?.description || 'Unknown Error';
-    const langName = LANGUAGE_NAMES[parseInt(languageId)] || `Language ${languageId}`;
+    const execTime = parseFloat(result.time) || 0;
+
+    // --- TLE OVERRIDE ---
+    // When Judge0 kills a process for exceeding the time limit, it sometimes
+    // reports SIGSEGV (7), SIGABRT (10), NZEC (11), or even status 12 instead
+    // of TLE (5). Detect this by checking if execution time is near the limit.
+    const isTLEOverride = cpuLimit && execTime >= cpuLimit * 0.9 && statusId !== 6 && statusId !== 3;
+
+    // --- TIME LIMIT EXCEEDED (status 5 or TLE override) ---
+    if (statusId === 5 || isTLEOverride) {
+        return `⏱️ Time Limit Exceeded\n\nYour code did not finish within the allowed time limit.${execTime ? `\nExecution time: ${result.time}s` : ''}\n\n=== Time Limit Exceeded ===`;
+    }
 
     // --- COMPILATION ERROR (status 6) ---
     if (statusId === 6) {
-        const compileOut = result.compile_output || '';
-        const lines = [];
-
-        lines.push(`❌ Compilation Error [${langName}]`);
-        lines.push('');
-
-        if (compileOut) {
-            // The compile_output from Judge0 already contains the native compiler output
-            // GCC/G++:   main.cpp:7:12: error: 'n' was not declared in this scope
-            // javac:     Main.java:5: error: ';' expected
-            // Go:        ./main.go:10:2: undefined: fmt.Printl
-            lines.push(compileOut.trim());
-        } else {
-            lines.push('No compiler output available.');
-        }
-
-        lines.push('');
-        lines.push('=== Code Exited With Compilation Errors ===');
-
-        return lines.join('\n');
-    }
-
-    // --- TIME LIMIT EXCEEDED (status 5) ---
-    if (statusId === 5) {
-        const lines = [];
-        lines.push(`⏱️ Time Limit Exceeded [${langName}]`);
-        lines.push('');
-        lines.push(`Your code did not finish within the allowed time limit.`);
-        if (result.time) {
-            lines.push(`Execution time: ${result.time}s`);
-        }
-        lines.push('');
-        lines.push('Common causes:');
-        lines.push('  • Infinite loop');
-        lines.push('  • Inefficient algorithm (high time complexity)');
-        lines.push('  • Waiting for input that was not provided');
-        lines.push('');
-        lines.push('=== Time Limit Exceeded ===');
-        return lines.join('\n');
+        const compileOut = (result.compile_output || '').trim();
+        return `❌ Compilation Error\n\n${compileOut || 'No compiler output available.'}\n\n=== Code Exited With Compilation Errors ===`;
     }
 
     // --- RUNTIME ERROR (status 7-12) ---
     if (statusId >= 7 && statusId <= 12) {
-        const stderr = result.stderr || '';
-        const lines = [];
+        const stderr = (result.stderr || '').trim();
 
-        // Runtime error sub-types
         const runtimeTypeMap = {
             7: 'Segmentation Fault (SIGSEGV)',
             8: 'Output Limit Exceeded (SIGXFSZ)',
@@ -102,58 +61,22 @@ function formatErrorOutput(result, languageId) {
             11: 'Non-Zero Exit Code (NZEC)',
             12: 'Runtime Error',
         };
-
         const runtimeType = runtimeTypeMap[statusId] || 'Runtime Error';
 
-        lines.push(`💥 Runtime Error: ${runtimeType} [${langName}]`);
-        lines.push('');
-
-        if (stderr) {
-            // Python:  Traceback (most recent call last): ... ValueError: invalid literal ...
-            // C/C++:   (usually empty or OS-level message)
-            // Java:    Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException ...
-            // Go:      panic: runtime error: index out of range ...
-            lines.push(stderr.trim());
-        } else {
-            // For C/C++ segfaults, stderr is often empty
-            if (statusId === 7) {
-                lines.push('Your program tried to access memory that was not allocated.');
-                lines.push('Common causes:');
-                lines.push('  • Array index out of bounds');
-                lines.push('  • Dereferencing a null/dangling pointer');
-                lines.push('  • Stack overflow from infinite recursion');
-            } else if (statusId === 9) {
-                lines.push('A floating point exception occurred.');
-                lines.push('Common cause: Division by zero');
-            } else if (statusId === 11) {
-                lines.push('Your program exited with a non-zero exit code.');
-                if (parseInt(languageId) === 71) {
-                    lines.push('In Python, this usually means an unhandled exception occurred.');
-                } else if (parseInt(languageId) === 62) {
-                    lines.push('In Java, this usually means an uncaught exception was thrown.');
-                }
-            } else {
-                lines.push(`Your program crashed with signal: ${statusDesc}`);
-            }
-        }
-
-        lines.push('');
-        lines.push(`=== Code Exited With ${runtimeType} ===`);
-
-        return lines.join('\n');
+        return `💥 Runtime Error: ${runtimeType}\n\n${stderr || statusDesc}\n\n=== Code Exited With Errors ===`;
     }
 
     // --- INTERNAL ERROR (status 13) ---
     if (statusId === 13) {
-        return `⚠️ Internal Judge Error [${langName}]\n\nThe judge encountered an internal error while processing your submission.\nThis is NOT your fault. Please try again or contact an admin.\n\n=== Internal Error ===`;
+        return `⚠️ Internal Judge Error\n\nThe judge encountered an internal error. This is not your fault.\nPlease try again or contact an admin.\n\n=== Internal Error ===`;
     }
 
     // --- EXEC FORMAT ERROR (status 14) ---
     if (statusId === 14) {
-        return `⚠️ Exec Format Error [${langName}]\n\nThe compiled binary could not be executed.\nThis may be a Judge configuration issue.\n\n=== Exec Format Error ===`;
+        return `⚠️ Exec Format Error\n\nThe compiled binary could not be executed.\n\n=== Exec Format Error ===`;
     }
 
-    // --- WRONG ANSWER (status 4) — shouldn't hit this path normally, but safety net ---
+    // --- WRONG ANSWER (status 4) ---
     if (statusId === 4) {
         return result.stderr || result.stdout || statusDesc;
     }
@@ -300,9 +223,10 @@ const worker = new Worker('judge-cluster', async (job) => {
 
                 // Apply per-question time limit for DSA and Cascade submissions
                 // Use != null so a 0.0 limit (edge case) is still enforced
+                let cpuLimit = null;
                 if (baseTimeLimit != null) {
                     const mult = LANG_MULTIPLIERS[parseInt(language_id)] || 1.0;
-                    const cpuLimit = parseFloat((baseTimeLimit * mult).toFixed(2));
+                    cpuLimit = parseFloat((baseTimeLimit * mult).toFixed(2));
                     payload.cpu_time_limit = cpuLimit;
                     payload.wall_time_limit = parseFloat((cpuLimit * 3).toFixed(2));
                     console.log(`   [${questionMeta?.round?.toUpperCase()}] cpu_time_limit=${cpuLimit}s (base=${baseTimeLimit}s × ${mult})`);
@@ -332,8 +256,8 @@ const worker = new Worker('judge-cluster', async (job) => {
                     // so frontends can handle it in their standard wrong-answer branch
                     finalStatus = isDSA ? "PARTIAL" : "WRONG_ANSWER";
                     finalOutput = (result.stdout || "").substring(0, 10000);
-                    // Use formatErrorOutput for detailed, language-specific error messages
-                    const formattedError = formatErrorOutput(result, language_id);
+                    // Use formatErrorOutput with cpuLimit for TLE override detection
+                    const formattedError = formatErrorOutput(result, language_id, cpuLimit);
                     finalStderr = `Test Case ${i + 1}/${testCases.length}: FAILED\n\n${formattedError}`;
                     break;
                 }

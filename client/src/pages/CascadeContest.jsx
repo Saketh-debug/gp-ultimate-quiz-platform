@@ -14,6 +14,7 @@ import {
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
+import useContestProctoring from "../hooks/useContestProctoring";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -63,6 +64,9 @@ export default function CascadeContest({ session }) {
     const prevEditorKeyRef = useRef(null); // tracks "questionId__language" to detect real switches
     // Authenticated backend socket ref — created lazily in initSession with JWT
     const backendSocketRef = useRef(null);
+
+    // Proctoring
+    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("cascade", { contestEnded: totalTimeLeft === 0 || contestStopped });
 
     // Listen for admin stop event and force_logout from backend socket
     useEffect(() => {
@@ -182,6 +186,7 @@ export default function CascadeContest({ session }) {
     // Handle contest end — guarded against admin stop to prevent double messaging
     useEffect(() => {
         if (totalTimeLeft === 0 && !contestStoppedRef.current) {
+            cleanupProctoring();
             alert(`Contest Over! Your Cascade Score: ${cascadeScore} pts (+ streak bonus on leaderboard)`);
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("cascadeToken");
@@ -289,6 +294,7 @@ export default function CascadeContest({ session }) {
                 if (allSolved) {
                     const finalScore = scoreData.cascadeScore ?? cascadeScore;
                     setTimeout(() => {
+                        cleanupProctoring();
                         alert(`All questions solved! Your Cascade Score: ${finalScore} pts`);
                         clearCodeStorage(STORAGE_PREFIX);
                         localStorage.removeItem("cascadeToken");
@@ -553,6 +559,24 @@ export default function CascadeContest({ session }) {
     return (
         <div className="h-screen flex flex-col bg-[#110806] text-[#eff1f6] font-sans overflow-hidden">
 
+            {/* PROCTORING WARNING OVERLAY */}
+            {showWarning && !contestStopped && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(255,77,32,0.15)] text-center">
+                        <div className="text-6xl mb-6">⚠️</div>
+                        <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
+                        <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
+                        <p className="text-sm text-[#ff4d20]/70 mb-8 font-bold">Violations recorded: {violationCount}</p>
+                        <button
+                            onClick={warningAction}
+                            className="px-8 py-3 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)] w-full"
+                        >
+                            {warningButtonText}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* --- CONTEST STOPPED OVERLAY --- */}
             {contestStopped && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
@@ -567,7 +591,7 @@ export default function CascadeContest({ session }) {
                             <span className="text-[#f4a460] font-bold">Your Score: {cascadeScore} pts (+ streak bonus on leaderboard)</span>
                         </p>
                         <button
-                            onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); localStorage.removeItem("cascadeAccessCode"); navigate("/rounds"); }}
+                            onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); localStorage.removeItem("cascadeAccessCode"); navigate("/rounds"); }}
                             className="px-8 py-3 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
                         >
                             Return to Rounds

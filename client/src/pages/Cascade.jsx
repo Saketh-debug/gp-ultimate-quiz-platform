@@ -30,6 +30,8 @@ function Cascade() {
       if (res.ok) {
         localStorage.setItem("cascadeToken", data.accessToken); // JWT for API auth
         localStorage.setItem("cascadeAccessCode", token);       // Raw code for /join resume
+        // Enter fullscreen before navigating (button click provides required gesture)
+        await document.documentElement.requestFullscreen().catch(() => { });
         navigate("/cascade-contest", { state: { session: data } });
       } else {
         setError(data.error || "Failed to join");

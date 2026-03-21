@@ -16,6 +16,7 @@ import {
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
+import useContestProctoring from "../hooks/useContestProctoring";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -59,6 +60,9 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
     // Scoring State
     const [rapidfireScore, setRapidfireScore] = useState(0);
+
+    // Proctoring
+    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("rapidfire", { contestEnded: totalTimeLeft === 0 });
 
     // UI State
     const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
@@ -180,6 +184,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     // Handle contest end — fires from both interval ticks and re-sync updates
     useEffect(() => {
         if (totalTimeLeft === 0) {
+            cleanupProctoring();
             alert(`Contest Over! Your Rapidfire Score: ${rapidfireScore} points`);
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("userToken");
@@ -320,6 +325,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 }
 
             } else {
+                cleanupProctoring();
                 alert(`All questions completed! Your Rapidfire Score: ${rapidfireScore} points`);
                 clearCodeStorage(STORAGE_PREFIX);
                 localStorage.removeItem("userToken");
@@ -472,6 +478,24 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
     return (
         <div className="h-screen flex flex-col bg-[#1a1a1a] text-[#eff1f6] font-sans overflow-hidden">
+
+            {/* PROCTORING WARNING OVERLAY */}
+            {showWarning && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(255,100,0,0.15)] text-center">
+                        <div className="text-6xl mb-6">⚠️</div>
+                        <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
+                        <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
+                        <p className="text-sm text-orange-400/70 mb-8 font-bold">Violations recorded: {violationCount}</p>
+                        <button
+                            onClick={warningAction}
+                            className="px-8 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,100,0,0.3)] w-full"
+                        >
+                            {warningButtonText}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* TOP NAVIGATION BAR */}
             <nav className="h-[60px] bg-[#282828] border-b border-[#3e3e3e] flex items-center justify-between px-6 shrink-0 z-50">

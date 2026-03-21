@@ -30,6 +30,8 @@ function DSA() {
       if (res.ok) {
         localStorage.setItem("dsaToken", data.accessToken); // JWT for API auth
         localStorage.setItem("dsaAccessCode", token);       // Raw code for /join resume
+        // Enter fullscreen before navigating (button click provides required gesture)
+        await document.documentElement.requestFullscreen().catch(() => { });
         navigate("/dsa-contest", { state: { session: data } });
       } else {
         setError(data.error || "Failed to join");

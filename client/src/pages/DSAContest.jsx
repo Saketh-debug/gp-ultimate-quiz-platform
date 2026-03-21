@@ -14,6 +14,7 @@ import {
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
+import useContestProctoring from "../hooks/useContestProctoring";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -57,6 +58,9 @@ export default function DSAContest({ session }) {
     const [totalTimeLeft, setTotalTimeLeft] = useState(null); // null = loading, seeded from server
     const [contestStopped, setContestStopped] = useState(false);
     const isSyncingRef = useRef(false); // Guard for visibility re-sync
+
+    // Proctoring
+    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("dsa", { contestEnded: totalTimeLeft === 0 || contestStopped });
 
     // Resizing State
     const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
@@ -205,6 +209,7 @@ export default function DSAContest({ session }) {
     // Handle contest end — fires from both interval ticks and re-sync updates
     useEffect(() => {
         if (totalTimeLeft === 0 && !contestStopped) {
+            cleanupProctoring();
             alert("Contest Over! Final score transmitted.");
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("dsaToken");
@@ -354,6 +359,7 @@ export default function DSAContest({ session }) {
                                 setStatusMessage("");
                                 setRightTab("result");
                             } else {
+                                cleanupProctoring();
                                 alert("Congratulations! You have solved all questions.");
                                 clearCodeStorage(STORAGE_PREFIX);
                                 localStorage.removeItem("dsaToken");
@@ -541,6 +547,24 @@ export default function DSAContest({ session }) {
     return (
         <div className="h-screen flex flex-col bg-[#0c0202] text-[#eff1f6] font-sans overflow-hidden">
 
+            {/* PROCTORING WARNING OVERLAY */}
+            {showWarning && !contestStopped && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(244,63,94,0.15)] text-center">
+                        <div className="text-6xl mb-6">⚠️</div>
+                        <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
+                        <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
+                        <p className="text-sm text-[#f43f5e]/70 mb-8 font-bold">Violations recorded: {violationCount}</p>
+                        <button
+                            onClick={warningAction}
+                            className="px-8 py-3 bg-[#f43f5e] hover:bg-rose-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)] w-full"
+                        >
+                            {warningButtonText}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* --- CONTEST STOPPED OVERLAY --- */}
             {contestStopped && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
@@ -554,7 +578,7 @@ export default function DSAContest({ session }) {
                             Your progress has been saved.
                         </p>
                         <button
-                            onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); localStorage.removeItem("dsaCurrentIndex"); navigate("/rounds"); }}
+                            onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); localStorage.removeItem("dsaCurrentIndex"); navigate("/rounds"); }}
                             className="px-8 py-3 bg-[#f43f5e] hover:bg-rose-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)]"
                         >
                             Return to Rounds

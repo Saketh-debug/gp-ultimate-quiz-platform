@@ -5,11 +5,11 @@ const pool = require("../db");
 
 const ROUND_NAME = 'rapidfire';
 const GRACE_PERIOD_MINUTES = 30;
-const CONTEST_DURATION_MINUTES = 45;
+const CONTEST_DURATION_MINUTES = 50;
 
 // Scoring Configuration (change BASE_POINTS to adjust scoring)
 const BASE_POINTS = 10;
-const QUESTION_DURATION = 600; // 10 minutes per question
+const QUESTION_DURATION = 300; // 5 minutes per question
 
 /**
  * Helper: Calculate remaining time for a specific question (3 mins max)
@@ -160,7 +160,7 @@ router.post("/join", async (req, res) => {
 
             // Assign 15 Random Questions
             const qRes = await pool.query(
-                "SELECT id, title, description, avg_time FROM questions WHERE round = 'rapidfire' ORDER BY RANDOM() LIMIT 15"
+                "SELECT id, title, description, avg_time FROM questions WHERE round = 'rapidfire' ORDER BY RANDOM() LIMIT 10"
             );
 
             if (qRes.rows.length === 0) {

@@ -23,7 +23,7 @@ const SUBMISSION_URL = import.meta.env.VITE_SUBMISSION_URL;
 const socket = io(SUBMISSION_URL);
 
 const STORAGE_PREFIX = "rapidfire";
-const QUESTION_DURATION = 600; // 10 minutes
+const QUESTION_DURATION = 300; // 5 minutes
 
 export default function RapidfireContest({ session }) { // Prop session is fallback
     const navigate = useNavigate();

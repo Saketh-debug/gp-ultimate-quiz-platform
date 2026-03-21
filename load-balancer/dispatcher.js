@@ -1,7 +1,7 @@
 const { Worker } = require('bullmq');
 const axios = require('axios');
 const { Pool } = require('pg');
-const { JUDGE_NODES, REDIS_CONFIG, PG_CONFIG } = require('./config');
+const { JUDGE_NODES, REDIS_CONFIG, PG_CONFIG, INTERNAL_SECRET } = require('./config');
 
 // Language multipliers for DSA time limits (Codeforces-standard)
 // Base limit is defined per-question for C/C++; other languages are scaled.
@@ -303,6 +303,51 @@ const worker = new Worker('judge-cluster', async (job) => {
             ? finalStderr.substring(0, MAX_SOCKET_OUTPUT) + '\n\n--- Error output truncated ---'
             : finalStderr;
 
+        // 6. CALL submit-result INTERNALLY (server-to-server, no user JWT)
+        // This prevents users from faking a score by calling submit-result via Postman.
+        // The dispatcher is the only entity that knows INTERNAL_SECRET.
+        // IMPORTANT: Only call in SUBMIT mode — RUN mode (custom input) should never award points.
+        let scorePayload = {};
+        if (!isRunMode && problem_id && (finalStatus === 'ACCEPTED' || finalStatus === 'PARTIAL')) {
+            try {
+                // Look up which round this question belongs to
+                const roundRes = await db.query("SELECT round FROM questions WHERE id = $1", [problem_id]);
+                const round = roundRes.rows[0]?.round; // 'rapidfire', 'cascade', or 'dsa'
+
+                const endpointMap = {
+                    rapidfire: '/rapidfire/submit-result',
+                    cascade: '/cascade/submit-result',
+                    dsa: '/dsa/submit-result',
+                };
+                const endpoint = endpointMap[round];
+
+                if (endpoint) {
+                    const body = { questionId: problem_id };
+                    if (round === 'dsa') body.passedCount = passedCount; // DSA uses partial scoring
+
+                    const scoreRes = await axios.post(
+                        `http://localhost:3000${endpoint}`,
+                        body,
+                        {
+                            headers: {
+                                'x-internal-secret': INTERNAL_SECRET,
+                                'x-user-id': String(user_id),
+                            },
+                            timeout: 5000,
+                        }
+                    );
+                    scorePayload = scoreRes.data;
+                    console.log(`[Job ${submissionId}] 🏆 Score synced for round=${round}, user=${user_id}`);
+                }
+            } catch (e) {
+                const errDetail = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+                console.error(`[Job ${submissionId}] ⚠️ submit-result failed (${e.response?.status || 'network'}): ${errDetail}`);
+                // Non-fatal: submission result still goes to the client, just without score data
+            }
+        }
+
+        // 7. NOTIFY THE FRONTEND via socket
+        // scorePayload is spread in so the frontend can display score without a separate API call
         socket.emit('internal_job_finished', {
             userId: user_id,
             submissionId: submissionId,
@@ -312,18 +357,8 @@ const worker = new Worker('judge-cluster', async (job) => {
             time: finalTime,
             passedCount,
             totalTestCases,
+            ...scorePayload,  // score fields from submit-result (scoreAwarded, totalRoundScore, etc.)
         });
-
-
-        // 6. UPDATE CONTEST PROGRESS (RAPID FIRE)
-        if (finalStatus === 'ACCEPTED' && problem_id) {
-            await db.query(`
-                UPDATE user_questions 
-                SET status = 'ACCEPTED'
-                WHERE user_id = $1 AND question_id = $2
-            `, [user_id, problem_id]);
-            console.log(`[Job ${submissionId}] 🏆 Marked Question ${problem_id} as ACCEPTED for User ${user_id}`);
-        }
 
     } catch (error) {
         const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;

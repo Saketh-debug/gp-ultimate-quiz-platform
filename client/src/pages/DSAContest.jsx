@@ -208,6 +208,7 @@ export default function DSAContest({ session }) {
             alert("Contest Over! Final score transmitted.");
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("dsaToken");
+            localStorage.removeItem("dsaCurrentIndex");
             navigate("/rounds");
         }
     }, [totalTimeLeft]);
@@ -288,7 +289,7 @@ export default function DSAContest({ session }) {
             ).join("  |  ");
 
             if (data.status === "ACCEPTED" || data.status === "PARTIAL") {
-                // passedCount=0 means no TCs passed — don't call submit-result, just show output
+                // passedCount=0 means no TCs passed — don't process score, just show output
                 if (passedCount === 0) {
                     const errDetail = data.stderr || data.stdout || "No test cases passed.";
                     setOutput(`${tcResults}\n\n${errDetail}`);
@@ -296,85 +297,75 @@ export default function DSAContest({ session }) {
                     return;
                 }
 
-                // Call backend to register partial/full score
-                try {
-                    const jwt = localStorage.getItem('dsaToken');
-                    const res = await axios.post(`${BACKEND_URL}/dsa/submit-result`, {
-                        questionId: currentQuestion.id,
-                        passedCount,
-                    }, {
-                        headers: { Authorization: `Bearer ${jwt}` }
-                    });
+                // Score data is computed server-side (dispatcher calls submit-result internally)
+                // and arrives pre-attached to the socket payload — no separate API call needed.
+                const scoreAwarded = data.scoreAwarded ?? 0;
+                const newTotalScore = data.totalScore ?? 0;
+                const noImprovement = data.message === "No improvement";
 
-                    const scoreData = res.data;
-                    const scoreAwarded = scoreData.scoreAwarded ?? 0;
-                    const newTotalScore = scoreData.totalScore ?? 0;
+                setTotalScore(newTotalScore);
 
-                    setTotalScore(newTotalScore);
+                const allPassed = passedCount === totalTestCases;
+                const newStatus = allPassed ? 'ACCEPTED' : 'PARTIAL';
 
-                    const allPassed = passedCount === totalTestCases;
-                    const newStatus = allPassed ? 'ACCEPTED' : 'PARTIAL';
+                // Update local question status and score_awarded
+                setQuestions(prev => {
+                    const newQ = [...prev];
+                    newQ[currentIndex] = {
+                        ...newQ[currentIndex],
+                        status: newStatus,
+                        score_awarded: scoreAwarded,
+                        passed_count: passedCount,
+                    };
+                    return newQ;
+                });
 
-                    // Update local question status and score_awarded
-                    setQuestions(prev => {
-                        const newQ = [...prev];
-                        newQ[currentIndex] = {
-                            ...newQ[currentIndex],
-                            status: newStatus,
-                            score_awarded: scoreAwarded,
-                            passed_count: passedCount,
-                        };
-                        return newQ;
-                    });
+                const statusLabel = allPassed ? "Accepted ✅" : "Partial Score 🟡";
+                const basePoints = currentQuestion.base_points;
+                const outputMsg = [
+                    tcResults,
+                    ``,
+                    `Score: ${scoreAwarded} / ${basePoints} pts`,
+                    allPassed
+                        ? `All test cases passed!`
+                        : `${passedCount}/${totalTestCases} test cases passed. You can re-submit for a better score.`,
+                    noImprovement ? `(No improvement over previous attempt)` : "",
+                ].filter(Boolean).join("\n");
 
-                    const statusLabel = allPassed ? "Accepted ✅" : "Partial Score 🟡";
-                    const basePoints = currentQuestion.base_points;
-                    const outputMsg = [
-                        tcResults,
-                        ``,
-                        `Score: ${scoreAwarded} / ${basePoints} pts`,
-                        allPassed
-                            ? `All test cases passed!`
-                            : `${passedCount}/${totalTestCases} test cases passed. You can re-submit for a better score.`,
-                        scoreData.message === "No improvement"
-                            ? `(No improvement over previous attempt)`
-                            : "",
-                    ].filter(Boolean).join("\n");
+                setOutput(outputMsg);
+                setStatusMessage(statusLabel);
 
-                    setOutput(outputMsg);
-                    setStatusMessage(statusLabel);
-
-                    // Auto-navigate to next unsolved question only if fully accepted
-                    if (allPassed) {
-                        setTimeout(() => {
-                            setQuestions(currentQuestions => {
-                                let nextUnsolvedIndex = -1;
-                                for (let i = 0; i < currentQuestions.length; i++) {
-                                    if (currentQuestions[i].status !== 'ACCEPTED') {
-                                        nextUnsolvedIndex = i;
-                                        break;
-                                    }
+                // Auto-navigate to next unsolved question only if fully accepted
+                if (allPassed) {
+                    setTimeout(() => {
+                        setQuestions(currentQuestions => {
+                            let nextUnsolvedIndex = -1;
+                            for (let i = 0; i < currentQuestions.length; i++) {
+                                if (currentQuestions[i].status !== 'ACCEPTED') {
+                                    nextUnsolvedIndex = i;
+                                    break;
                                 }
-                                if (nextUnsolvedIndex !== -1) {
-                                    setCurrentIndex(nextUnsolvedIndex);
-                                    localStorage.setItem("dsaCurrentIndex", nextUnsolvedIndex);
-                                    setOutput("");
-                                    setCustomInput("");
-                                    setStatusMessage("");
-                                    setRightTab("result");
-                                } else {
-                                    alert("Congratulations! You have solved all questions.");
-                                }
-                                return currentQuestions;
-                            });
-                        }, 2000);
-                    }
-
-                } catch (err) {
-                    console.error("Failed to sync score", err);
-                    setOutput("Score sync failed. Contact admin.");
+                            }
+                            if (nextUnsolvedIndex !== -1) {
+                                setCurrentIndex(nextUnsolvedIndex);
+                                localStorage.setItem("dsaCurrentIndex", nextUnsolvedIndex);
+                                setOutput("");
+                                setCustomInput("");
+                                setStatusMessage("");
+                                setRightTab("result");
+                            } else {
+                                alert("Congratulations! You have solved all questions.");
+                                clearCodeStorage(STORAGE_PREFIX);
+                                localStorage.removeItem("dsaToken");
+                                localStorage.removeItem("dsaCurrentIndex");
+                                navigate("/rounds");
+                            }
+                            return currentQuestions;
+                        });
+                    }, 2000);
                 }
             }
+
             else {
                 // WRONG_ANSWER from non-DSA path (shouldn't happen for DSA, but safe fallback)
                 const errorDetail = data.stderr || data.stdout || "Incorrect Answer. Try again!";
@@ -563,7 +554,7 @@ export default function DSAContest({ session }) {
                             Your progress has been saved.
                         </p>
                         <button
-                            onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); navigate("/rounds"); }}
+                            onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); localStorage.removeItem("dsaCurrentIndex"); navigate("/rounds"); }}
                             className="px-8 py-3 bg-[#f43f5e] hover:bg-rose-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)]"
                         >
                             Return to Rounds

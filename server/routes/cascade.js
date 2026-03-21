@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");
 const jwt = require('jsonwebtoken');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticateToken, authenticateInternal } = require('../middleware/authMiddleware');
 
 const ROUND_NAME = 'cascade';
 const GRACE_PERIOD_MINUTES = 30;
@@ -38,9 +38,9 @@ router.post("/join", async (req, res) => {
         }
         const user = userRes.rows[0];
 
-        // 3. Check for existing active session
+        // 3. Check for any prior session (active or expired)
         const activeSession = await pool.query(
-            "SELECT * FROM cascade_sessions WHERE user_id = $1",
+            "SELECT * FROM cascade_sessions WHERE user_id = $1 ORDER BY join_time DESC LIMIT 1",
             [user.id]
         );
 
@@ -50,7 +50,13 @@ router.post("/join", async (req, res) => {
             // --- RESUME EXISTING SESSION ---
             const session = activeSession.rows[0];
 
-            if (session.end_time < now) {
+            // Block: user already completed this contest
+            if (session.completed) {
+                return res.status(403).json({ error: "You have already completed this contest." });
+            }
+
+            // Block: session timer has expired
+            if (new Date(session.end_time) < now) {
                 return res.status(403).json({ error: "Contest has ended for this user." });
             }
 
@@ -65,6 +71,18 @@ router.post("/join", async (req, res) => {
             );
 
             outputQuestions = qRes.rows;
+
+            // If every question is finished, mark completed and block re-entry
+            const allDone = outputQuestions.every(
+                q => q.status === 'ACCEPTED' || q.status === 'SKIPPED'
+            );
+            if (allDone) {
+                await pool.query(
+                    "UPDATE cascade_sessions SET completed = TRUE WHERE user_id = $1",
+                    [user.id]
+                );
+                return res.status(403).json({ error: "You have already completed this contest." });
+            }
 
             const totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - now) / 1000));
 
@@ -191,9 +209,10 @@ router.post("/join", async (req, res) => {
     }
 });
 
-// Submit Result (Called after Socket execution)
-router.post("/submit-result", authenticateToken, async (req, res) => {
-    const userId = req.user.userId;
+// Submit Result — internal-only, called by dispatcher after Judge0 confirms ACCEPTED.
+// User JWTs are rejected with 403.
+router.post("/submit-result", authenticateInternal, async (req, res) => {
+    const userId = req.user.userId; // injected from x-user-id header by dispatcher
     const { questionId } = req.body;
     try {
         const sessionRes = await pool.query("SELECT * FROM cascade_sessions WHERE user_id = $1", [userId]);

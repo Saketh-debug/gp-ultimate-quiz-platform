@@ -25,5 +25,9 @@ module.exports = {
         database: 'contest_db',
         password: 'password', // Matches the docker run command from Phase 2
         port: 5432,
-    }
+    },
+
+    // Internal secret — must match INTERNAL_SECRET in server/.env
+    // Protects submit-result endpoints from being called by users directly.
+    INTERNAL_SECRET: 'opulence_contest_internal_dispatcher_secret_2025_!@#',
 };

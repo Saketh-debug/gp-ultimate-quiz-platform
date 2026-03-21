@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");
 const jwt = require('jsonwebtoken');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticateToken, authenticateInternal } = require('../middleware/authMiddleware');
 
 const ROUND_NAME = 'rapidfire';
 const GRACE_PERIOD_MINUTES = 30;
@@ -55,10 +55,10 @@ router.post("/join", async (req, res) => {
         }
         const user = userRes.rows[0];
 
-        // 3. Check for existing active session
+        // 3. Check for any prior session (active or expired)
         const activeSession = await pool.query(
-            "SELECT * FROM user_sessions WHERE user_id = $1 AND end_time > $2",
-            [user.id, now]
+            "SELECT * FROM user_sessions WHERE user_id = $1 ORDER BY join_time DESC LIMIT 1",
+            [user.id]
         );
 
         let outputQuestions = [];
@@ -67,8 +67,13 @@ router.post("/join", async (req, res) => {
             // --- RESUME EXISTING SESSION ---
             const session = activeSession.rows[0];
 
-            // Check if session has expired
-            if (session.end_time < now) {
+            // Block: user already completed this contest
+            if (session.completed) {
+                return res.status(403).json({ error: "You have already completed this contest." });
+            }
+
+            // Block: session timer has expired
+            if (new Date(session.end_time) < now) {
                 return res.status(403).json({ error: "Contest has ended for this user." });
             }
 
@@ -108,9 +113,13 @@ router.post("/join", async (req, res) => {
                 break;
             }
 
-            // If all questions are done, point to the last one
+            // If all questions are done — mark completed and block re-entry
             if (currentIndex === -1) {
-                currentIndex = qRes.rows.length - 1;
+                await pool.query(
+                    "UPDATE user_sessions SET completed = TRUE WHERE user_id = $1",
+                    [user.id]
+                );
+                return res.status(403).json({ error: "You have already completed this contest." });
             }
 
             // Auto-start timer for the current question if it hasn't been started
@@ -189,7 +198,7 @@ router.post("/join", async (req, res) => {
 
             // Assign 15 Random Questions
             const qRes = await pool.query(
-                "SELECT id, title, description, avg_time FROM questions WHERE round = 'rapidfire' ORDER BY RANDOM() LIMIT 15"
+                "SELECT id, title, description, avg_time FROM questions WHERE round = 'rapidfire' ORDER BY RANDOM() LIMIT 10"
             );
 
             if (qRes.rows.length === 0) {
@@ -372,8 +381,10 @@ router.post("/time-check", authenticateToken, async (req, res) => {
 
 // Submit Result — called by frontend after load balancer confirms ACCEPTED
 // All scoring computed server-side from stored start_time
-router.post("/submit-result", authenticateToken, async (req, res) => {
-    const userId = req.user.userId;
+// NOTE: This endpoint is now internal-only — called by the dispatcher after Judge0 confirms ACCEPTED.
+// User JWTs are rejected with 403. Use authenticateInternal instead of authenticateToken.
+router.post("/submit-result", authenticateInternal, async (req, res) => {
+    const userId = req.user.userId; // injected from x-user-id header by dispatcher
     const { questionId } = req.body;
     try {
         // 1. Fetch question data
@@ -417,8 +428,9 @@ router.post("/submit-result", authenticateToken, async (req, res) => {
         const score = Math.round(BASE_POINTS + 5 * (remainingTime / QUESTION_DURATION));
 
         // 5. Atomic update — only if score_awarded is still 0 (prevents double-scoring)
+        // Also mark status = 'ACCEPTED' so the /join re-entry gate can skip completed questions.
         const updateRes = await pool.query(
-            "UPDATE user_questions SET score_awarded = $1 WHERE user_id = $2 AND question_id = $3 AND score_awarded = 0 RETURNING score_awarded",
+            "UPDATE user_questions SET score_awarded = $1, status = 'ACCEPTED' WHERE user_id = $2 AND question_id = $3 AND score_awarded = 0 RETURNING score_awarded",
             [score, userId, questionId]
         );
 

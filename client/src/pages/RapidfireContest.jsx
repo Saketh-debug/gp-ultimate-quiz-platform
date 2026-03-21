@@ -59,7 +59,6 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
     // Scoring State
     const [rapidfireScore, setRapidfireScore] = useState(0);
-    const submittedQuestionIdRef = useRef(null); // Captures questionId at submit time (edge case #10)
 
     // UI State
     const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
@@ -184,6 +183,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             alert(`Contest Over! Your Rapidfire Score: ${rapidfireScore} points`);
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("userToken");
+            localStorage.removeItem("userAccessCode");
             navigate("/rounds");
         }
     }, [totalTimeLeft]);
@@ -322,7 +322,8 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             } else {
                 alert(`All questions completed! Your Rapidfire Score: ${rapidfireScore} points`);
                 clearCodeStorage(STORAGE_PREFIX);
-                localStorage.removeItem("userToken"); // Clear session
+                localStorage.removeItem("userToken");
+                localStorage.removeItem("userAccessCode");
                 navigate("/rounds");
             }
         } finally {
@@ -361,21 +362,12 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             if (data.status === "ACCEPTED") {
                 setStatusMessage("Accepted");
 
-                // Call /submit-result IMMEDIATELY (before advance delay)
-                // Uses submittedQuestionIdRef to avoid stale closure (edge case #10)
-                const qId = submittedQuestionIdRef.current;
-                try {
-                    const jwt = localStorage.getItem('userToken');
-                    const res = await axios.post(`${BACKEND_URL}/rapidfire/submit-result`, {
-                        questionId: qId
-                    }, {
-                        headers: { Authorization: `Bearer ${jwt}` }
-                    });
-                    const { scoreAwarded, totalRoundScore } = res.data;
-                    setRapidfireScore(totalRoundScore);
-                    setOutput(`Correct! +${scoreAwarded} pts (Total: ${totalRoundScore})`);
-                } catch (err) {
-                    console.error("Failed to sync score", err);
+                // Score is computed server-side (dispatcher calls submit-result internally).
+                // It arrives pre-attached to the socket payload — no separate API call needed.
+                if (data.scoreAwarded != null) {
+                    setRapidfireScore(data.totalRoundScore);
+                    setOutput(`Correct! +${data.scoreAwarded} pts (Total: ${data.totalRoundScore})`);
+                } else {
                     setOutput("Correct! Moving to next question...");
                 }
 
@@ -434,7 +426,6 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         setOutput("Submitting...");
         setStatusMessage("Judging...");
         isWaitingForResponse.current = true;
-        submittedQuestionIdRef.current = currentQuestion.id; // Capture for scoring (edge case #10)
 
         const code = codes[currentQuestion.id]?.[language] || getCodeOrBoilerplate(STORAGE_PREFIX, currentQuestion.id, language);
         const langId = LANGUAGE_IDS[language];

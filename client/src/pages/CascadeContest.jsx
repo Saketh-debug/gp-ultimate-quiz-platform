@@ -185,6 +185,7 @@ export default function CascadeContest({ session }) {
             alert(`Contest Over! Your Cascade Score: ${cascadeScore} pts (+ streak bonus on leaderboard)`);
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("cascadeToken");
+            localStorage.removeItem("cascadeAccessCode");
             navigate("/rounds");
         }
     }, [totalTimeLeft]);
@@ -261,59 +262,46 @@ export default function CascadeContest({ session }) {
 
             if (data.status === "ACCEPTED") {
                 setStatusMessage("Accepted");
-                setOutput("Correct Answer! Syncing with mainframe...");
+                setOutput("Correct Answer!");
 
-                // Call backend to register points & update streak
-                try {
-                    const jwt = localStorage.getItem('cascadeToken');
-                    const res = await axios.post(`${BACKEND_URL}/cascade/submit-result`, {
-                        questionId: currentQuestion.id
-                    }, {
-                        headers: { Authorization: `Bearer ${jwt}` }
-                    });
+                // Score data is computed server-side (dispatcher calls submit-result internally)
+                // and arrives pre-attached to the socket payload — no separate API call needed.
+                const scoreData = data;
+                setCurrentStreak(scoreData.currentStreak ?? currentStreak);
+                setMaxStreak(scoreData.maxStreak ?? maxStreak);
+                if (scoreData.cascadeScore != null) {
+                    setCascadeScore(scoreData.cascadeScore);
+                }
+                setHighestForwardIndex(scoreData.highestForwardIndex ?? highestForwardIndex);
 
-                    const scoreData = res.data;
-                    setCurrentStreak(scoreData.currentStreak);
-                    setMaxStreak(scoreData.maxStreak);
-                    if (scoreData.cascadeScore != null) {
-                        setCascadeScore(scoreData.cascadeScore);
-                    }
+                // Update local question status
+                setQuestions(prev => {
+                    const newQ = [...prev];
+                    newQ[currentIndex].status = 'ACCEPTED';
+                    return newQ;
+                });
 
-                    // Update local question status
-                    setQuestions(prev => {
-                        const newQ = [...prev];
-                        newQ[currentIndex].status = 'ACCEPTED';
-                        return newQ;
-                    });
+                // Check if ALL questions are now solved
+                const updatedQuestions = [...questions];
+                updatedQuestions[currentIndex].status = 'ACCEPTED';
+                const allSolved = updatedQuestions.every(q => q.status === 'ACCEPTED');
 
-                    // Note: backend 'submit-result' auto-advances the highest forward index if eligible.
-                    // We must honor that or advance locally
-                    setHighestForwardIndex(scoreData.highestForwardIndex);
-
-                    // Check if ALL questions are now solved (compute synchronously to avoid stale closure)
-                    const updatedQuestions = [...questions];
-                    updatedQuestions[currentIndex].status = 'ACCEPTED';
-                    const allSolved = updatedQuestions.every(q => q.status === 'ACCEPTED');
-
-                    if (allSolved) {
-                        const finalScore = scoreData.cascadeScore ?? cascadeScore;
-                        setTimeout(() => {
-                            alert(`All questions solved! Your Cascade Score: ${finalScore} pts`);
-                            clearCodeStorage(STORAGE_PREFIX);
-                            localStorage.removeItem("cascadeToken");
-                            navigate("/rounds");
-                        }, 1500);
-                    } else {
-                        setTimeout(() => {
-                            handleAdvance("Next question");
-                        }, 1500);
-                    }
-
-                } catch (err) {
-                    console.error("Failed to sync score", err);
-                    setOutput("Score sync failed. Contact admin.");
+                if (allSolved) {
+                    const finalScore = scoreData.cascadeScore ?? cascadeScore;
+                    setTimeout(() => {
+                        alert(`All questions solved! Your Cascade Score: ${finalScore} pts`);
+                        clearCodeStorage(STORAGE_PREFIX);
+                        localStorage.removeItem("cascadeToken");
+                        localStorage.removeItem("cascadeAccessCode");
+                        navigate("/rounds");
+                    }, 1500);
+                } else {
+                    setTimeout(() => {
+                        handleAdvance("Next question");
+                    }, 1500);
                 }
             }
+
             else {
                 const stderr = data.stderr || '';
                 const errorDetail = stderr || data.stdout || "Incorrect Answer. System streak preserved. Try again!";
@@ -579,7 +567,7 @@ export default function CascadeContest({ session }) {
                             <span className="text-[#f4a460] font-bold">Your Score: {cascadeScore} pts (+ streak bonus on leaderboard)</span>
                         </p>
                         <button
-                            onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); navigate("/rounds"); }}
+                            onClick={() => { clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); localStorage.removeItem("cascadeAccessCode"); navigate("/rounds"); }}
                             className="px-8 py-3 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
                         >
                             Return to Rounds
@@ -743,9 +731,11 @@ export default function CascadeContest({ session }) {
                                             setCurrentIndex(q.ogIndex);
                                             resetEditorState();
                                             // Persist viewing index for reload resilience
+                                            const jwt = localStorage.getItem('cascadeToken');
                                             axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
-                                                userId: activeSession.userId,
                                                 currentViewingIndex: q.ogIndex
+                                            }, {
+                                                headers: { Authorization: `Bearer ${jwt}` }
                                             }).catch(() => { });
                                         }}
                                         className={`w-full text-left px-4 py-3 rounded-lg text-sm flex justify-between items-center transition-colors border

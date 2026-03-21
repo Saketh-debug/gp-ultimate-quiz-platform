@@ -54,4 +54,21 @@ function authorizeAdmin(req, res, next) {
     next();
 }
 
-module.exports = { authenticateToken, authorizeAdmin };
+/**
+ * Authenticates internal server-to-server calls from the dispatcher.
+ * Rejects any request that doesn't carry the shared INTERNAL_SECRET header.
+ * This prevents users from calling submit-result directly via Postman or curl.
+ *
+ * The dispatcher injects x-user-id as a header, so req.user.userId is available
+ * to the route handler just like with authenticateToken.
+ */
+function authenticateInternal(req, res, next) {
+    if (req.headers['x-internal-secret'] !== process.env.INTERNAL_SECRET) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    req.user = { userId: parseInt(req.headers['x-user-id'], 10) };
+    next();
+}
+
+module.exports = { authenticateToken, authorizeAdmin, authenticateInternal };
+

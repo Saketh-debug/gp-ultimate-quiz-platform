@@ -37,6 +37,24 @@ router.post("/login", async (req, res) => {
     }
 });
 
+// Leaderboard — public route (no auth required)
+router.get("/leaderboard", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT username, team_name,
+                   rapidfire_score, cascade_score, dsa_score,
+                   (rapidfire_score + cascade_score + dsa_score) AS total_score
+            FROM users
+            ORDER BY total_score DESC, username ASC
+        `);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error("❌ LEADERBOARD ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ----------------------------------------------------------
 // All routes below this line require valid admin JWT
 // ----------------------------------------------------------
@@ -150,23 +168,6 @@ router.get("/status/:roundName", async (req, res) => {
 // Cascade Streak Bonus — configurable multiplier
 const STREAK_MULTIPLIER = 20;
 
-// Leaderboard — returns all teams sorted by total score
-router.get("/leaderboard", async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT username, team_name,
-                   rapidfire_score, cascade_score, dsa_score,
-                   (rapidfire_score + cascade_score + dsa_score) AS total_score
-            FROM users
-            ORDER BY total_score DESC, username ASC
-        `);
-
-        res.json(result.rows);
-    } catch (err) {
-        console.error("❌ LEADERBOARD ERROR:", err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
 
 // Apply Streak Bonus — admin batch-applies max_streak * STREAK_MULTIPLIER to cascade_score
 // Only applies to users whose sessions have expired (end_time < NOW)

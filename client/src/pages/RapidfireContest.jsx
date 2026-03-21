@@ -20,6 +20,7 @@ import { formatErrorForDisplay } from "../utils/errorFormatter";
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 const SUBMISSION_URL = import.meta.env.VITE_SUBMISSION_URL;
+// Socket connects to load-balancer for submission results (LB has no auth)
 const socket = io(SUBMISSION_URL);
 
 const STORAGE_PREFIX = "rapidfire";
@@ -67,27 +68,68 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     const isResizingVertical = useRef(false);
     const editorRef = useRef(null);
     const prevEditorKeyRef = useRef(null); // tracks "questionId__language" to detect real switches
+    // Authenticated backend socket ref — created lazily in initSession with JWT
+    const backendSocketRef = useRef(null);
+
+    // 401 interceptor — if ANY authenticated API call is rejected, navigate back to join
+    useEffect(() => {
+        const interceptor = axios.interceptors.response.use(
+            res => res,
+            err => {
+                if (err.response?.status === 401) {
+                    navigate('/rapidfire');
+                }
+                return Promise.reject(err);
+            }
+        );
+        return () => {
+            // Disconnect authenticated backend socket on unmount
+            backendSocketRef.current?.disconnect();
+            backendSocketRef.current = null;
+            axios.interceptors.response.eject(interceptor);
+        };
+    }, [navigate]);
 
     // Resume / Load Logic
     useEffect(() => {
         const initSession = async () => {
-            const token = localStorage.getItem("userToken");
-            if (!token) {
+            const accessCode = localStorage.getItem("userAccessCode");
+            if (!accessCode) {
                 navigate("/rapidfire");
                 return;
             }
 
             try {
-                // We use the same JOIN endpoint, it handles resume intelligently now
                 const res = await fetch(`${BACKEND_URL}/rapidfire/join`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
+                    body: JSON.stringify({ token: accessCode }),
                 });
                 const data = await res.json();
 
                 if (res.ok) {
+                    if (data.accessToken) localStorage.setItem('userToken', data.accessToken);
                     setActiveSession(data);
+
+                    // Create an authenticated backend socket so the server
+                    // can map this userId → socketId in userSockets.
+                    // Disconnect any stale socket from a previous page load.
+                    if (backendSocketRef.current) backendSocketRef.current.disconnect();
+                    const jwt = data.accessToken;
+                    const bSocket = io(BACKEND_URL, { auth: { token: jwt } });
+                    backendSocketRef.current = bSocket;
+
+                    // Emit register inside the connect callback so the socket
+                    // is guaranteed to be connected before sending.
+                    bSocket.on('connect', () => {
+                        bSocket.emit('register');
+                    });
+
+                    // Listen for force_logout — another device joined with the same token
+                    bSocket.on('force_logout', () => {
+                        alert('Your session was taken over on another device.');
+                        navigate('/rapidfire');
+                    });
                 } else {
                     alert(data.error || "Session expired");
                     navigate("/rapidfire");
@@ -163,8 +205,9 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             isSyncingRef.current = true;
 
             try {
-                const res = await axios.post(`${BACKEND_URL}/rapidfire/time-check`, {
-                    userId: activeSession.userId
+                const jwt = localStorage.getItem('userToken');
+                const res = await axios.post(`${BACKEND_URL}/rapidfire/time-check`, {}, {
+                    headers: { Authorization: `Bearer ${jwt}` }
                 });
                 const { totalTimeLeft: serverTotal, questionTimeLeft, currentIndex: serverIndex, contestEnded } = res.data;
 
@@ -261,9 +304,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
                 // Notify Backend to start timer for this new question and get timeLeft
                 try {
+                    const jwt = localStorage.getItem('userToken');
                     const res = await axios.post(`${BACKEND_URL}/rapidfire/start-question`, {
-                        userId: activeSession.userId,
                         questionId: nextQ.id
+                    }, {
+                        headers: { Authorization: `Bearer ${jwt}` }
                     });
                     setTimeLeft(res.data.timeLeft ?? QUESTION_DURATION);
                     if (res.data.totalTimeLeft != null) {
@@ -320,9 +365,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 // Uses submittedQuestionIdRef to avoid stale closure (edge case #10)
                 const qId = submittedQuestionIdRef.current;
                 try {
+                    const jwt = localStorage.getItem('userToken');
                     const res = await axios.post(`${BACKEND_URL}/rapidfire/submit-result`, {
-                        userId: activeSession.userId,
                         questionId: qId
+                    }, {
+                        headers: { Authorization: `Bearer ${jwt}` }
                     });
                     const { scoreAwarded, totalRoundScore } = res.data;
                     setRapidfireScore(totalRoundScore);
@@ -361,13 +408,16 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         const langId = LANGUAGE_IDS[language];
 
         try {
-            await axios.post(`${SUBMISSION_URL}/submit`, {
-                user_id: activeSession.userId,
+            const jwt = localStorage.getItem('userToken');
+            await axios.post(`${BACKEND_URL}/submit`, {
+                // user_id is NOT sent — server injects from JWT
                 problem_id: currentQuestion.id,
                 language_id: langId,
                 source_code: code,
-                stdin: customInput, // Custom input from the new tab
+                stdin: customInput,
                 mode: "run"
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
         } catch (error) {
             setIsRunning(false);
@@ -390,13 +440,16 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         const langId = LANGUAGE_IDS[language];
 
         try {
-            await axios.post(`${SUBMISSION_URL}/submit`, {
-                user_id: activeSession.userId,
+            const jwt = localStorage.getItem('userToken');
+            await axios.post(`${BACKEND_URL}/submit`, {
+                // user_id is NOT sent — server injects from JWT
                 problem_id: currentQuestion.id,
                 language_id: langId,
                 source_code: code,
                 stdin: "",
                 mode: "submit"
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
         } catch (error) {
             setIsRunning(false);

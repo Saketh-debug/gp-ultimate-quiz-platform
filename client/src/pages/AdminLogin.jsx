@@ -18,7 +18,7 @@ export default function AdminLogin() {
             });
             const data = await res.json();
             if (res.ok) {
-                localStorage.setItem("adminToken", data.token);
+                localStorage.setItem("adminToken", data.accessToken); // JWT
                 navigate("/admin/dashboard");
             } else {
                 setError(data.error);

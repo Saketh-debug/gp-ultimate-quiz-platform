@@ -18,8 +18,7 @@ import { formatErrorForDisplay } from "../utils/errorFormatter";
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 const SUBMISSION_URL = import.meta.env.VITE_SUBMISSION_URL;
-const socket = io(SUBMISSION_URL);
-const backendSocket = io(BACKEND_URL);
+const socket = io(SUBMISSION_URL); // LB has no auth
 
 const STORAGE_PREFIX = "dsa";
 
@@ -66,23 +65,32 @@ export default function DSAContest({ session }) {
     const isResizingVertical = useRef(false);
     const editorRef = useRef(null);
     const prevEditorKeyRef = useRef(null); // tracks "questionId__language" to detect real switches
+    // Authenticated backend socket ref — created lazily in initSession with JWT
+    const backendSocketRef = useRef(null);
 
-    // Admin Stop Listener
+    // Admin Stop Listener + force_logout + 401 interceptor
     useEffect(() => {
-        const handleRoundStopped = (data) => {
-            if (data.roundName === "dsa") {
-                setContestStopped(true);
+        // 401 interceptor — navigate back to join if JWT rejected
+        const interceptor = axios.interceptors.response.use(
+            res => res,
+            err => {
+                if (err.response?.status === 401) navigate('/dsa');
+                return Promise.reject(err);
             }
+        );
+        return () => {
+            // Disconnect authenticated backend socket on unmount
+            backendSocketRef.current?.disconnect();
+            backendSocketRef.current = null;
+            axios.interceptors.response.eject(interceptor);
         };
-        backendSocket.on("round_stopped", handleRoundStopped);
-        return () => backendSocket.off("round_stopped", handleRoundStopped);
-    }, []);
+    }, [navigate]);
 
     // Init & Resume Handling
     useEffect(() => {
         const initSession = async () => {
-            const token = localStorage.getItem("dsaToken");
-            if (!token) {
+            const accessCode = localStorage.getItem("dsaAccessCode");
+            if (!accessCode) {
                 navigate("/dsa");
                 return;
             }
@@ -91,12 +99,41 @@ export default function DSAContest({ session }) {
                 const res = await fetch(`${BACKEND_URL}/dsa/join`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
+                    body: JSON.stringify({ token: accessCode }), // send raw access code
                 });
                 const data = await res.json();
 
                 if (res.ok) {
+                    // Update stored JWT (server issues fresh JWT on resume)
+                    if (data.accessToken) localStorage.setItem('dsaToken', data.accessToken);
                     setActiveSession(data);
+
+                    // Create an authenticated backend socket so the server
+                    // can map this userId → socketId in userSockets.
+                    // Disconnect any stale socket from a previous page load.
+                    if (backendSocketRef.current) backendSocketRef.current.disconnect();
+                    const jwt = data.accessToken;
+                    const bSocket = io(BACKEND_URL, { auth: { token: jwt } });
+                    backendSocketRef.current = bSocket;
+
+                    // Emit register inside the connect callback so the socket
+                    // is guaranteed to be connected before sending.
+                    bSocket.on('connect', () => {
+                        bSocket.emit('register');
+                    });
+
+                    // Listen for force_logout — another device joined with the same token
+                    bSocket.on('force_logout', () => {
+                        alert('Your session was taken over on another device.');
+                        navigate('/dsa');
+                    });
+
+                    // Listen for admin round_stopped broadcast
+                    bSocket.on('round_stopped', (data) => {
+                        if (data.roundName === 'dsa') {
+                            setContestStopped(true);
+                        }
+                    });
                 } else {
                     alert(data.error || "Session expired");
                     navigate("/dsa");
@@ -185,8 +222,9 @@ export default function DSAContest({ session }) {
             isSyncingRef.current = true;
 
             try {
-                const res = await axios.post(`${BACKEND_URL}/dsa/time-check`, {
-                    userId: activeSession.userId
+                const jwt = localStorage.getItem('dsaToken');
+                const res = await axios.post(`${BACKEND_URL}/dsa/time-check`, {}, {
+                    headers: { Authorization: `Bearer ${jwt}` }
                 });
                 const { totalTimeLeft: serverTotal, contestEnded } = res.data;
 
@@ -260,10 +298,12 @@ export default function DSAContest({ session }) {
 
                 // Call backend to register partial/full score
                 try {
+                    const jwt = localStorage.getItem('dsaToken');
                     const res = await axios.post(`${BACKEND_URL}/dsa/submit-result`, {
-                        userId: activeSession.userId,
                         questionId: currentQuestion.id,
                         passedCount,
+                    }, {
+                        headers: { Authorization: `Bearer ${jwt}` }
                     });
 
                     const scoreData = res.data;
@@ -379,13 +419,16 @@ export default function DSAContest({ session }) {
         const langId = LANGUAGE_IDS[language];
 
         try {
-            await axios.post(`${SUBMISSION_URL}/submit`, {
-                user_id: activeSession.userId,
+            const jwt = localStorage.getItem('dsaToken');
+            await axios.post(`${BACKEND_URL}/submit`, {
+                // user_id NOT sent — server injects from JWT
                 problem_id: currentQuestion.id,
                 language_id: langId,
                 source_code: code,
                 stdin: customInput,
                 mode: "run"
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
         } catch (error) {
             setIsRunning(false);
@@ -407,13 +450,16 @@ export default function DSAContest({ session }) {
         const langId = LANGUAGE_IDS[language];
 
         try {
-            await axios.post(`${SUBMISSION_URL}/submit`, {
-                user_id: activeSession.userId,
+            const jwt = localStorage.getItem('dsaToken');
+            await axios.post(`${BACKEND_URL}/submit`, {
+                // user_id NOT sent — server injects from JWT
                 problem_id: currentQuestion.id,
                 language_id: langId,
                 source_code: code,
                 stdin: "",
                 mode: "submit"
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
         } catch (error) {
             setIsRunning(false);

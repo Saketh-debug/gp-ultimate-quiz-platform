@@ -7,9 +7,10 @@ function DSA() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Clear stale token on mount
+  // Clear stale tokens on mount
   useEffect(() => {
     localStorage.removeItem("dsaToken");
+    localStorage.removeItem("dsaAccessCode");
   }, []);
 
   async function handleJoin() {
@@ -27,7 +28,8 @@ function DSA() {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("dsaToken", token); // Store for reload/resume
+        localStorage.setItem("dsaToken", data.accessToken); // JWT for API auth
+        localStorage.setItem("dsaAccessCode", token);       // Raw code for /join resume
         navigate("/dsa-contest", { state: { session: data } });
       } else {
         setError(data.error || "Failed to join");

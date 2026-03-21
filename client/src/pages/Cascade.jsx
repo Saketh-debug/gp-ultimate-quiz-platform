@@ -7,9 +7,10 @@ function Cascade() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Clear stale token on mount
+  // Clear stale tokens on mount
   useEffect(() => {
     localStorage.removeItem("cascadeToken");
+    localStorage.removeItem("cascadeAccessCode");
   }, []);
 
   async function handleJoin() {
@@ -27,7 +28,8 @@ function Cascade() {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("cascadeToken", token); // Store for reload/resume
+        localStorage.setItem("cascadeToken", data.accessToken); // JWT for API auth
+        localStorage.setItem("cascadeAccessCode", token);       // Raw code for /join resume
         navigate("/cascade-contest", { state: { session: data } });
       } else {
         setError(data.error || "Failed to join");

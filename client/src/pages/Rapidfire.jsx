@@ -5,8 +5,8 @@ import { Link, useNavigate } from "react-router-dom";
 function Rapidfire() {
   const [token, setToken] = useState("");
 
-  // Clear stale token on mount — user must re-enter if they come here
-  useState(() => localStorage.removeItem("userToken"));
+  // Clear stale tokens on mount — user must re-enter if they come here
+  useState(() => { localStorage.removeItem("userToken"); localStorage.removeItem("userAccessCode"); });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,7 +27,8 @@ function Rapidfire() {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("userToken", token); // Store for reload/resume
+        localStorage.setItem("userToken", data.accessToken); // JWT for API auth
+        localStorage.setItem("userAccessCode", token);       // Raw code for /join resume
         navigate("/rapidfire-contest", { state: { session: data } });
       } else {
         setError(data.error || "Failed to join");

@@ -2,36 +2,49 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { authenticateToken, authorizeAdmin } = require('../middleware/authMiddleware');
 
-// Admin Login
+// Admin Login — public route (no auth middleware)
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
     try {
         const result = await pool.query(
-            "SELECT * FROM admins WHERE username = $1 AND password = $2",
-            [username, password]
+            "SELECT * FROM admins WHERE username = $1", [username]
+        );
+        const admin = result.rows[0];
+
+        if (!admin) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        // Compare with hashed password
+        const valid = await bcrypt.compare(password, admin.password_hash);
+        if (!valid) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        const accessToken = jwt.sign(
+            { adminId: admin.id, username: admin.username, role: 'admin' },
+            process.env.JWT_SECRET,
+            { expiresIn: '4h' }
         );
 
-        if (result.rows.length > 0) {
-            res.json({ success: true, token: result.rows[0].token });
-        } else {
-            res.status(401).json({ error: "Invalid credentials" });
-        }
+        res.json({ success: true, accessToken });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// ----------------------------------------------------------
+// All routes below this line require valid admin JWT
+// ----------------------------------------------------------
+router.use(authenticateToken, authorizeAdmin);
+
 // Start Round
 router.post("/start-round", async (req, res) => {
-    const { roundName, token } = req.body;
-
-    // Simple token check (in real app, use middleware)
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) {
-        return res.status(403).json({ error: "Unauthorized" });
-    }
-
+    const { roundName } = req.body; // token removed — handled by router.use middleware
     try {
         const now = new Date();
         await pool.query(
@@ -53,11 +66,7 @@ router.post("/start-round", async (req, res) => {
 
 // Stop Round
 router.post("/stop-round", async (req, res) => {
-    const { roundName, token } = req.body;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) {
-        return res.status(403).json({ error: "Unauthorized" });
-    }
+    const { roundName } = req.body; // token removed — handled by router.use middleware
     try {
         await pool.query("UPDATE round_control SET is_active = FALSE WHERE round_name = $1", [roundName]);
 
@@ -92,8 +101,7 @@ router.post("/stop-round", async (req, res) => {
 
 // Reset Round
 router.post("/reset-round", async (req, res) => {
-    const { roundName, token } = req.body;
-    // ... Verify Token ...
+    const { roundName } = req.body; // token removed — handled by router.use middleware
     try {
         await pool.query("UPDATE round_control SET is_active = FALSE, start_time = NULL WHERE round_name = $1", [roundName]);
         res.json({ success: true, message: "Round reset to Not Started." });
@@ -164,12 +172,7 @@ router.get("/leaderboard", async (req, res) => {
 // Only applies to users whose sessions have expired (end_time < NOW)
 // Uses atomic CTE to prevent partial failures
 router.post("/apply-streak-bonus", async (req, res) => {
-    const { token } = req.body;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) {
-        return res.status(403).json({ error: "Unauthorized" });
-    }
-
+    // Auth handled by router.use middleware — no inline token check needed
     try {
         const result = await pool.query(`
             WITH to_apply AS (
@@ -232,10 +235,7 @@ async function hasActiveSessions(round) {
 // GET /admin/questions/:round — list all questions for a round (with TC counts)
 router.get("/questions/:round", async (req, res) => {
     const { round } = req.params;
-    const token = req.query.token;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) return res.status(403).json({ error: "Unauthorized" });
-
+    // Auth handled by router.use — no inline check needed
     try {
         const result = await pool.query(`
             SELECT q.*,
@@ -254,10 +254,7 @@ router.get("/questions/:round", async (req, res) => {
 // GET /admin/questions/:id/testcases — get all test cases for a question
 router.get("/questions/:id/testcases", async (req, res) => {
     const { id } = req.params;
-    const token = req.query.token;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) return res.status(403).json({ error: "Unauthorized" });
-
+    // Auth handled by router.use — no inline check needed
     try {
         const result = await pool.query(
             "SELECT * FROM test_cases WHERE problem_id = $1::text ORDER BY id ASC",
@@ -271,9 +268,8 @@ router.get("/questions/:id/testcases", async (req, res) => {
 
 // POST /admin/questions — create a new question + test cases (atomic)
 router.post("/questions", async (req, res) => {
-    const { token, round, title, description, avg_time, base_points, time_limit, sequence_order, test_cases } = req.body;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) return res.status(403).json({ error: "Unauthorized" });
+    const { round, title, description, avg_time, base_points, time_limit, sequence_order, test_cases } = req.body;
+    // Auth handled by router.use — no inline check needed
 
     // Validate required fields
     if (!round || !title || !description) {
@@ -343,9 +339,8 @@ router.post("/questions", async (req, res) => {
 // PUT /admin/questions/:id — update question fields + replace all test cases (atomic)
 router.put("/questions/:id", async (req, res) => {
     const { id } = req.params;
-    const { token, round, title, description, avg_time, base_points, time_limit, sequence_order, test_cases } = req.body;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) return res.status(403).json({ error: "Unauthorized" });
+    const { round, title, description, avg_time, base_points, time_limit, sequence_order, test_cases } = req.body;
+    // Auth handled by router.use — no inline check needed
 
     // Fetch existing question to know its round
     const existing = await pool.query("SELECT * FROM questions WHERE id = $1", [id]);
@@ -421,9 +416,7 @@ router.put("/questions/:id", async (req, res) => {
 // DELETE /admin/questions/:id — delete question + test cases (blocks if active session exists)
 router.delete("/questions/:id", async (req, res) => {
     const { id } = req.params;
-    const { token } = req.body;
-    const adminCheck = await pool.query("SELECT * FROM admins WHERE token = $1", [token]);
-    if (adminCheck.rows.length === 0) return res.status(403).json({ error: "Unauthorized" });
+    // Auth handled by router.use — no inline check needed
 
     // Find the question's round first
     const existing = await pool.query("SELECT round FROM questions WHERE id = $1", [id]);

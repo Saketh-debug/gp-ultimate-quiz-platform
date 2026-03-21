@@ -18,8 +18,7 @@ import { formatErrorForDisplay } from "../utils/errorFormatter";
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 const SUBMISSION_URL = import.meta.env.VITE_SUBMISSION_URL;
-const socket = io(SUBMISSION_URL);
-const backendSocket = io(BACKEND_URL);
+const socket = io(SUBMISSION_URL); // LB has no auth
 
 const STORAGE_PREFIX = "cascade";
 
@@ -62,24 +61,32 @@ export default function CascadeContest({ session }) {
     const contestStoppedRef = useRef(false); // Ref to avoid stale closure in effects
     const editorRef = useRef(null);
     const prevEditorKeyRef = useRef(null); // tracks "questionId__language" to detect real switches
+    // Authenticated backend socket ref — created lazily in initSession with JWT
+    const backendSocketRef = useRef(null);
 
-    // Listen for admin stop event from backend socket
+    // Listen for admin stop event and force_logout from backend socket
     useEffect(() => {
-        const handleRoundStopped = (data) => {
-            if (data.roundName === "cascade") {
-                setContestStopped(true);
-                contestStoppedRef.current = true;
+        // 401 interceptor — if ANY authenticated API call is rejected, go back to join
+        const interceptor = axios.interceptors.response.use(
+            res => res,
+            err => {
+                if (err.response?.status === 401) navigate('/cascade');
+                return Promise.reject(err);
             }
+        );
+        return () => {
+            // Disconnect authenticated backend socket on unmount
+            backendSocketRef.current?.disconnect();
+            backendSocketRef.current = null;
+            axios.interceptors.response.eject(interceptor);
         };
-        backendSocket.on("round_stopped", handleRoundStopped);
-        return () => backendSocket.off("round_stopped", handleRoundStopped);
-    }, []);
+    }, [navigate]);
 
     // Init & Resume Handling — only if no session was provided
     useEffect(() => {
         const initSession = async () => {
-            const token = localStorage.getItem("cascadeToken");
-            if (!token) {
+            const accessCode = localStorage.getItem("cascadeAccessCode");
+            if (!accessCode) {
                 navigate("/cascade");
                 return;
             }
@@ -88,12 +95,42 @@ export default function CascadeContest({ session }) {
                 const res = await fetch(`${BACKEND_URL}/cascade/join`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
+                    body: JSON.stringify({ token: accessCode }), // send raw access code
                 });
                 const data = await res.json();
 
                 if (res.ok) {
+                    // Update stored JWT (server issues fresh JWT on resume)
+                    if (data.accessToken) localStorage.setItem('cascadeToken', data.accessToken);
                     setActiveSession(data);
+
+                    // Create an authenticated backend socket so the server
+                    // can map this userId → socketId in userSockets.
+                    // Disconnect any stale socket from a previous page load.
+                    if (backendSocketRef.current) backendSocketRef.current.disconnect();
+                    const jwt = data.accessToken;
+                    const bSocket = io(BACKEND_URL, { auth: { token: jwt } });
+                    backendSocketRef.current = bSocket;
+
+                    // Emit register inside the connect callback so the socket
+                    // is guaranteed to be connected before sending.
+                    bSocket.on('connect', () => {
+                        bSocket.emit('register');
+                    });
+
+                    // Listen for force_logout — another device joined with the same token
+                    bSocket.on('force_logout', () => {
+                        alert('Your session was taken over on another device.');
+                        navigate('/cascade');
+                    });
+
+                    // Listen for admin round_stopped broadcast
+                    bSocket.on('round_stopped', (data) => {
+                        if (data.roundName === 'cascade') {
+                            setContestStopped(true);
+                            contestStoppedRef.current = true;
+                        }
+                    });
                 } else {
                     alert(data.error || "Session expired");
                     navigate("/cascade");
@@ -163,8 +200,9 @@ export default function CascadeContest({ session }) {
             isSyncingRef.current = true;
 
             try {
-                const res = await axios.post(`${BACKEND_URL}/cascade/time-check`, {
-                    userId: activeSession.userId
+                const jwt = localStorage.getItem('cascadeToken');
+                const res = await axios.post(`${BACKEND_URL}/cascade/time-check`, {}, {
+                    headers: { Authorization: `Bearer ${jwt}` }
                 });
                 const { totalTimeLeft: serverTotal, contestEnded } = res.data;
 
@@ -227,9 +265,11 @@ export default function CascadeContest({ session }) {
 
                 // Call backend to register points & update streak
                 try {
+                    const jwt = localStorage.getItem('cascadeToken');
                     const res = await axios.post(`${BACKEND_URL}/cascade/submit-result`, {
-                        userId: activeSession.userId,
                         questionId: currentQuestion.id
+                    }, {
+                        headers: { Authorization: `Bearer ${jwt}` }
                     });
 
                     const scoreData = res.data;
@@ -306,9 +346,11 @@ export default function CascadeContest({ session }) {
             resetEditorState();
             // Persist viewing index for reload resilience
             if (activeSession?.userId) {
+                const jwt = localStorage.getItem('cascadeToken');
                 axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
-                    userId: activeSession.userId,
                     currentViewingIndex: nextIdx
+                }, {
+                    headers: { Authorization: `Bearer ${jwt}` }
                 }).catch(() => { });
             }
         } else {
@@ -322,9 +364,11 @@ export default function CascadeContest({ session }) {
         if (!window.confirm("WARNING: Skipping will BREAK your current streak. Your max streak will be saved. Continue?")) return;
 
         try {
+            const jwt = localStorage.getItem('cascadeToken');
             const res = await axios.post(`${BACKEND_URL}/cascade/skip`, {
-                userId: activeSession.userId,
                 questionId: currentQuestion.id
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
 
             // Streak broken
@@ -343,9 +387,11 @@ export default function CascadeContest({ session }) {
                 setHighestForwardIndex(res.data.highestForwardIndex);
                 resetEditorState();
                 // Persist viewing index for reload resilience
+                const jwt = localStorage.getItem('cascadeToken');
                 axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
-                    userId: activeSession.userId,
                     currentViewingIndex: nextIdx
+                }, {
+                    headers: { Authorization: `Bearer ${jwt}` }
                 }).catch(() => { });
             } else {
                 alert("No more questions to skip to.");
@@ -359,7 +405,10 @@ export default function CascadeContest({ session }) {
     const handleGoBack = async () => {
         setShowGoBackModal(false);
         try {
-            await axios.post(`${BACKEND_URL}/cascade/go-back`, { userId: activeSession.userId });
+            const jwt = localStorage.getItem('cascadeToken');
+            await axios.post(`${BACKEND_URL}/cascade/go-back`, {}, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            });
 
             // Streak broken
             setCurrentStreak(0);
@@ -380,9 +429,11 @@ export default function CascadeContest({ session }) {
                 setCurrentIndex(firstSkipped);
                 resetEditorState();
                 // Persist the initial review index
+                const jwt = localStorage.getItem('cascadeToken');
                 axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
-                    userId: activeSession.userId,
                     currentViewingIndex: firstSkipped
+                }, {
+                    headers: { Authorization: `Bearer ${jwt}` }
                 }).catch(() => { });
             }
         } catch (e) {
@@ -393,15 +444,19 @@ export default function CascadeContest({ session }) {
     // Action: RETURN TO FORWARD PROGRESSION
     const handleReturnForward = async () => {
         try {
-            await axios.post(`${BACKEND_URL}/cascade/return-forward`, { userId: activeSession.userId });
+            const jwt = localStorage.getItem('cascadeToken');
+            await axios.post(`${BACKEND_URL}/cascade/return-forward`, {}, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            });
             alert("Returned to forward progression. A new streak has started!");
             setIsReviewMode(false);
             setCurrentIndex(highestForwardIndex);
             resetEditorState();
             // Persist return to forward
             axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
-                userId: activeSession.userId,
                 currentViewingIndex: highestForwardIndex
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             }).catch(() => { });
         } catch (e) {
             console.error(e);
@@ -443,13 +498,16 @@ export default function CascadeContest({ session }) {
         const langId = LANGUAGE_IDS[language];
 
         try {
-            await axios.post(`${SUBMISSION_URL}/submit`, {
-                user_id: activeSession.userId,
+            const jwt = localStorage.getItem('cascadeToken');
+            await axios.post(`${BACKEND_URL}/submit`, {
+                // user_id NOT sent — server injects from JWT
                 problem_id: currentQuestion.id,
                 language_id: langId,
                 source_code: code,
                 stdin: customInput,
                 mode: "run"
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
         } catch (error) {
             setIsRunning(false);
@@ -471,13 +529,16 @@ export default function CascadeContest({ session }) {
         const langId = LANGUAGE_IDS[language];
 
         try {
-            await axios.post(`${SUBMISSION_URL}/submit`, {
-                user_id: activeSession.userId,
+            const jwt = localStorage.getItem('cascadeToken');
+            await axios.post(`${BACKEND_URL}/submit`, {
+                // user_id NOT sent — server injects from JWT
                 problem_id: currentQuestion.id,
                 language_id: langId,
                 source_code: code,
                 stdin: "",
                 mode: "submit"
+            }, {
+                headers: { Authorization: `Bearer ${jwt}` }
             });
         } catch (error) {
             setIsRunning(false);

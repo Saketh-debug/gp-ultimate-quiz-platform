@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
+const jwt = require('jsonwebtoken');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 const ROUND_NAME = 'dsa';
 const GRACE_PERIOD_MINUTES = 30;
@@ -74,7 +76,19 @@ router.post("/join", async (req, res) => {
 
             const totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - now) / 1000));
 
+            // Issue a fresh JWT on resume
+            const versionRes = await pool.query(
+                'SELECT session_version FROM users WHERE id = $1', [user.id]
+            );
+            const sessionVersion = versionRes.rows[0].session_version;
+            const accessToken = jwt.sign(
+                { userId: user.id, username: user.username, role: 'user', sessionVersion },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN || '3h' }
+            );
+
             res.json({
+                accessToken,
                 userId: user.id,
                 team: user.team_name,
                 endTime: session.end_time,
@@ -91,6 +105,21 @@ router.post("/join", async (req, res) => {
             }
 
             const endTime = new Date(now.getTime() + CONTEST_DURATION_MINUTES * 60 * 1000);
+
+            // Increment session_version — invalidates any existing JWT for this user
+            const versionRes = await pool.query(
+                'UPDATE users SET session_version = session_version + 1 WHERE id = $1 RETURNING session_version',
+                [user.id]
+            );
+            const sessionVersion = versionRes.rows[0].session_version;
+
+            // Force-logout old socket if one exists (via in-memory Map)
+            const io = req.app.get('io');
+            const userSockets = req.app.get('userSockets');
+            const existingSocketId = userSockets?.get(String(user.id));
+            if (existingSocketId && io) {
+                io.to(existingSocketId).emit('force_logout');
+            }
 
             // Cleanup old questions just in case
             await pool.query("DELETE FROM dsa_user_questions WHERE user_id = $1", [user.id]);
@@ -129,7 +158,15 @@ router.post("/join", async (req, res) => {
                 });
             }
 
+            // Issue JWT for new session
+            const accessToken = jwt.sign(
+                { userId: user.id, username: user.username, role: 'user', sessionVersion },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN || '3h' }
+            );
+
             res.json({
+                accessToken,
                 userId: user.id,
                 team: user.team_name,
                 endTime,
@@ -163,8 +200,9 @@ const DSA_SCORING = [
 ];
 
 // Submit Result (Called after socket execution)
-router.post("/submit-result", async (req, res) => {
-    const { userId, questionId, passedCount } = req.body;
+router.post("/submit-result", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { questionId, passedCount } = req.body;
     // Cap passedCount against the ACTUAL number of test cases for this question
     // (Q2/Q3 have 2 TCs; hard-coding 3 would cause a missing key in DSA_SCORING)
     const tcCountRes = await pool.query(
@@ -266,8 +304,8 @@ router.post("/submit-result", async (req, res) => {
 
 
 // Lightweight time-check endpoint for visibility re-sync
-router.post("/time-check", async (req, res) => {
-    const { userId } = req.body;
+router.post("/time-check", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
     try {
         const sessionRes = await pool.query(
             "SELECT end_time FROM dsa_sessions WHERE user_id = $1",

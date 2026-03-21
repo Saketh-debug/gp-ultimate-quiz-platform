@@ -49,7 +49,8 @@ export default function AdminQuestions() {
         setError("");
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/admin/questions/${round}?token=${token}`
+                `${import.meta.env.VITE_API_URL}/admin/questions/${round}`,
+                { headers: { Authorization: `Bearer ${token}` } }
             );
             const data = await res.json();
             if (res.ok) setQuestions(data);
@@ -71,7 +72,8 @@ export default function AdminQuestions() {
     // Fetch test cases when expanding a card and opening edit
     async function fetchTestCases(questionId) {
         const res = await fetch(
-            `${import.meta.env.VITE_API_URL}/admin/questions/${questionId}/testcases?token=${token}`
+            `${import.meta.env.VITE_API_URL}/admin/questions/${questionId}/testcases`,
+            { headers: { Authorization: `Bearer ${token}` } }
         );
         return res.ok ? await res.json() : [];
     }
@@ -137,7 +139,6 @@ export default function AdminQuestions() {
         }
 
         const body = {
-            token,
             round: activeRound,
             title: form.title,
             description: form.description,
@@ -146,6 +147,7 @@ export default function AdminQuestions() {
             time_limit: activeRound === "dsa" ? Number(form.time_limit) : null,
             sequence_order: Number(form.sequence_order),
             test_cases: form.test_cases,
+            // token removed from body — sent via Authorization header
         };
 
         try {
@@ -156,7 +158,10 @@ export default function AdminQuestions() {
 
             const res = await fetch(url, {
                 method,
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
                 body: JSON.stringify(body),
             });
             const data = await res.json();
@@ -185,8 +190,11 @@ export default function AdminQuestions() {
                 `${import.meta.env.VITE_API_URL}/admin/questions/${q.id}`,
                 {
                     method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    // body empty — token moved to header
                 }
             );
             const data = await res.json();

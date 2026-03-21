@@ -14,22 +14,23 @@ export default function AdminDashboard() {
     }, []);
 
     async function fetchStatus() {
+        const authHeader = { Authorization: `Bearer ${token}` };
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/status/rapidfire`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/status/rapidfire`, { headers: authHeader });
             const data = await res.json();
             setRounds(prev => ({ ...prev, rapidfire: data }));
         } catch (err) {
             console.error("Failed to fetch rapidfire status");
         }
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/status/cascade`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/status/cascade`, { headers: authHeader });
             const data = await res.json();
             setRounds(prev => ({ ...prev, cascade: data }));
         } catch (err) {
             console.error("Failed to fetch cascade status");
         }
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/status/dsa`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/status/dsa`, { headers: authHeader });
             const data = await res.json();
             setRounds(prev => ({ ...prev, dsa: data }));
         } catch (err) {
@@ -44,9 +45,10 @@ export default function AdminDashboard() {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/start-round`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ roundName, token }),
+                body: JSON.stringify({ roundName }), // token removed from body
             });
             const data = await res.json();
             if (res.ok) {
@@ -64,8 +66,12 @@ export default function AdminDashboard() {
         if (!confirm(`Stop ${roundName}?`)) return;
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/stop-round`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ roundName, token })
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ roundName }) // token removed from body
             });
             const data = await res.json();
             if (res.ok) {
@@ -83,8 +89,12 @@ export default function AdminDashboard() {
         if (!confirm(`RESET ${roundName}? This will reset start time.`)) return;
         try {
             await fetch(`${import.meta.env.VITE_API_URL}/admin/reset-round`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ roundName, token })
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ roundName }) // token removed from body
             });
             fetchStatus();
         } catch (err) { }
@@ -216,8 +226,11 @@ export default function AdminDashboard() {
                             try {
                                 const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/apply-streak-bonus`, {
                                     method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ token })
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        Authorization: `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({}) // token removed from body
                                 });
                                 const data = await res.json();
                                 if (res.ok) {

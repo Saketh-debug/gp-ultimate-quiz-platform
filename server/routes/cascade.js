@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
+const jwt = require('jsonwebtoken');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 const ROUND_NAME = 'cascade';
 const GRACE_PERIOD_MINUTES = 30;
@@ -70,7 +72,19 @@ router.post("/join", async (req, res) => {
             const scoreRes = await pool.query("SELECT cascade_score FROM users WHERE id = $1", [user.id]);
             const cascadeScore = scoreRes.rows[0]?.cascade_score || 0;
 
+            // Issue a fresh JWT on resume
+            const versionRes = await pool.query(
+                'SELECT session_version FROM users WHERE id = $1', [user.id]
+            );
+            const sessionVersion = versionRes.rows[0].session_version;
+            const accessToken = jwt.sign(
+                { userId: user.id, username: user.username, role: 'user', sessionVersion },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN || '3h' }
+            );
+
             res.json({
+                accessToken,
                 userId: user.id,
                 team: user.team_name,
                 endTime: session.end_time,
@@ -92,6 +106,21 @@ router.post("/join", async (req, res) => {
             }
 
             const endTime = new Date(now.getTime() + CONTEST_DURATION_MINUTES * 60 * 1000);
+
+            // Increment session_version — invalidates any existing JWT for this user
+            const versionRes = await pool.query(
+                'UPDATE users SET session_version = session_version + 1 WHERE id = $1 RETURNING session_version',
+                [user.id]
+            );
+            const sessionVersion = versionRes.rows[0].session_version;
+
+            // Force-logout old socket if one exists (via in-memory Map)
+            const io = req.app.get('io');
+            const userSockets = req.app.get('userSockets');
+            const existingSocketId = userSockets?.get(String(user.id));
+            if (existingSocketId && io) {
+                io.to(existingSocketId).emit('force_logout');
+            }
 
             // Cleanup old questions just in case
             await pool.query("DELETE FROM cascade_user_questions WHERE user_id = $1", [user.id]);
@@ -134,7 +163,15 @@ router.post("/join", async (req, res) => {
                 });
             }
 
+            // Issue JWT for new session
+            const accessToken = jwt.sign(
+                { userId: user.id, username: user.username, role: 'user', sessionVersion },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN || '3h' }
+            );
+
             res.json({
+                accessToken,
                 userId: user.id,
                 team: user.team_name,
                 endTime,
@@ -155,8 +192,9 @@ router.post("/join", async (req, res) => {
 });
 
 // Submit Result (Called after Socket execution)
-router.post("/submit-result", async (req, res) => {
-    const { userId, questionId } = req.body;
+router.post("/submit-result", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { questionId } = req.body;
     try {
         const sessionRes = await pool.query("SELECT * FROM cascade_sessions WHERE user_id = $1", [userId]);
         if (sessionRes.rows.length === 0) return res.status(404).json({ error: "Session not found" });
@@ -242,8 +280,9 @@ router.post("/submit-result", async (req, res) => {
 });
 
 // Skip Question
-router.post("/skip", async (req, res) => {
-    const { userId, questionId } = req.body;
+router.post("/skip", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { questionId } = req.body;
     try {
         const sessionRes = await pool.query("SELECT highest_forward_index FROM cascade_sessions WHERE user_id = $1", [userId]);
         const highestForward = sessionRes.rows[0].highest_forward_index;
@@ -267,8 +306,8 @@ router.post("/skip", async (req, res) => {
 });
 
 // Go Back
-router.post("/go-back", async (req, res) => {
-    const { userId } = req.body;
+router.post("/go-back", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
     try {
         const sessionRes = await pool.query("SELECT highest_forward_index FROM cascade_sessions WHERE user_id = $1", [userId]);
         const highestForward = sessionRes.rows[0].highest_forward_index;
@@ -294,8 +333,8 @@ router.post("/go-back", async (req, res) => {
 });
 
 // Return Forward
-router.post("/return-forward", async (req, res) => {
-    const { userId } = req.body;
+router.post("/return-forward", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
     try {
         await pool.query("UPDATE cascade_sessions SET is_review_mode = FALSE, current_viewing_index = 0 WHERE user_id = $1", [userId]);
         res.json({ success: true, message: "Returned to forward progression. New streak started." });
@@ -305,8 +344,8 @@ router.post("/return-forward", async (req, res) => {
 });
 
 // Lightweight time-check endpoint for visibility re-sync
-router.post("/time-check", async (req, res) => {
-    const { userId } = req.body;
+router.post("/time-check", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
     try {
         const sessionRes = await pool.query(
             "SELECT end_time FROM cascade_sessions WHERE user_id = $1",
@@ -332,8 +371,9 @@ router.post("/time-check", async (req, res) => {
 });
 
 // Persist currently viewed node index (for reload resilience)
-router.post("/update-viewing-index", async (req, res) => {
-    const { userId, currentViewingIndex } = req.body;
+router.post("/update-viewing-index", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { currentViewingIndex } = req.body;
     try {
         await pool.query(
             "UPDATE cascade_sessions SET current_viewing_index = $1 WHERE user_id = $2",

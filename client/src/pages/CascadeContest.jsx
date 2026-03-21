@@ -59,6 +59,10 @@ export default function CascadeContest({ session }) {
     const [contestStopped, setContestStopped] = useState(false);
     const isSyncingRef = useRef(false); // Guard for visibility re-sync
     const contestStoppedRef = useRef(false); // Ref to avoid stale closure in effects
+    const [leftPanelWidth, setLeftPanelWidth] = useState(46); // percentage of the main work area
+    const [editorHeight, setEditorHeight] = useState(68); // percentage of the right panel
+    const isResizingHorizontal = useRef(false);
+    const isResizingVertical = useRef(false);
 
     // Listen for admin stop event from backend socket
     useEffect(() => {
@@ -181,6 +185,60 @@ export default function CascadeContest({ session }) {
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [activeSession?.userId]);
+
+    // Resizable panels
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (isResizingHorizontal.current) {
+                const workArea = document.getElementById("cascade-work-area");
+                if (workArea) {
+                    const rect = workArea.getBoundingClientRect();
+                    const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+                    if (newWidth > 26 && newWidth < 74) {
+                        setLeftPanelWidth(newWidth);
+                    }
+                }
+            }
+
+            if (isResizingVertical.current) {
+                const container = document.getElementById("cascade-right-panel");
+                if (container) {
+                    const rect = container.getBoundingClientRect();
+                    const newHeight = ((e.clientY - rect.top) / rect.height) * 100;
+                    if (newHeight > 35 && newHeight < 82) {
+                        setEditorHeight(newHeight);
+                    }
+                }
+            }
+        };
+
+        const handleMouseUp = () => {
+            isResizingHorizontal.current = false;
+            isResizingVertical.current = false;
+            document.body.style.cursor = "default";
+            document.body.style.userSelect = "auto";
+        };
+
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, []);
+
+    const startHorizontalResize = () => {
+        isResizingHorizontal.current = true;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    };
+
+    const startVerticalResize = () => {
+        isResizingVertical.current = true;
+        document.body.style.cursor = "row-resize";
+        document.body.style.userSelect = "none";
+    };
 
 
     // Socket Listener
@@ -571,6 +629,16 @@ export default function CascadeContest({ session }) {
                         </div>
                         <div className="w-px h-8 bg-white/10" />
                         <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-[#ffb347]/10 border border-[#ffb347]/30">
+                                <span className="material-symbols-outlined text-sm text-[#ffb347]">scoreboard</span>
+                            </div>
+                            <div>
+                                <div className="font-bold text-white">{cascadeScore}</div>
+                                <div className="text-[9px] text-white/40 uppercase tracking-wide">Score</div>
+                            </div>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-md flex items-center justify-center bg-yellow-500/10 border border-yellow-500/30">
                                 <span className="material-symbols-outlined text-sm text-yellow-500">emoji_events</span>
                             </div>
@@ -638,7 +706,7 @@ export default function CascadeContest({ session }) {
                 {!isReviewMode && currentIndex === highestForwardIndex && (
                     <button
                         onClick={handleSkip}
-                        className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white font-medium transition-colors"
+                        className="flex items-center gap-1.5 rounded-full border border-[#ffb347]/30 bg-[#ffb347]/12 px-3 py-1.5 text-xs font-semibold text-[#ffd28c] transition-colors hover:bg-[#ffb347]/20 hover:text-white"
                     >
                         Skip Problem
                         <FiSkipForward size={14} />
@@ -679,9 +747,13 @@ export default function CascadeContest({ session }) {
                     </div>
                 )}
 
-                {/* Left Panel - Problem Statement */}
-                <div className={`${isReviewMode ? 'w-[42%]' : 'w-1/2'} flex flex-col border-r border-[#ff4d20]/10`}>
-                    <div className="flex-1 overflow-y-auto">
+                <div id="cascade-work-area" className="flex-1 flex overflow-hidden">
+                    {/* Left Panel - Problem Statement */}
+                    <div
+                        className="flex flex-col border-r border-[#ff4d20]/10 min-w-0"
+                        style={{ width: `${leftPanelWidth}%` }}
+                    >
+                        <div className="flex-1 overflow-y-auto min-h-0">
                         <div className="p-5 space-y-5">
                             {/* Problem Header */}
                             <div>
@@ -768,119 +840,136 @@ export default function CascadeContest({ session }) {
                             )}
                         </div>
                     </div>
-                </div>
-
-                {/* Right Panel - Code Editor */}
-                <div className={`${isReviewMode ? 'w-[58%]' : 'w-1/2'} flex flex-col`}>
-                    {/* Editor Toolbar */}
-                    <div className="h-11 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4 shrink-0">
-                        <div className="text-xs font-semibold text-white/40 uppercase tracking-wide">Code Editor</div>
-                        <select
-                            value={language}
-                            onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
-                            className="bg-black/40 text-xs text-white/80 font-medium px-3 py-1.5 rounded border border-white/10 focus:outline-none focus:border-[#ff4d20]/30 uppercase"
-                        >
-                            <option value="python">Python</option>
-                            <option value="c">C</option>
-                            <option value="cpp">C++</option>
-                            <option value="java">Java</option>
-                            <option value="go">Go</option>
-                        </select>
                     </div>
 
-                    {/* Monaco Editor */}
-                    <div className="flex-1 bg-[#1e1e1e] min-h-0">
-                        <Editor
-                            height="100%"
-                            language={language}
-                            theme="vs-dark"
-                            value={codes[currentQuestion.id]?.[language] ?? getCodeOrBoilerplate(STORAGE_PREFIX, currentQuestion.id, language)}
-                            onChange={(val) => {
-                                setCodes(prev => ({
-                                    ...prev,
-                                    [currentQuestion.id]: { ...prev[currentQuestion.id], [language]: val }
-                                }));
-                                saveCode(STORAGE_PREFIX, currentQuestion.id, language, val);
-                            }}
-                            options={{
-                                fontSize: 14,
-                                minimap: { enabled: false },
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                padding: { top: 16, bottom: 16 },
-                                lineHeight: 1.6,
-                                wordWrap: 'on',
-                                renderWhitespace: 'none',
-                                cursorBlinking: 'smooth',
-                                smoothScrolling: true,
-                                fontFamily: 'JetBrains Mono, Fira Code, monospace',
-                                fontLigatures: true,
-                            }}
-                        />
-                    </div>
+                    <div
+                        onMouseDown={startHorizontalResize}
+                        className="w-1.5 shrink-0 cursor-col-resize bg-[#ff4d20]/8 transition-colors hover:bg-[#ff4d20]/25"
+                        aria-label="Resize panels"
+                    />
 
-                    {/* Console Panel */}
-                    <div className="h-52 bg-[#0d0605] border-t border-[#ff4d20]/20 flex flex-col shrink-0">
-                        {/* Tabs */}
-                        <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4">
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => setRightTab("input")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${rightTab === "input"
-                                            ? 'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
-                                            : 'text-white/50 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    Custom Input
-                                </button>
-                                <button
-                                    onClick={() => setRightTab("result")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${rightTab === "result"
-                                            ? 'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
-                                            : 'text-white/50 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    Output
-                                </button>
-                            </div>
-                            {statusMessage && (
-                                <span className={`text-[10px] uppercase font-bold tracking-wide px-2.5 py-1 rounded ${statusMessage.includes("Accepted") ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                        statusMessage.includes("Running") ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                            'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
-                                    }`}>
-                                    {statusMessage}
-                                </span>
-                            )}
+                    {/* Right Panel - Code Editor */}
+                    <div
+                        id="cascade-right-panel"
+                        className="flex min-w-0 flex-col"
+                        style={{ width: `${100 - leftPanelWidth}%` }}
+                    >
+                        {/* Editor Toolbar */}
+                        <div className="h-11 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4 shrink-0">
+                            <div className="text-xs font-semibold text-white/40 uppercase tracking-wide">Code Editor</div>
+                            <select
+                                value={language}
+                                onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
+                                className="bg-black/40 text-xs text-white/80 font-medium px-3 py-1.5 rounded border border-white/10 focus:outline-none focus:border-[#ff4d20]/30 uppercase"
+                            >
+                                <option value="python">Python</option>
+                                <option value="c">C</option>
+                                <option value="cpp">C++</option>
+                                <option value="java">Java</option>
+                                <option value="go">Go</option>
+                            </select>
                         </div>
 
-                        {/* Panel Content */}
-                        <div className="flex-1 overflow-hidden">
-                            {rightTab === "input" ? (
-                                <textarea
-                                    value={customInput}
-                                    onChange={(e) => setCustomInput(e.target.value)}
-                                    placeholder="Enter test input here..."
-                                    className="w-full h-full bg-[#0d0605] p-4 text-sm font-mono text-white/80 focus:outline-none resize-none placeholder:text-white/20 leading-relaxed"
-                                />
-                            ) : (
-                                <div className="w-full h-full p-4 font-mono text-sm overflow-auto text-white/80 bg-[#0d0605]">
-                                    {isRunning ? (
-                                        <div className="flex items-center gap-2 text-[#ff4d20]/70">
-                                            <FiPlay className="animate-spin" />
-                                            <span>Running...</span>
-                                        </div>
-                                    ) : (
-                                        <pre className={`whitespace-pre-wrap leading-relaxed ${statusMessage.includes("Wrong") || statusMessage.includes("Error") || statusMessage.includes("Limit")
-                                                ? 'text-[#ff4d20]'
-                                                : statusMessage.includes("Accepted")
-                                                    ? 'text-green-400'
-                                                    : ''
-                                            }`}>
-                                            {output || <span className="text-white/30">No output yet. Run or submit your code to see results.</span>}
-                                        </pre>
-                                    )}
+                        {/* Monaco Editor */}
+                        <div className="bg-[#1e1e1e] min-h-0" style={{ height: `${editorHeight}%` }}>
+                            <Editor
+                                height="100%"
+                                language={language}
+                                theme="vs-dark"
+                                value={codes[currentQuestion.id]?.[language] ?? getCodeOrBoilerplate(STORAGE_PREFIX, currentQuestion.id, language)}
+                                onChange={(val) => {
+                                    setCodes(prev => ({
+                                        ...prev,
+                                        [currentQuestion.id]: { ...prev[currentQuestion.id], [language]: val }
+                                    }));
+                                    saveCode(STORAGE_PREFIX, currentQuestion.id, language, val);
+                                }}
+                                options={{
+                                    fontSize: 14,
+                                    minimap: { enabled: false },
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    padding: { top: 16, bottom: 16 },
+                                    lineHeight: 1.6,
+                                    wordWrap: 'on',
+                                    renderWhitespace: 'none',
+                                    cursorBlinking: 'smooth',
+                                    smoothScrolling: true,
+                                    fontFamily: 'JetBrains Mono, Fira Code, monospace',
+                                    fontLigatures: true,
+                                }}
+                            />
+                        </div>
+
+                        <div
+                            onMouseDown={startVerticalResize}
+                            className="h-1.5 shrink-0 cursor-row-resize bg-[#ff4d20]/8 transition-colors hover:bg-[#ff4d20]/25"
+                            aria-label="Resize editor and output"
+                        />
+
+                        {/* Console Panel */}
+                        <div className="bg-[#0d0605] border-t border-[#ff4d20]/20 flex min-h-0 flex-1 flex-col">
+                            {/* Tabs */}
+                            <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-4">
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setRightTab("input")}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${rightTab === "input"
+                                                ? 'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
+                                                : 'text-white/50 hover:text-white hover:bg-white/5'
+                                            }`}
+                                    >
+                                        Custom Input
+                                    </button>
+                                    <button
+                                        onClick={() => setRightTab("result")}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${rightTab === "result"
+                                                ? 'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
+                                                : 'text-white/50 hover:text-white hover:bg-white/5'
+                                            }`}
+                                    >
+                                        Output
+                                    </button>
                                 </div>
-                            )}
+                                {statusMessage && (
+                                    <span className={`text-[10px] uppercase font-bold tracking-wide px-2.5 py-1 rounded ${statusMessage.includes("Accepted") ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                                            statusMessage.includes("Running") ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                                'bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20'
+                                        }`}>
+                                        {statusMessage}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Panel Content */}
+                            <div className="flex-1 overflow-hidden min-h-0">
+                                {rightTab === "input" ? (
+                                    <textarea
+                                        value={customInput}
+                                        onChange={(e) => setCustomInput(e.target.value)}
+                                        placeholder="Enter test input here..."
+                                        className="w-full h-full bg-[#0d0605] p-4 text-sm font-mono text-white/80 focus:outline-none resize-none placeholder:text-white/20 leading-relaxed"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full p-4 font-mono text-sm overflow-auto text-white/80 bg-[#0d0605]">
+                                        {isRunning ? (
+                                            <div className="flex items-center gap-2 text-[#ff4d20]/70">
+                                                <FiPlay className="animate-spin" />
+                                                <span>Running...</span>
+                                            </div>
+                                        ) : (
+                                            <pre className={`whitespace-pre-wrap leading-relaxed ${statusMessage.includes("Wrong") || statusMessage.includes("Error") || statusMessage.includes("Limit")
+                                                    ? 'text-[#ff4d20]'
+                                                    : statusMessage.includes("Accepted")
+                                                        ? 'text-green-400'
+                                                        : ''
+                                                }`}>
+                                                {output || <span className="text-white/30">No output yet. Run or submit your code to see results.</span>}
+                                            </pre>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

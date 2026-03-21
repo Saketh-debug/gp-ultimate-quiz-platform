@@ -1,16 +1,15 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 function Rapidfire() {
   const [token, setToken] = useState("");
-
-  // Clear stale token on mount — user must re-enter if they come here
-  useState(() => localStorage.removeItem("userToken"));
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.removeItem("userToken");
+  }, []);
 
   async function handleJoin() {
     if (!token) return;
@@ -27,7 +26,7 @@ function Rapidfire() {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("userToken", token); // Store for reload/resume
+        localStorage.setItem("userToken", token);
         navigate("/rapidfire-contest", { state: { session: data } });
       } else {
         setError(data.error || "Failed to join");
@@ -38,120 +37,213 @@ function Rapidfire() {
       setLoading(false);
     }
   }
+
   return (
-    <div className="min-h-screen text-white font-['Space_Grotesk'] bg-gradient-to-br from-[#451a03] to-[#1a0b08] overflow-hidden">
+    <div className="min-h-screen bg-[#1a0b08] text-white font-['Space_Grotesk'] overflow-x-hidden">
 
-      {/* BACKGROUND ELEMENTS */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-orange-600/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[150px]"></div>
-      </div>
+      {/* BACKGROUND */}
+      <div className="fixed inset-0 pointer-events-none bg-gradient-to-tr from-orange-900/30 via-transparent to-red-600/10 z-0" />
 
-      <div className="relative z-10 container mx-auto px-6 py-12 flex flex-col items-center justify-center min-h-screen">
-
-        {/* HEADER */}
-        <div className="text-center mb-16 space-y-4">
-          <div className="inline-block px-4 py-1 rounded-full border border-orange-500/30 bg-orange-500/10 backdrop-blur-md mb-6">
-            <span className="text-orange-400 text-xs font-bold tracking-[0.2em] uppercase">High Intensity Mode</span>
+      {/* NAV */}
+      <nav className="relative z-10 flex items-center justify-between px-12 py-8 max-w-[1600px] mx-auto">
+        <Link to="/" className="flex items-center gap-4 group">
+          <div className="size-10 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white/5 transition">
+            <span className="material-symbols-outlined text-white/70">
+              arrow_back
+            </span>
           </div>
-          <h1 className="text-7xl font-black italic tracking-tighter uppercase mb-2">
-            Rapid <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">Fire</span>
-          </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto font-light tracking-wide">
-            Speed is your only ally. Solve as many problems as possible before the clock runs out.
-          </p>
+          <span className="text-white/50 text-xs tracking-widest uppercase">
+            Dashboard
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          <div className="size-2.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_10px_rgba(255,100,0,0.8)]"></div>
+          <span className="text-sm font-bold tracking-[0.3em] uppercase text-orange-400/80">
+            Rapid Mode Active
+          </span>
         </div>
+      </nav>
 
-        {/* CARD */}
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      {/* MAIN */}
+      <main className="relative z-10 max-w-[1600px] mx-auto px-12 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
 
-          {/* LEFT: STATS */}
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition group">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 rounded-lg bg-orange-500/20 text-orange-400 group-hover:scale-110 transition">
-                  <span className="material-symbols-outlined text-3xl">timer</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Time Pressure</h3>
-                  <p className="text-sm text-gray-400">3 minutes per question. No turning back.</p>
-                </div>
+          {/* LEFT */}
+          <div className="lg:col-span-5 space-y-10">
+
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold uppercase tracking-[0.25em]">
+                <span className="material-symbols-outlined text-sm">
+                  flash_on
+                </span>
+                High Intensity Mode
               </div>
-            </div>
 
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition group">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 rounded-lg bg-red-500/20 text-red-400 group-hover:scale-110 transition">
-                  <span className="material-symbols-outlined text-3xl">local_fire_department</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Streak Bonus</h3>
-                  <p className="text-sm text-gray-400">Maintain a streak for maximum points.</p>
-                </div>
-              </div>
-            </div>
+              <h1 className="text-6xl font-bold leading-none tracking-tight">
+                Rapid <br />
+                <span className="bg-gradient-to-r from-orange-400 to-red-600 bg-clip-text text-transparent">
+                  Fire
+                </span>
+              </h1>
 
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition group">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 rounded-lg bg-yellow-500/20 text-yellow-400 group-hover:scale-110 transition">
-                  <span className="material-symbols-outlined text-3xl">emoji_events</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Leaderboard</h3>
-                  <p className="text-sm text-gray-400">Compete with top coders globally.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: ACTION */}
-          <div className="space-y-8">
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: "Questions", value: "15" },
-                { label: "Duration", value: "45m" },
-                { label: "Difficulty", value: "Mixed" },
-                { label: "Format", value: "Seq" },
-              ].map((stat, i) => (
-                <div key={i} className="text-center p-4 rounded-xl bg-black/20 border border-white/5">
-                  <div className="text-2xl font-bold text-white">{stat.value}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-gray-500">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* START BUTTON / LOGIN INPUT */}
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
-              <div className="flex h-16 rounded-xl overflow-hidden bg-black/40 border border-white/10">
-                <div className="flex items-center px-4 text-orange-400">
-                  <span className="material-symbols-outlined">key</span>
-                </div>
-
-                <input
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="ENTER ACCESS TOKEN"
-                  className="flex-1 bg-transparent px-4 text-white placeholder:text-orange-200/40 focus:outline-none"
-                />
-
-                <button
-                  onClick={handleJoin}
-                  disabled={loading}
-                  className="px-10 bg-orange-600 hover:bg-orange-500 font-bold transition shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? "JOINING..." : "JOIN"}
-                </button>
-              </div>
-              {error && <p className="mt-3 text-red-500 text-xs font-bold text-center">{error}</p>}
-              <p className="mt-4 text-[11px] uppercase tracking-[0.5em] text-orange-300/40 text-center font-bold">
-                Secure uplink established
+              <p className="text-white/70 leading-relaxed max-w-lg">
+                Speed is everything. Solve questions under extreme time pressure.
+                No pauses, no retries — just pure performance.
               </p>
             </div>
 
+            {/* STATS */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+                <div className="flex items-center gap-2 text-orange-400/70 mb-2">
+                  <span className="material-symbols-outlined">timer</span>
+                  <span className="text-xs uppercase tracking-widest font-bold">
+                    Duration
+                  </span>
+                </div>
+                <p className="text-4xl font-bold">
+                  45 <span className="text-lg text-white/40">mins</span>
+                </p>
+              </div>
+
+              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+                <div className="flex items-center gap-2 text-orange-400/70 mb-2">
+                  <span className="material-symbols-outlined">bolt</span>
+                  <span className="text-xs uppercase tracking-widest font-bold">
+                    Questions
+                  </span>
+                </div>
+                <p className="text-4xl font-bold">
+                  15 <span className="text-lg text-white/40">total</span>
+                </p>
+              </div>
+            </div>
+
+            {/* JOIN PANEL */}
+            <div className="bg-black/40 backdrop-blur-xl border border-orange-500/20 rounded-3xl p-10">
+              <h3 className="text-xl font-bold mb-3">
+                Enter Rapid Session
+              </h3>
+
+              <p className="text-white/50 mb-8 text-sm">
+                Input your access token to begin the rapid challenge.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex h-16 rounded-2xl overflow-hidden bg-black/60 border border-orange-500/30 focus-within:border-orange-500/80 transition-colors">
+                  <div className="flex items-center px-5 text-orange-400">
+                    <span className="material-symbols-outlined">key</span>
+                  </div>
+
+                  <input
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleJoin(); }}
+                    placeholder="ENTER ACCESS TOKEN"
+                    className="flex-1 bg-transparent px-2 text-white placeholder:text-orange-400/30 font-mono tracking-widest text-sm focus:outline-none"
+                  />
+
+                  <button
+                    onClick={handleJoin}
+                    disabled={loading || !token}
+                    className="px-8 bg-orange-600 hover:bg-orange-500 font-bold transition shadow-[0_0_20px_rgba(255,100,0,0.3)] disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <span className="material-symbols-outlined animate-spin text-sm">
+                        sync
+                      </span>
+                    ) : (
+                      <>
+                        JOIN
+                        <span className="material-symbols-outlined text-sm">
+                          chevron_right
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="text-red-500 text-xs font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
+                    {error}
+                  </p>
+                )}
+              </div>
+
+              <p className="text-center text-[10px] uppercase tracking-[0.3em] text-white/30 mt-6">
+                Timer locked • No retries
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="lg:col-span-7 space-y-8">
+
+            {/* FEATURES */}
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-12">
+              <h3 className="text-2xl font-bold mb-10 flex items-center gap-3">
+                <span className="material-symbols-outlined text-orange-400">
+                  local_fire_department
+                </span>
+                Rapid Mechanics
+              </h3>
+
+              <div className="space-y-8">
+                {[
+                  ["⚡", "Time Pressure", "Each question must be solved quickly."],
+                  ["🔥", "Streak Bonus", "Maintain streaks for higher scores."],
+                  ["🏆", "Leaderboard", "Compete globally in real-time."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title} className="flex gap-6 items-start">
+                    <div className="w-14 h-14 rounded-xl bg-orange-500/10 border border-orange-500/40 flex items-center justify-center text-orange-400 text-xl">
+                      {icon}
+                    </div>
+                    <div>
+                      <h4 className="font-bold">{title}</h4>
+                      <p className="text-sm text-white/50">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RULES */}
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-10">
+              <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
+                <span className="material-symbols-outlined text-orange-400">
+                  security
+                </span>
+                Rules
+              </h3>
+
+              <div className="grid md:grid-cols-3 gap-8">
+                {[
+                  ["timer", "Limited Time", "Each problem has strict timing."],
+                  ["bolt", "Fast Responses", "Speed affects scoring."],
+                  ["block", "No Reattempts", "Once skipped, cannot return."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title}>
+                    <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-3">
+                      <span className="material-symbols-outlined text-orange-400">
+                        {icon}
+                      </span>
+                    </div>
+                    <h4 className="font-bold">{title}</h4>
+                    <p className="text-sm text-white/50">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
+      </main>
 
-      </div>
+      {/* FOOTER */}
+      <footer className="max-w-[1600px] mx-auto px-12 py-12 text-white/20 text-xs uppercase tracking-[0.4em]">
+        © 2025 RapidFire Systems
+      </footer>
     </div>
   );
 }

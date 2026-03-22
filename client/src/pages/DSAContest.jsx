@@ -6,11 +6,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {
-    FiPlay, FiUpload, FiCheckCircle, FiClock, FiTerminal, FiZap, FiCode, FiList, FiFileText
+    FiPlay, FiUpload, FiCheckCircle, FiClock, FiTerminal, FiZap, FiCode, FiList, FiFileText, FiRotateCcw
 } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-    LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
+    LANGUAGE_IDS, BOILERPLATE, getCodeOrBoilerplate, saveCode, clearCodeStorage,
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
@@ -57,7 +57,10 @@ export default function DSAContest({ session }) {
     // Timer & Admin Control
     const [totalTimeLeft, setTotalTimeLeft] = useState(null); // null = loading, seeded from server
     const [contestStopped, setContestStopped] = useState(false);
+    const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+    const [completionMessage, setCompletionMessage] = useState("");
     const isSyncingRef = useRef(false); // Guard for visibility re-sync
+    const isContestEndedRef = useRef(false); // Guard for completion
 
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("dsa", { contestEnded: totalTimeLeft === 0 || contestStopped });
@@ -78,7 +81,7 @@ export default function DSAContest({ session }) {
         const interceptor = axios.interceptors.response.use(
             res => res,
             err => {
-                if (err.response?.status === 401) navigate('/dsa');
+                if (err.response?.status === 401 && !isContestEndedRef.current) navigate('/dsa');
                 return Promise.reject(err);
             }
         );
@@ -206,15 +209,21 @@ export default function DSAContest({ session }) {
         return () => clearInterval(timer);
     }, [activeSession, totalTimeLeft !== null]);
 
+    // triggerCompletion — called from timer expiry and all-questions-done paths
+    function triggerCompletion(msg) {
+        if (isContestEndedRef.current) return; // prevent double-fire
+        isContestEndedRef.current = true;
+        cleanupProctoring();
+        clearCodeStorage(STORAGE_PREFIX);
+        // Tokens deferred to button click so ProtectedDSARoute doesn't kick in
+        setCompletionMessage(msg);
+        setShowCompletionOverlay(true);
+    }
+
     // Handle contest end — fires from both interval ticks and re-sync updates
     useEffect(() => {
         if (totalTimeLeft === 0 && !contestStopped) {
-            cleanupProctoring();
-            alert("Contest Over! Final score transmitted.");
-            clearCodeStorage(STORAGE_PREFIX);
-            localStorage.removeItem("dsaToken");
-            localStorage.removeItem("dsaCurrentIndex");
-            navigate("/rounds");
+            triggerCompletion("Contest Over! Your final DSA score has been recorded.");
         }
     }, [totalTimeLeft]);
 
@@ -225,6 +234,7 @@ export default function DSAContest({ session }) {
         const handleVisibilityChange = async () => {
             if (document.visibilityState !== 'visible') return;
             if (isSyncingRef.current) return;
+            if (isContestEndedRef.current) return; // don't sync after contest ended
             isSyncingRef.current = true;
 
             try {
@@ -260,6 +270,7 @@ export default function DSAContest({ session }) {
 
         const handleSubmissionResult = async (data) => {
             if (!isWaitingForResponse.current) return;
+            if (isContestEndedRef.current) return; // ignore late results after completion
 
             setIsRunning(false);
             isWaitingForResponse.current = false;
@@ -359,12 +370,7 @@ export default function DSAContest({ session }) {
                                 setStatusMessage("");
                                 setRightTab("result");
                             } else {
-                                cleanupProctoring();
-                                alert("Congratulations! You have solved all questions.");
-                                clearCodeStorage(STORAGE_PREFIX);
-                                localStorage.removeItem("dsaToken");
-                                localStorage.removeItem("dsaCurrentIndex");
-                                navigate("/rounds");
+                                triggerCompletion("Congratulations! You have solved all DSA questions!");
                             }
                             return currentQuestions;
                         });
@@ -400,6 +406,12 @@ export default function DSAContest({ session }) {
         setCustomInput("");
         setStatusMessage("");
         setRightTab("result");
+    };
+
+    const handleResetCode = () => {
+        if (!currentQuestion || !editorRef.current) return;
+        // setValue triggers onChange → which updates codes state + saves to localStorage
+        editorRef.current.setValue(BOILERPLATE[language] || "");
     };
 
     // Execution Handlers
@@ -547,8 +559,31 @@ export default function DSAContest({ session }) {
     return (
         <div className="h-screen flex flex-col bg-[#0c0202] text-[#eff1f6] font-sans overflow-hidden">
 
+            {/* COMPLETION OVERLAY */}
+            {showCompletionOverlay && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
+                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(244,63,94,0.2)] text-center">
+                        <div className="text-7xl mb-6">🏆</div>
+                        <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
+                        <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
+                        <p className="text-[#f43f5e]/70 text-sm mb-8">Check the leaderboard to see where you stand among other teams.</p>
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem("dsaToken");
+                                localStorage.removeItem("dsaCurrentIndex");
+                                navigate("/leaderboard");
+                            }}
+                            className="w-full px-8 py-4 bg-[#f43f5e] hover:bg-rose-500 text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(244,63,94,0.4)] flex items-center justify-center gap-3 text-sm"
+                        >
+                            <span>View Leaderboard</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* PROCTORING WARNING OVERLAY */}
-            {showWarning && !contestStopped && (
+            {showWarning && !contestStopped && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(244,63,94,0.15)] text-center">
                         <div className="text-6xl mb-6">⚠️</div>
@@ -566,7 +601,7 @@ export default function DSAContest({ session }) {
             )}
 
             {/* --- CONTEST STOPPED OVERLAY --- */}
-            {contestStopped && (
+            {contestStopped && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     <div className="text-center">
                         <div className="text-6xl mb-6">🛑</div>
@@ -578,10 +613,10 @@ export default function DSAContest({ session }) {
                             Your progress has been saved.
                         </p>
                         <button
-                            onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); localStorage.removeItem("dsaCurrentIndex"); navigate("/rounds"); }}
+                            onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); localStorage.removeItem("dsaCurrentIndex"); navigate("/leaderboard"); }}
                             className="px-8 py-3 bg-[#f43f5e] hover:bg-rose-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)]"
                         >
-                            Return to Rounds
+                            Check Leaderboard
                         </button>
                     </div>
                 </div>
@@ -730,6 +765,14 @@ export default function DSAContest({ session }) {
                                     <option value="go" className="bg-[#140a0a]">Go</option>
                                 </select>
                             </div>
+                            <button
+                                onClick={handleResetCode}
+                                disabled={isRunning}
+                                title="Reset to default boilerplate"
+                                className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#f43f5e]/20 text-white/40 hover:text-[#f43f5e] hover:border-[#f43f5e]/50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold uppercase tracking-wider"
+                            >
+                                <FiRotateCcw className="text-xs" /> Reset
+                            </button>
                         </div>
 
                         <div className="flex-1 relative bg-[#1e1e1e]">

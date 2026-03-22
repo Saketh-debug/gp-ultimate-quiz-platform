@@ -8,11 +8,11 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {
     FiPlay, FiUpload, FiClock, FiTerminal, FiZap, FiAlertTriangle, FiCheckCircle,
-    FiSettings, FiFileText, FiCode
+    FiSettings, FiFileText, FiCode, FiRotateCcw
 } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-    LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
+    LANGUAGE_IDS, BOILERPLATE, getCodeOrBoilerplate, saveCode, clearCodeStorage,
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
@@ -61,6 +61,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     // Scoring State
     const [rapidfireScore, setRapidfireScore] = useState(0);
 
+    // Completion overlay
+    const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+    const [completionMessage, setCompletionMessage] = useState("");
+    const isContestEndedRef = useRef(false);
+
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("rapidfire", { contestEnded: totalTimeLeft === 0 });
 
@@ -79,7 +84,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         const interceptor = axios.interceptors.response.use(
             res => res,
             err => {
-                if (err.response?.status === 401) {
+                if (err.response?.status === 401 && !isContestEndedRef.current) {
                     navigate('/rapidfire');
                 }
                 return Promise.reject(err);
@@ -156,6 +161,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 setTotalTimeLeft(activeSession.totalTimeLeft);
             }
 
+            // Seed score from server so it survives page reloads
+            if (activeSession.currentScore != null) {
+                setRapidfireScore(activeSession.currentScore);
+            }
+
             // Use backend-provided currentIndex instead of guessing
             if (activeSession.questions && activeSession.questions.length > 0) {
                 const resumeIndex = activeSession.currentIndex ?? 0;
@@ -181,15 +191,22 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         return () => clearInterval(timer);
     }, [activeSession, currentIndex, timeLeft !== null, totalTimeLeft !== null]);
 
+    // triggerCompletion — called from timer expiry and all-questions-done paths
+    function triggerCompletion(msg) {
+        if (isContestEndedRef.current) return; // prevent double-fire
+        isContestEndedRef.current = true;
+        cleanupProctoring();
+        clearCodeStorage(STORAGE_PREFIX);
+        // Tokens are kept alive until the user clicks the button
+        // so ProtectedContestRoute doesn't kick in on a re-render
+        setCompletionMessage(msg);
+        setShowCompletionOverlay(true);
+    }
+
     // Handle contest end — fires from both interval ticks and re-sync updates
     useEffect(() => {
         if (totalTimeLeft === 0) {
-            cleanupProctoring();
-            alert(`Contest Over! Your Rapidfire Score: ${rapidfireScore} points`);
-            clearCodeStorage(STORAGE_PREFIX);
-            localStorage.removeItem("userToken");
-            localStorage.removeItem("userAccessCode");
-            navigate("/rounds");
+            triggerCompletion(`Contest Over! Your Rapidfire Score: ${rapidfireScore} points`);
         }
     }, [totalTimeLeft]);
 
@@ -207,6 +224,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         const handleVisibilityChange = async () => {
             if (document.visibilityState !== 'visible') return;
             if (isSyncingRef.current) return;
+            if (isContestEndedRef.current) return; // don't sync after contest ended
             isSyncingRef.current = true;
 
             try {
@@ -325,12 +343,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 }
 
             } else {
-                cleanupProctoring();
-                alert(`All questions completed! Your Rapidfire Score: ${rapidfireScore} points`);
-                clearCodeStorage(STORAGE_PREFIX);
-                localStorage.removeItem("userToken");
-                localStorage.removeItem("userAccessCode");
-                navigate("/rounds");
+                triggerCompletion(`All questions completed! Your Rapidfire Score: ${rapidfireScore} points`);
             }
         } finally {
             isAdvancingRef.current = false;
@@ -345,6 +358,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
         const handleSubmissionResult = async (data) => {
             if (!isWaitingForResponse.current) return;
+            if (isContestEndedRef.current) return; // ignore late results after completion
 
             setIsRunning(false);
             isWaitingForResponse.current = false;
@@ -392,6 +406,12 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         socket.on("submission_result", handleSubmissionResult);
         return () => socket.off("submission_result", handleSubmissionResult);
     }, [activeSession?.userId, currentIndex, questions.length]);
+
+    const handleResetCode = () => {
+        if (!currentQuestion || !editorRef.current) return;
+        // setValue triggers onChange → which updates codes state + saves to localStorage
+        editorRef.current.setValue(BOILERPLATE[language] || "");
+    };
 
     async function handleRun() {
         if (!currentQuestion) return;
@@ -479,8 +499,31 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     return (
         <div className="h-screen flex flex-col bg-[#1a1a1a] text-[#eff1f6] font-sans overflow-hidden">
 
+            {/* COMPLETION OVERLAY */}
+            {showCompletionOverlay && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
+                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(255,140,0,0.2)] text-center">
+                        <div className="text-7xl mb-6">🏆</div>
+                        <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
+                        <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
+                        <p className="text-orange-400/70 text-sm mb-8">Check the leaderboard to see where you stand among other teams.</p>
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem("userToken");
+                                localStorage.removeItem("userAccessCode");
+                                navigate("/leaderboard");
+                            }}
+                            className="w-full px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(255,100,0,0.4)] flex items-center justify-center gap-3 text-sm"
+                        >
+                            <span>View Leaderboard</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* PROCTORING WARNING OVERLAY */}
-            {showWarning && (
+            {showWarning && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(255,100,0,0.15)] text-center">
                         <div className="text-6xl mb-6">⚠️</div>
@@ -526,6 +569,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
                 {/* ACTIONS */}
                 <div className="flex items-center gap-3">
+                    <div className="bg-[#333] h-8 px-4 rounded-full border border-white/10 flex items-center gap-2 mr-2 shadow-inner">
+                        <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Score</span>
+                        <span className="text-orange-400 font-mono font-bold text-sm">{rapidfireScore}</span>
+                        <FiZap className="text-orange-500 text-sm" />
+                    </div>
                     <button
                         onClick={handleRun}
                         disabled={isRunning}
@@ -646,6 +694,14 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                                         <option value="go" className="bg-[#282828]">Go</option>
                                     </select>
                                 </div>
+                                <button
+                                    onClick={handleResetCode}
+                                    disabled={isRunning}
+                                    title="Reset to default boilerplate"
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-[#282828] border border-[#3e3e3e] text-gray-400 hover:text-orange-400 hover:border-orange-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold uppercase tracking-wider"
+                                >
+                                    <FiRotateCcw className="text-xs" /> Reset
+                                </button>
                             </div>
                         </div>
 

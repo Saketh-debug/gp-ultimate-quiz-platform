@@ -158,6 +158,7 @@ router.post("/join", async (req, res) => {
                 endTime: session.end_time,
                 totalTimeLeft,
                 currentIndex,
+                currentScore: user.rapidfire_score || 0,
                 questions: outputQuestions,
                 message: "Resumed session"
             });
@@ -237,6 +238,7 @@ router.post("/join", async (req, res) => {
                 endTime,
                 totalTimeLeft: CONTEST_DURATION_MINUTES * 60,
                 currentIndex: 0,
+                currentScore: user.rapidfire_score || 0,
                 questions: outputQuestions,
                 message: "New session started"
             });
@@ -387,9 +389,9 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
     const userId = req.user.userId; // injected from x-user-id header by dispatcher
     const { questionId } = req.body;
     try {
-        // 1. Fetch question data
+        // 1. Fetch question data (also select status for expiry guard)
         const qRes = await pool.query(
-            "SELECT start_time, score_awarded FROM user_questions WHERE user_id = $1 AND question_id = $2",
+            "SELECT start_time, score_awarded, status FROM user_questions WHERE user_id = $1 AND question_id = $2",
             [userId, questionId]
         );
 
@@ -412,6 +414,45 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
                 totalRoundScore: userRes.rows[0]?.rapidfire_score || 0
             });
         }
+
+        // --- Bug 2 Fix: Reject if question timer has already expired ---
+        // Guard A: Status is already TIMEOUT (set by /join or /time-check when user was away)
+        if (question.status === 'TIMEOUT') {
+            console.warn(`⚠️ submit-result: question ${questionId} is already TIMEOUT for user ${userId}. Rejecting.`);
+            return res.status(403).json({ error: "Question timer expired", scoreAwarded: 0 });
+        }
+
+        // Guard B: Elapsed time exceeds the question duration + a grace buffer for queue/judge latency.
+        // This catches submissions that entered the queue just before expiry but were judged after.
+        const SCORING_GRACE_SECONDS = 10; // 10s extra to absorb BullMQ queue wait + Judge0 exec time
+        if (question.start_time) {
+            const nowForElapsed = new Date();
+            const elapsed = (nowForElapsed - new Date(question.start_time)) / 1000;
+            if (elapsed > QUESTION_DURATION + SCORING_GRACE_SECONDS) {
+                // Also persist the TIMEOUT status so future checks are fast
+                await pool.query(
+                    "UPDATE user_questions SET status = 'TIMEOUT' WHERE user_id = $1 AND question_id = $2 AND status NOT IN ('ACCEPTED','TIMEOUT')",
+                    [userId, questionId]
+                );
+                console.warn(`⚠️ submit-result: question ${questionId} expired (elapsed ${elapsed.toFixed(1)}s) for user ${userId}. Rejecting.`);
+                return res.status(403).json({ error: "Question timer expired", scoreAwarded: 0 });
+            }
+        }
+
+        // --- Bug 3 Fix: Reject if the 50-min session has ended ---
+        const sessionCheckRes = await pool.query(
+            "SELECT end_time, completed FROM user_sessions WHERE user_id = $1 ORDER BY join_time DESC LIMIT 1",
+            [userId]
+        );
+        if (
+            sessionCheckRes.rows.length === 0 ||
+            sessionCheckRes.rows[0].completed ||
+            new Date(sessionCheckRes.rows[0].end_time) < new Date()
+        ) {
+            console.warn(`⚠️ submit-result: session expired or completed for user ${userId}. Rejecting.`);
+            return res.status(403).json({ error: "Contest session has expired", scoreAwarded: 0 });
+        }
+        // --- End of Bug 2 & 3 Guards ---
 
         // 3. Compute remaining time from server-side timestamps
         let remainingTime = 0;

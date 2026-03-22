@@ -10,7 +10,7 @@ import {
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import {
-    LANGUAGE_IDS, getCodeOrBoilerplate, saveCode, clearCodeStorage,
+    LANGUAGE_IDS, BOILERPLATE, getCodeOrBoilerplate, saveCode, clearCodeStorage,
     saveLastLanguage, getLastLanguage
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
@@ -22,6 +22,7 @@ const SUBMISSION_URL = import.meta.env.VITE_SUBMISSION_URL;
 const socket = io(SUBMISSION_URL); // LB has no auth
 
 const STORAGE_PREFIX = "cascade";
+const STREAK_MULTIPLIER = 20;
 
 export default function CascadeContest({ session }) {
     const navigate = useNavigate();
@@ -58,8 +59,11 @@ export default function CascadeContest({ session }) {
     const [totalTimeLeft, setTotalTimeLeft] = useState(null); // null = loading, seeded from backend
     const [showGoBackModal, setShowGoBackModal] = useState(false);
     const [contestStopped, setContestStopped] = useState(false);
+    const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+    const [completionMessage, setCompletionMessage] = useState("");
     const isSyncingRef = useRef(false); // Guard for visibility re-sync
     const contestStoppedRef = useRef(false); // Ref to avoid stale closure in effects
+    const isContestEndedRef = useRef(false); // Guard for completion
     const editorRef = useRef(null);
     const prevEditorKeyRef = useRef(null); // tracks "questionId__language" to detect real switches
     // Authenticated backend socket ref — created lazily in initSession with JWT
@@ -74,7 +78,7 @@ export default function CascadeContest({ session }) {
         const interceptor = axios.interceptors.response.use(
             res => res,
             err => {
-                if (err.response?.status === 401) navigate('/cascade');
+                if (err.response?.status === 401 && !isContestEndedRef.current) navigate('/cascade');
                 return Promise.reject(err);
             }
         );
@@ -183,15 +187,21 @@ export default function CascadeContest({ session }) {
         return () => clearInterval(timer);
     }, [activeSession, totalTimeLeft !== null]);
 
+    // triggerCompletion — called from timer expiry and all-questions-done paths
+    function triggerCompletion(msg) {
+        if (isContestEndedRef.current) return; // prevent double-fire
+        isContestEndedRef.current = true;
+        cleanupProctoring();
+        clearCodeStorage(STORAGE_PREFIX);
+        // Tokens deferred to button click so ProtectedCascadeRoute doesn't kick in
+        setCompletionMessage(msg);
+        setShowCompletionOverlay(true);
+    }
+
     // Handle contest end — guarded against admin stop to prevent double messaging
     useEffect(() => {
         if (totalTimeLeft === 0 && !contestStoppedRef.current) {
-            cleanupProctoring();
-            alert(`Contest Over! Your Cascade Score: ${cascadeScore} pts (+ streak bonus on leaderboard)`);
-            clearCodeStorage(STORAGE_PREFIX);
-            localStorage.removeItem("cascadeToken");
-            localStorage.removeItem("cascadeAccessCode");
-            navigate("/rounds");
+            triggerCompletion(`Contest Over! Your Cascade Score: ${cascadeScore} pts (+ streak bonus on leaderboard)`);
         }
     }, [totalTimeLeft]);
 
@@ -203,6 +213,7 @@ export default function CascadeContest({ session }) {
             if (document.visibilityState !== 'visible') return;
             if (isSyncingRef.current) return;
             if (contestStoppedRef.current) return;
+            if (isContestEndedRef.current) return; // don't sync after contest ended
             isSyncingRef.current = true;
 
             try {
@@ -238,6 +249,7 @@ export default function CascadeContest({ session }) {
 
         const handleSubmissionResult = async (data) => {
             if (!isWaitingForResponse.current) return;
+            if (isContestEndedRef.current) return; // ignore late results after completion
 
             setIsRunning(false);
             isWaitingForResponse.current = false;
@@ -294,12 +306,7 @@ export default function CascadeContest({ session }) {
                 if (allSolved) {
                     const finalScore = scoreData.cascadeScore ?? cascadeScore;
                     setTimeout(() => {
-                        cleanupProctoring();
-                        alert(`All questions solved! Your Cascade Score: ${finalScore} pts`);
-                        clearCodeStorage(STORAGE_PREFIX);
-                        localStorage.removeItem("cascadeToken");
-                        localStorage.removeItem("cascadeAccessCode");
-                        navigate("/rounds");
+                        triggerCompletion(`All questions solved! Your Cascade Score: ${finalScore} pts`);
                     }, 1500);
                 } else {
                     setTimeout(() => {
@@ -478,6 +485,12 @@ export default function CascadeContest({ session }) {
         setRightTab("result");
     };
 
+    const handleResetCode = () => {
+        if (!currentQuestion || !editorRef.current) return;
+        // setValue triggers onChange → which updates codes state + saves to localStorage
+        editorRef.current.setValue(BOILERPLATE[language] || "");
+    };
+
 
     async function handleRun() {
         if (!currentQuestion) return;
@@ -559,8 +572,31 @@ export default function CascadeContest({ session }) {
     return (
         <div className="h-screen flex flex-col bg-[#110806] text-[#eff1f6] font-sans overflow-hidden">
 
+            {/* COMPLETION OVERLAY */}
+            {showCompletionOverlay && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
+                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(255,77,32,0.2)] text-center">
+                        <div className="text-7xl mb-6">🏆</div>
+                        <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
+                        <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
+                        <p className="text-[#ff4d20]/70 text-sm mb-8">Check the leaderboard to see where you stand among other teams.</p>
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem("cascadeToken");
+                                localStorage.removeItem("cascadeAccessCode");
+                                navigate("/leaderboard");
+                            }}
+                            className="w-full px-8 py-4 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(255,77,32,0.4)] flex items-center justify-center gap-3 text-sm"
+                        >
+                            <span>View Leaderboard</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* PROCTORING WARNING OVERLAY */}
-            {showWarning && !contestStopped && (
+            {showWarning && !contestStopped && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(255,77,32,0.15)] text-center">
                         <div className="text-6xl mb-6">⚠️</div>
@@ -578,7 +614,7 @@ export default function CascadeContest({ session }) {
             )}
 
             {/* --- CONTEST STOPPED OVERLAY --- */}
-            {contestStopped && (
+            {contestStopped && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
                     <div className="text-center">
                         <div className="text-6xl mb-6">🛑</div>
@@ -591,10 +627,10 @@ export default function CascadeContest({ session }) {
                             <span className="text-[#f4a460] font-bold">Your Score: {cascadeScore} pts (+ streak bonus on leaderboard)</span>
                         </p>
                         <button
-                            onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); localStorage.removeItem("cascadeAccessCode"); navigate("/rounds"); }}
+                            onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("cascadeToken"); localStorage.removeItem("cascadeAccessCode"); navigate("/leaderboard"); }}
                             className="px-8 py-3 bg-[#ff4d20] hover:bg-[#ff623d] text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
                         >
-                            Return to Rounds
+                            Check Leaderboard
                         </button>
                     </div>
                 </div>
@@ -676,6 +712,18 @@ export default function CascadeContest({ session }) {
 
                 {/* Right: Timer & Actions */}
                 <div className="flex items-center gap-6 relative z-10">
+                    <div className="flex items-center gap-4 bg-black/40 px-5 py-2 rounded-2xl border border-white/5 shadow-inner">
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-white/40 uppercase font-bold tracking-[0.2em] leading-none mb-1">Current Score</span>
+                            <span className="font-mono text-xl font-black text-white">{cascadeScore}</span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10"></div>
+                        <div className="flex flex-col items-start translate-y-0.5">
+                            <span className="text-[10px] text-yellow-500/70 uppercase font-bold tracking-[0.2em] leading-none mb-1">Streak Bonus</span>
+                            <span className="font-mono text-xl font-black text-yellow-500">+{maxStreak * STREAK_MULTIPLIER}</span>
+                        </div>
+                    </div>
+
                     <div className="flex flex-col items-center min-w-[80px]">
                         <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Uplink Closes</span>
                         <span className={`font-mono text-2xl font-black leading-none ${totalTimeLeft !== null && totalTimeLeft < 300 ? "text-red-500 animate-pulse" : "text-[#ff4d20]"}`}>
@@ -704,12 +752,12 @@ export default function CascadeContest({ session }) {
             </nav>
 
             {/* SECONDARY NAV (Navigation specific to Cascade) */}
-            <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-6 shrink-0 relative z-30">
+            <div className="h-12 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-6 shrink-0 relative z-30">
                 <div className="flex gap-4">
                     {!isReviewMode && highestForwardIndex > 0 && (
                         <button
                             onClick={() => setShowGoBackModal(true)}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff4d20]/80 hover:text-[#ff4d20] transition bg-[#ff4d20]/5 hover:bg-[#ff4d20]/10 px-3 py-1.5 rounded"
+                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff4d20] hover:text-white transition bg-[#ff4d20]/10 hover:bg-[#ff4d20]/20 border border-[#ff4d20]/30 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(255,77,32,0.1)]"
                         >
                             <FiRotateCcw /> Review Previous Nodes
                         </button>
@@ -717,7 +765,7 @@ export default function CascadeContest({ session }) {
                     {isReviewMode && (
                         <button
                             onClick={handleReturnForward}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 px-3 py-1.5 rounded animate-pulse"
+                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-4 py-2 rounded-lg animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.1)]"
                         >
                             Return to Forward Node <FiArrowRight />
                         </button>
@@ -727,7 +775,7 @@ export default function CascadeContest({ session }) {
                 {!isReviewMode && currentIndex === highestForwardIndex && (
                     <button
                         onClick={handleSkip}
-                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition group"
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 hover:text-[#ff4d20] transition bg-white/5 hover:bg-[#ff4d20]/10 border border-white/10 hover:border-[#ff4d20]/40 px-4 py-2 rounded-lg group shadow-[0_0_10px_rgba(255,255,255,0.02)] hover:shadow-[0_0_15px_rgba(255,77,32,0.15)]"
                     >
                         Skip Node <FiSkipForward className="group-hover:translate-x-1 transition-transform" />
                     </button>
@@ -817,17 +865,27 @@ export default function CascadeContest({ session }) {
                 <div className={`${isReviewMode ? "w-2/3" : "w-1/2"} flex flex-col`}>
                     <div className="h-10 border-b border-[#ff4d20]/10 flex items-center justify-between px-4 bg-[#140a08]">
                         <span className="text-xs font-bold text-white/30 uppercase tracking-widest">Compiler Matrix</span>
-                        <select
-                            value={language}
-                            onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
-                            className="bg-black/50 text-xs text-[#ff4d20] font-bold tracking-wider px-3 py-1 rounded border border-[#ff4d20]/20 focus:outline-none uppercase"
-                        >
-                            <option value="python">Python</option>
-                            <option value="c">C</option>
-                            <option value="cpp">C++</option>
-                            <option value="java">Java</option>
-                            <option value="go">Go</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                            <select
+                                value={language}
+                                onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
+                                className="bg-black/50 text-xs text-[#ff4d20] font-bold tracking-wider px-3 py-1 rounded border border-[#ff4d20]/20 focus:outline-none uppercase"
+                            >
+                                <option value="python">Python</option>
+                                <option value="c">C</option>
+                                <option value="cpp">C++</option>
+                                <option value="java">Java</option>
+                                <option value="go">Go</option>
+                            </select>
+                            <button
+                                onClick={handleResetCode}
+                                disabled={isRunning}
+                                title="Reset to default boilerplate"
+                                className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#ff4d20]/20 text-white/40 hover:text-[#ff4d20] hover:border-[#ff4d20]/50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold uppercase tracking-wider"
+                            >
+                                <FiRotateCcw className="text-xs" /> Reset
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 bg-[#1e1e1e]">

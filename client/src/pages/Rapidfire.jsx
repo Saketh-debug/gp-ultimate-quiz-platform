@@ -65,7 +65,7 @@ function Rapidfire() {
         <div className="flex items-center gap-3">
           <div className="size-2.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_10px_rgba(255,100,0,0.8)]" />
           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400/80 sm:text-sm">
-            Rapid Mode Active
+            Rapid Fire Round Active
           </span>
         </div>
       </nav>
@@ -96,8 +96,8 @@ function Rapidfire() {
 
             <div className="grid grid-cols-2 gap-4 sm:gap-6">
               {[
-                { icon: "timer", label: "Duration", value: "45", suffix: "mins" },
-                { icon: "bolt", label: "Questions", value: "15", suffix: "total" },
+                { icon: "timer", label: "Duration", value: "50", suffix: "mins" },
+                { icon: "bolt", label: "Questions", value: "10", suffix: "total" },
               ].map((stat) => (
                 <div
                   key={stat.label}
@@ -120,10 +120,10 @@ function Rapidfire() {
             </div>
 
             <div className="rounded-3xl border border-orange-500/20 bg-black/40 p-8 backdrop-blur-xl sm:p-10">
-              <h3 className="mb-3 text-xl font-bold">Enter Rapid Session</h3>
+              <h3 className="mb-3 text-xl font-bold">Enter Rapid Fire Session</h3>
 
               <p className="mb-8 text-sm text-white/50">
-                Input your access token to begin the rapid challenge.
+                Input your access token to begin the rapid fire challenge.
               </p>
 
               <div className="space-y-4">
@@ -186,8 +186,8 @@ function Rapidfire() {
 
               <div className="space-y-8">
                 {[
-                  ["timer", "Time Pressure", "3 minutes per question. No turning back."],
-                  ["local_fire_department", "Streak Bonus", "Maintain a streak for maximum points."],
+                  ["timer", "Time Pressure", "5 minutes per question. No turning back."],
+                  ["local_fire_department", "Time Based Bonus", "Solve faster for maximum points."],
                   ["emoji_events", "Leaderboard", "Compete with top coders globally."],
                 ].map(([icon, title, desc]) => (
                   <div key={title} className="flex items-start gap-6">

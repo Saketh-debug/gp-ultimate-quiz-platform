@@ -10,7 +10,7 @@ function Rounds() {
         className="fixed bottom-0 left-0 w-full h-[40vh] opacity-80 -z-10"
         style={{
           backgroundImage:
-            "url(https://lh3.googleusercontent.com/aida-public/AB6AXuBWKU71LHCaR-12O4S36n5DP8fLv0yDQ7DthBgduswuRF3uIw5chGApd5dPqordM1TsjcdvBFBJHUG7_l3rVgwdQuN5-DClQMTFh4VFR1hvVVB5cM49KSjgyStPg5r-Pln-9okenBW1J4xJ6Z6KYzVqFXk6BeLW5LXoLTs8NAmgFjmQahsMf0652CDOBEwhnI9iAJ9TX9-2S417I1trrurakwXqee1-EMEJ1QpYFH1aiu0WJs1jrMd8tuMcqMLRiYlukLrGgjseeQo)",
+            "url(/images/martian-bg.png)",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
         }}
@@ -87,7 +87,7 @@ function Rounds() {
               className="relative h-64 bg-cover bg-center overflow-hidden"
               style={{
                 backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAWUnXJoowbLn4b1vnu9cSYbMp4SB3WRA1tqsltyBsgam3Ob1cQi8MXE4uMt_oODeMYuSWVNPqXGKXB7BWLKaVPEIpquME5eV--eyeBVwTYcLhKHj0mb00kKtA8nuKHkZg8SSiSKW23Wn4Ts6GuSOj8aL6pdLGdry2xgy9GumQzXlyk1U9Gq_jOVthzzYnGI3QYV46HaCW1s9v6Ca-2V5OzSelGCdaAq06EKsHcuGM0SmrEeRnTWMQ6hrYKci6V-N-6UJ7_1eO1ASM")',
+                  'url("/images/rapid-fire.png")',
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
@@ -131,7 +131,7 @@ function Rounds() {
               className="relative h-64 bg-cover bg-center"
               style={{
                 backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuC4Dw3TZ-ul2-EbqKmI9yIuonlqjDf3TTTa5Q2DS5qfcBg87jrITJsaMI9xQtfL4jFn_scdtfZRloDEhTrWfLx3RFNywQctYOt9I9taaWu42SQj3YIeiywjTJp_vOWccdKYqBO4x48u3qRjnOSs1rbI_76tLM7nq8B62MR3qnCgncSpX5tkuWqyE9XMEL4CgD0oZbFlxeTir8y_AeeVFpbrgEVdG6e7-bDqodYyhMi3NadaxyS_v8pHC3lDQ6fXXqLE34aKoFFrbQE")',
+                  'url("/images/coding-cascade.png")',
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
@@ -161,7 +161,7 @@ function Rounds() {
               className="relative h-64 bg-cover bg-center"
               style={{
                 backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAMGCswWEEIgh-jEVU-KOhr6HL3TE-cnowC71MTdkzWZr3UR_sVckX9SIoIMfs4u7aZmfB8vo-rw0iqeB0RrO0c91NCS2YWnRCfZmHjk02pHaZ5i2Q9RaXIAjG6NXWONjtxAu4GN5dN3uWWhePsrRxOjDgK66pIywzwHfucvtbN0vX6GWA6wHdRMHH-r2MATOIMAivArtyQ8SMRlSCCMd_23L1Azl768EorQKT3ZM3TI90U-AcAP0Ioexgu-iGov3o3lkWJsDZiPIQ")',
+                  'url("/images/dsa.png")',
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />

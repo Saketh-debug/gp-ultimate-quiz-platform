@@ -8,17 +8,13 @@ import 'material-symbols/outlined.css';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { loader } from '@monaco-editor/react';
 import App from './App.jsx'
 import Rounds from './pages/Rounds.jsx'
 import Rapidfire from './pages/Rapidfire.jsx'
 import Cascade from './pages/Cascade.jsx'
 import DSA from './pages/DSA.jsx'
 import Leaderboard from './pages/Leaderboard.jsx'
-import { loader } from '@monaco-editor/react';
-import './index.css'
-
-// Configure Monaco Editor to load local vs directory files instead of CDN
-loader.config({ paths: { vs: `${import.meta.env.BASE_URL}node_modules/monaco-editor/min/vs` } });
 import RapidfireContest from './pages/RapidfireContest.jsx'
 import ProtectedContestRoute from './components/ProtectedContestRoute.jsx'
 import CascadeContest from './pages/CascadeContest.jsx'
@@ -28,6 +24,15 @@ import ProtectedDSARoute from './components/ProtectedDSARoute.jsx'
 import AdminLogin from './pages/AdminLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import AdminQuestions from './pages/AdminQuestions.jsx'
+import AdminSampleInputs from './pages/AdminSampleInputs.jsx'
+import './index.css'
+
+// Point Monaco Editor to local files instead of the CDN (works offline on LAN)
+loader.config({ paths: { vs: `${import.meta.env.BASE_URL}node_modules/monaco-editor/min/vs` } });
+
+// Eagerly initialize Monaco as soon as the app boots so it is already cached
+// by the time any user navigates to a contest page — eliminates "Loading..." delay.
+loader.init().catch(() => { /* silently ignore — fallback handled by Editor component */ });
 
 const router = createBrowserRouter([
     {
@@ -81,6 +86,10 @@ const router = createBrowserRouter([
     {
         path: "/admin/questions",
         element: <AdminQuestions />
+    },
+    {
+        path: "/admin/sample-inputs",
+        element: <AdminSampleInputs />
     }
 ]);
 

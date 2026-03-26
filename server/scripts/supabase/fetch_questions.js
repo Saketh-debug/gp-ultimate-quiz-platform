@@ -79,9 +79,9 @@ async function fetch() {
     for (const q of questions) {
         const supabaseId = q.id;
         const result = await localPool.query(
-            `INSERT INTO questions (title, description, avg_time, round, base_points, sequence_order, time_limit)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [q.title, q.description, q.avg_time, q.round, q.base_points, q.sequence_order, q.time_limit]
+            `INSERT INTO questions (title, description, avg_time, round, base_points, sequence_order, time_limit, sample_input)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+            [q.title, q.description, q.avg_time, q.round, q.base_points, q.sequence_order, q.time_limit, q.sample_input || '']
         );
         const localId = result.rows[0].id;
         supabaseToLocalId[supabaseId] = localId;

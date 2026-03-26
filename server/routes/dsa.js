@@ -58,7 +58,7 @@ router.post("/join", async (req, res) => {
 
             // Fetch assigned questions
             const qRes = await pool.query(
-                `SELECT q.id, q.title, q.description, duq.status, duq.base_points, duq.sequence_order,
+                `SELECT q.id, q.title, q.description, q.sample_input, duq.status, duq.base_points, duq.sequence_order,
                         duq.accepted_at, duq.passed_count, duq.score_awarded
                  FROM questions q
                  JOIN dsa_user_questions duq ON q.id = duq.question_id
@@ -148,7 +148,7 @@ router.post("/join", async (req, res) => {
 
             // Assign 5 DSA Questions (round = 'dsa')
             const qRes = await pool.query(
-                "SELECT id, title, description, base_points, sequence_order FROM questions WHERE round = 'dsa' ORDER BY sequence_order ASC LIMIT 5"
+                "SELECT id, title, description, sample_input, base_points, sequence_order FROM questions WHERE round = 'dsa' ORDER BY sequence_order ASC LIMIT 5"
             );
 
             let questionsToAssign = qRes.rows;

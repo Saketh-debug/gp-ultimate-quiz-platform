@@ -225,6 +225,13 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         }
     }, [activeSession]);
 
+    // Auto-populate customInput with sample_input when question changes
+    useEffect(() => {
+        if (currentQuestion) {
+            setCustomInput(currentQuestion.sample_input || "");
+        }
+    }, [currentIndex]);
+
     // Timers — pure decrement, no client clock dependency
     useEffect(() => {
         if (!activeSession || timeLeft === null || totalTimeLeft === null) return;
@@ -367,7 +374,6 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
                 setCurrentIndex(nextIdx);
                 setOutput("");
-                setCustomInput("");
                 setStatusMessage("");
                 setRightTab("result");
                 // Code for the next question will be loaded from localStorage via getCodeOrBoilerplate in the editor

@@ -46,17 +46,17 @@ const PreBlock = ({ node, children, className, ...props }) => {
     };
 
     return (
-        <pre className={`relative group ${className || ''}`} {...props}>
+        <div className="relative group not-prose my-4">
             <button
                 onClick={handleCopy}
-                className="absolute top-3 right-3 p-1.5 rounded-md bg-[#282828] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-[#ff4d20]/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm font-sans"
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-[#1a1a1a] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-[#ff4d20]/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm font-sans"
                 title="Copy to clipboard"
             >
                 {isCopied ? <FiCheck className="text-green-500" /> : <FiCopy />}
                 {isCopied && <span className="text-[10px] font-bold text-green-500 uppercase tracking-wider">Copied!</span>}
             </button>
-            {children}
-        </pre>
+            <pre className={className || ''} {...props}>{children}</pre>
+        </div>
     );
 };
 
@@ -98,6 +98,9 @@ export default function CascadeContest({ session }) {
 
     const [totalTimeLeft, setTotalTimeLeft] = useState(null); // null = loading, seeded from backend
     const [showGoBackModal, setShowGoBackModal] = useState(false);
+    const [showSkipModal, setShowSkipModal] = useState(false);
+    const [showReturnForwardModal, setShowReturnForwardModal] = useState(false);
+    const [isConfirming, setIsConfirming] = useState(false); // guard: prevent double-click on modal confirms
     const [contestStopped, setContestStopped] = useState(false);
     const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
     const [completionMessage, setCompletionMessage] = useState("");
@@ -215,6 +218,13 @@ export default function CascadeContest({ session }) {
             }
         }
     }, [activeSession]);
+
+    // Auto-populate customInput with sample_input when question changes
+    useEffect(() => {
+        if (currentQuestion) {
+            setCustomInput(currentQuestion.sample_input || "");
+        }
+    }, [currentIndex]);
 
     // Timer — pure decrement, no client clock dependency
     useEffect(() => {
@@ -400,10 +410,10 @@ export default function CascadeContest({ session }) {
     };
 
 
-    // Action: SKIP
-    const handleSkip = async () => {
-        if (!window.confirm("WARNING: Skipping will BREAK your current streak. Your max streak will be saved. Continue?")) return;
-
+    // Action: SKIP — opens confirmation modal; actual skip logic in confirmSkip
+    const confirmSkip = async () => {
+        setShowSkipModal(false);
+        setIsConfirming(true);
         try {
             const jwt = localStorage.getItem('cascadeToken');
             const res = await axios.post(`${BACKEND_URL}/cascade/skip`, {
@@ -421,24 +431,23 @@ export default function CascadeContest({ session }) {
                 return newQ;
             });
 
-            // Advance
+            // Advance (button is hidden on last question, so currentIndex < questions.length - 1 always holds here)
             if (currentIndex < questions.length - 1) {
                 const nextIdx = currentIndex + 1;
                 setCurrentIndex(nextIdx);
                 setHighestForwardIndex(res.data.highestForwardIndex);
                 resetEditorState();
-                // Persist viewing index for reload resilience
-                const jwt = localStorage.getItem('cascadeToken');
+                const jwt2 = localStorage.getItem('cascadeToken');
                 axios.post(`${BACKEND_URL}/cascade/update-viewing-index`, {
                     currentViewingIndex: nextIdx
                 }, {
-                    headers: { Authorization: `Bearer ${jwt}` }
+                    headers: { Authorization: `Bearer ${jwt2}` }
                 }).catch(() => { });
-            } else {
-                alert("No more questions to skip to.");
             }
         } catch (e) {
             console.error(e);
+        } finally {
+            setIsConfirming(false);
         }
     };
 
@@ -482,14 +491,15 @@ export default function CascadeContest({ session }) {
         }
     };
 
-    // Action: RETURN TO FORWARD PROGRESSION
-    const handleReturnForward = async () => {
+    // Action: RETURN TO FORWARD PROGRESSION — opens confirmation modal; actual logic in confirmReturnForward
+    const confirmReturnForward = async () => {
+        setShowReturnForwardModal(false);
+        setIsConfirming(true);
         try {
             const jwt = localStorage.getItem('cascadeToken');
             await axios.post(`${BACKEND_URL}/cascade/return-forward`, {}, {
                 headers: { Authorization: `Bearer ${jwt}` }
             });
-            alert("Returned to forward progression. A new streak has started!");
             setIsReviewMode(false);
             setCurrentIndex(highestForwardIndex);
             resetEditorState();
@@ -501,6 +511,8 @@ export default function CascadeContest({ session }) {
             }).catch(() => { });
         } catch (e) {
             console.error(e);
+        } finally {
+            setIsConfirming(false);
         }
     };
 
@@ -520,7 +532,6 @@ export default function CascadeContest({ session }) {
 
     const resetEditorState = () => {
         setOutput("");
-        setCustomInput("");
         setStatusMessage("");
         setRightTab("result");
     };
@@ -699,6 +710,70 @@ export default function CascadeContest({ session }) {
                 </div>
             )}
 
+            {/* --- SKIP NODE MODAL --- */}
+            {showSkipModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(255,77,32,0.1)]">
+                        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                            <FiSkipForward className="text-[#ff4d20]" /> Confirm Skip
+                        </h2>
+                        <p className="text-gray-300 mb-6 font-light leading-relaxed">
+                            Skipping this node will immediately <strong className="text-[#ff4d20]">BREAK</strong> your current streak of <strong className="text-white">{currentStreak}</strong>.
+                            Your maximum streak of <span className="text-yellow-500 font-bold">{maxStreak}</span> is safely logged.
+                            <br /><br />
+                            The skipped node can still be solved later in review mode (base points only, no streak).
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowSkipModal(false)}
+                                className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmSkip}
+                                disabled={isConfirming}
+                                className="flex-1 py-3 bg-[#ff4d20] hover:bg-[#ff623d] rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(255,77,32,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Break Streak & Skip <FiSkipForward />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- RETURN TO FORWARD MODAL --- */}
+            {showReturnForwardModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-[#1f0e0a] border border-green-500/30 rounded-2xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(34,197,94,0.08)]">
+                        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                            <FiArrowRight className="text-green-500" /> Return to Forward Progression
+                        </h2>
+                        <p className="text-gray-300 mb-6 font-light leading-relaxed">
+                            You will exit review mode and resume at <strong className="text-white">Node {highestForwardIndex + 1}</strong>.
+                            A <strong className="text-green-400">new streak</strong> will begin from here.
+                            <br /><br />
+                            Unsolved review nodes will still be available if you go back again, but forward streak eligibility is gone.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowReturnForwardModal(false)}
+                                className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmReturnForward}
+                                disabled={isConfirming}
+                                className="flex-1 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Confirm & Return <FiArrowRight />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* HEADER */}
             <nav className="h-[70px] bg-[#1a0b08] border-b border-[#ff4d20]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
@@ -804,7 +879,7 @@ export default function CascadeContest({ session }) {
                     )}
                     {isReviewMode && (
                         <button
-                            onClick={handleReturnForward}
+                            onClick={() => setShowReturnForwardModal(true)}
                             className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-4 py-2 rounded-lg animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.1)]"
                         >
                             Return to Forward Node <FiArrowRight />
@@ -812,9 +887,10 @@ export default function CascadeContest({ session }) {
                     )}
                 </div>
 
-                {!isReviewMode && currentIndex === highestForwardIndex && (
+                {/* Bug 1 fix: also hide Skip on the very last question (nothing to skip to) */}
+                {!isReviewMode && currentIndex === highestForwardIndex && currentIndex < questions.length - 1 && (
                     <button
-                        onClick={handleSkip}
+                        onClick={() => setShowSkipModal(true)}
                         className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 hover:text-[#ff4d20] transition bg-white/5 hover:bg-[#ff4d20]/10 border border-white/10 hover:border-[#ff4d20]/40 px-4 py-2 rounded-lg group shadow-[0_0_10px_rgba(255,255,255,0.02)] hover:shadow-[0_0_15px_rgba(255,77,32,0.15)]"
                     >
                         Skip Node <FiSkipForward className="group-hover:translate-x-1 transition-transform" />

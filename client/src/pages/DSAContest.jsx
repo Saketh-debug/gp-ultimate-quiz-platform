@@ -45,17 +45,17 @@ const PreBlock = ({ node, children, className, ...props }) => {
     };
 
     return (
-        <pre className={`relative group ${className || ''}`} {...props}>
+        <div className="relative group not-prose my-4">
             <button
                 onClick={handleCopy}
-                className="absolute top-3 right-3 p-1.5 rounded-md bg-[#282828] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-[#f43f5e]/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm font-sans"
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-[#1a1a1a] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-[#f43f5e]/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm font-sans"
                 title="Copy to clipboard"
             >
                 {isCopied ? <FiCheck className="text-green-500" /> : <FiCopy />}
                 {isCopied && <span className="text-[10px] font-bold text-green-500 uppercase tracking-wider">Copied!</span>}
             </button>
-            {children}
-        </pre>
+            <pre className={className || ''} {...props}>{children}</pre>
+        </div>
     );
 };
 
@@ -238,6 +238,13 @@ export default function DSAContest({ session }) {
         }
     }, [activeSession]);
 
+    // Auto-populate customInput with sample_input when question changes
+    useEffect(() => {
+        if (currentQuestion) {
+            setCustomInput(currentQuestion.sample_input || "");
+        }
+    }, [currentIndex]);
+
     // Timer — pure decrement, no client clock dependency
     useEffect(() => {
         if (!activeSession || totalTimeLeft === null) return;
@@ -406,7 +413,6 @@ export default function DSAContest({ session }) {
                                 setCurrentIndex(nextUnsolvedIndex);
                                 localStorage.setItem("dsaCurrentIndex", nextUnsolvedIndex);
                                 setOutput("");
-                                setCustomInput("");
                                 setStatusMessage("");
                                 setRightTab("result");
                             } else {
@@ -443,7 +449,6 @@ export default function DSAContest({ session }) {
         setCurrentIndex(idx);
         localStorage.setItem("dsaCurrentIndex", idx);
         setOutput("");
-        setCustomInput("");
         setStatusMessage("");
         setRightTab("result");
     };

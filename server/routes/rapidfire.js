@@ -79,7 +79,7 @@ router.post("/join", async (req, res) => {
 
             // Fetch assigned questions with their specific start times
             const qRes = await pool.query(
-                `SELECT q.id, q.title, q.description, uq.start_time, uq.status
+                `SELECT q.id, q.title, q.description, q.sample_input, uq.start_time, uq.status
                  FROM questions q
                  JOIN user_questions uq ON q.id = uq.question_id
                  WHERE uq.user_id = $1
@@ -199,7 +199,7 @@ router.post("/join", async (req, res) => {
 
             // Assign 15 Random Questions
             const qRes = await pool.query(
-                "SELECT id, title, description, avg_time FROM questions WHERE round = 'rapidfire' ORDER BY RANDOM() LIMIT 10"
+                "SELECT id, title, description, avg_time, sample_input FROM questions WHERE round = 'rapidfire' ORDER BY RANDOM() LIMIT 10"
             );
 
             if (qRes.rows.length === 0) {

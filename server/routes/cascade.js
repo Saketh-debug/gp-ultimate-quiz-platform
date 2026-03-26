@@ -62,7 +62,7 @@ router.post("/join", async (req, res) => {
 
             // Fetch assigned questions
             const qRes = await pool.query(
-                `SELECT q.id, q.title, q.description, q.time_limit, cuq.status, cuq.base_points, cuq.is_streak_eligible, cuq.sequence_order
+                `SELECT q.id, q.title, q.description, q.sample_input, q.time_limit, cuq.status, cuq.base_points, cuq.is_streak_eligible, cuq.sequence_order
                  FROM questions q
                  JOIN cascade_user_questions cuq ON q.id = cuq.question_id
                  WHERE cuq.user_id = $1
@@ -153,7 +153,7 @@ router.post("/join", async (req, res) => {
             // For now, we grab 15 questions order by sequence_order or id. 
             // We assume there are exactly 15 cascade questions set up in DB.
             const qRes = await pool.query(
-                "SELECT id, title, description, base_points, sequence_order, time_limit FROM questions WHERE round = 'cascade' ORDER BY sequence_order ASC LIMIT 15"
+                "SELECT id, title, description, sample_input, base_points, sequence_order, time_limit FROM questions WHERE round = 'cascade' ORDER BY sequence_order ASC LIMIT 15"
             );
 
             const questionsToAssign = qRes.rows;

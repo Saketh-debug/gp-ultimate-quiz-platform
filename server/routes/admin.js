@@ -449,5 +449,26 @@ router.delete("/questions/:id", async (req, res) => {
     }
 });
 
+// PATCH /admin/questions/:id/sample-input — update just the sample_input field
+router.patch("/questions/:id/sample-input", async (req, res) => {
+    const { id } = req.params;
+    const { sample_input } = req.body;
+    if (sample_input === undefined) {
+        return res.status(400).json({ error: "sample_input is required" });
+    }
+    try {
+        const result = await pool.query(
+            "UPDATE questions SET sample_input = $1 WHERE id = $2 RETURNING id, title, sample_input",
+            [sample_input, id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: "Question not found" });
+        res.json({ success: true, question: result.rows[0] });
+    } catch (err) {
+        console.error("❌ UPDATE SAMPLE INPUT ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
+
 

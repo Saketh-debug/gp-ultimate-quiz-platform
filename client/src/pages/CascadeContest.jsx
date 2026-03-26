@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {
-    FiPlay, FiUpload, FiZap, FiCheckCircle, FiSkipForward, FiRotateCcw, FiArrowRight
+    FiPlay, FiUpload, FiZap, FiCheckCircle, FiSkipForward, FiRotateCcw, FiArrowRight, FiCopy, FiCheck
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import {
@@ -23,6 +23,46 @@ const socket = io(SUBMISSION_URL); // LB has no auth
 
 const STORAGE_PREFIX = "cascade";
 const STREAK_MULTIPLIER = 20;
+
+const PreBlock = ({ node, children, className, ...props }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    let textToCopy = '';
+    const extractText = (n) => {
+        if (typeof n === 'string' || typeof n === 'number') return String(n);
+        if (Array.isArray(n)) return n.map(extractText).join('');
+        if (n?.props?.children) return extractText(n.props.children);
+        return '';
+    };
+
+    if (children) {
+        textToCopy = extractText(children).replace(/\n$/, '');
+    }
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(textToCopy);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    return (
+        <pre className={`relative group ${className || ''}`} {...props}>
+            <button
+                onClick={handleCopy}
+                className="absolute top-3 right-3 p-1.5 rounded-md bg-[#282828] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-[#ff4d20]/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm font-sans"
+                title="Copy to clipboard"
+            >
+                {isCopied ? <FiCheck className="text-green-500" /> : <FiCopy />}
+                {isCopied && <span className="text-[10px] font-bold text-green-500 uppercase tracking-wider">Copied!</span>}
+            </button>
+            {children}
+        </pre>
+    );
+};
+
+const markdownComponents = {
+    pre: PreBlock
+};
 
 export default function CascadeContest({ session }) {
     const navigate = useNavigate();
@@ -855,7 +895,7 @@ export default function CascadeContest({ session }) {
                     <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
 
                     <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
                             {currentQuestion.description}
                         </ReactMarkdown>
                     </div>

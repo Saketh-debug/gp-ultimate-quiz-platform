@@ -1,4 +1,8 @@
-import '@fontsource-variable/space-grotesk';
+import '@fontsource/space-grotesk/300.css';
+import '@fontsource/space-grotesk/400.css';
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/space-grotesk/700.css';
 import 'material-symbols/outlined.css';
 
 import { StrictMode } from 'react'
@@ -10,8 +14,11 @@ import Rapidfire from './pages/Rapidfire.jsx'
 import Cascade from './pages/Cascade.jsx'
 import DSA from './pages/DSA.jsx'
 import Leaderboard from './pages/Leaderboard.jsx'
+import { loader } from '@monaco-editor/react';
 import './index.css'
 
+// Configure Monaco Editor to load local vs directory files instead of CDN
+loader.config({ paths: { vs: `${import.meta.env.BASE_URL}node_modules/monaco-editor/min/vs` } });
 import RapidfireContest from './pages/RapidfireContest.jsx'
 import ProtectedContestRoute from './components/ProtectedContestRoute.jsx'
 import CascadeContest from './pages/CascadeContest.jsx'

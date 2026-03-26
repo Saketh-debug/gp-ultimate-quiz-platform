@@ -28,46 +28,12 @@ function Rounds() {
             Opulence
           </h2>
 
-          <span className="material-symbols-outlined text-primary cursor-pointer">
+          {/* <span className="material-symbols-outlined text-primary cursor-pointer">
             info
-          </span>
+          </span> */}
         </div>
 
         {/* PROGRESS SECTION */}
-        <section className="mt-10">
-          <div className="rounded-3xl p-8 bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-orange-500/20 shadow-[0_0_25px_rgba(249,115,22,0.15)]">
-
-            <div className="flex justify-between items-end mb-6">
-              <div>
-                <h3 className="text-2xl font-black uppercase italic">
-                  Mission Trajectory
-                </h3>
-                <p className="text-white/60 text-sm mt-1">
-                  Synchronize systems across Martian sectors.
-                </p>
-              </div>
-
-              <div className="text-right">
-                <span className="text-4xl font-black text-orange-500">
-                  33%
-                </span>
-                <p className="text-xs uppercase tracking-widest text-white/40">
-                  Sector 1 of 3
-                </p>
-              </div>
-            </div>
-
-            <div className="h-3 rounded-full bg-black/40 border border-white/10 overflow-hidden">
-              <div className="h-full w-1/3 bg-gradient-to-r from-orange-600 to-orange-500 relative">
-                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-white/50 uppercase tracking-wider">
-              Next up: Rapid Fire
-            </p>
-          </div>
-        </section>
 
         {/* HEADER */}
         <section className="mt-16">
@@ -91,10 +57,6 @@ function Rounds() {
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
-
-              <span className="absolute top-4 left-4 bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                Active Sector
-              </span>
             </div>
 
             <div className="p-8 space-y-6">
@@ -117,7 +79,7 @@ function Rounds() {
               </div>
 
               <Link to="/rapidfire">
-                <button className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-xl transition">
+                <button className="w-full h-12 bg-transparent text-white border border-white/20 font-black uppercase rounded-xl transition-all duration-300 group-hover:bg-orange-500 group-hover:text-black group-hover:border-orange-500">
                   Join Round
                 </button>
               </Link>
@@ -125,7 +87,7 @@ function Rounds() {
           </div>
 
           {/* CARD 2 */}
-          <div className="rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-white/10 opacity-90">
+          <div className="group rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-white/10 hover:-translate-y-2 hover:border-white/50 transition-all duration-500">
 
             <div
               className="relative h-64 bg-cover bg-center"
@@ -135,10 +97,6 @@ function Rounds() {
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
-
-              <span className="absolute top-4 left-4 bg-white/10 border border-white/20 text-white/80 text-xs px-3 py-1 rounded-full uppercase">
-                Starts in 2h
-              </span>
             </div>
 
             <div className="p-8">
@@ -147,7 +105,7 @@ function Rounds() {
               </h4>
 
               <Link to="/cascade">
-                <button className="mt-6 w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-bold transition">
+                <button className="mt-6 w-full h-12 bg-transparent text-white border border-white/20 font-black uppercase rounded-xl transition-all duration-300 group-hover:bg-orange-500 group-hover:text-black group-hover:border-orange-500">
                   Join Round
                 </button>
               </Link>
@@ -155,7 +113,7 @@ function Rounds() {
           </div>
 
           {/* CARD 3 */}
-          <div className="rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-white/10 opacity-70">
+          <div className="group rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-white/10 hover:-translate-y-2 hover:border-white/50 transition-all duration-500">
 
             <div
               className="relative h-64 bg-cover bg-center"
@@ -165,10 +123,6 @@ function Rounds() {
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
-
-              <span className="absolute top-4 left-4 bg-black/60 text-white/40 text-xs px-3 py-1 rounded-full uppercase">
-                Locked
-              </span>
             </div>
 
             <div className="p-8">
@@ -176,7 +130,7 @@ function Rounds() {
                 DSA
               </h4>
               <Link to="/dsa">
-                <button className="mt-6 w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-bold transition">
+                <button className="mt-6 w-full h-12 bg-transparent text-white border border-white/20 font-black uppercase rounded-xl transition-all duration-300 group-hover:bg-orange-500 group-hover:text-black group-hover:border-orange-500">
                   Join Round
                 </button>
               </Link>

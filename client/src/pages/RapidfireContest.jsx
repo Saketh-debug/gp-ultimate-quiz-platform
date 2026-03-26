@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {
     FiPlay, FiUpload, FiClock, FiTerminal, FiZap, FiAlertTriangle, FiCheckCircle,
-    FiSettings, FiFileText, FiCode, FiRotateCcw
+    FiSettings, FiFileText, FiCode, FiRotateCcw, FiCopy, FiCheck
 } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -26,6 +26,53 @@ const socket = io(SUBMISSION_URL);
 
 const STORAGE_PREFIX = "rapidfire";
 const QUESTION_DURATION = 300; // 5 minutes
+
+const CodeBlock = ({ inline, children, ...props }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    if (inline) {
+        return (
+            <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
+                {children}
+            </code>
+        );
+    }
+
+    const handleCopy = () => {
+        let text = Array.isArray(children)
+            ? children.map(c => typeof c === 'string' ? c : c?.props?.children || '').join('')
+            : String(children || '');
+        text = text.replace(/\n$/, '');
+        navigator.clipboard.writeText(text);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    return (
+        <div className="relative bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm group">
+            <button
+                onClick={handleCopy}
+                className="absolute top-3 right-3 p-1.5 rounded-md bg-[#282828] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-orange-500/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm"
+                title="Copy to clipboard"
+            >
+                {isCopied ? <FiCheck className="text-green-500" /> : <FiCopy />}
+                {isCopied && <span className="text-[10px] font-bold text-green-500 uppercase tracking-wider">Copied!</span>}
+            </button>
+            <pre className="overflow-x-auto mt-0 mb-0" {...props}><code>{children}</code></pre>
+        </div>
+    );
+};
+
+const markdownComponents = {
+    p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
+    code: CodeBlock,
+    strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+    em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
+    h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
+    h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
+    ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
+    li: ({ children }) => <li className="text-gray-300">{children}</li>
+};
 
 export default function RapidfireContest({ session }) { // Prop session is fallback
     const navigate = useNavigate();
@@ -621,26 +668,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypeRaw]}
-                                    components={{
-                                        p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
-                                        code: ({ inline, children, ...props }) => {
-                                            return inline ? (
-                                                <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
-                                                    {children}
-                                                </code>
-                                            ) : (
-                                                <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
-                                                    <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
-                                                </div>
-                                            );
-                                        },
-                                        strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
-                                        em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
-                                        h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
-                                        h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
-                                        ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
-                                        li: ({ children }) => <li className="text-gray-300">{children}</li>
-                                    }}
+                                    components={markdownComponents}
                                 >
                                     {currentQuestion.description}
                                 </ReactMarkdown>

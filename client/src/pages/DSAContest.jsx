@@ -103,7 +103,16 @@ export default function DSAContest({ session }) {
     const isContestEndedRef = useRef(false); // Guard for completion
 
     // Proctoring
-    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("dsa", { contestEnded: totalTimeLeft === 0 || contestStopped });
+    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("dsa", {
+        contestEnded: totalTimeLeft === 0 || contestStopped,
+        onDisqualify: () => {
+            cleanupProctoring();
+            clearCodeStorage(STORAGE_PREFIX);
+            localStorage.removeItem("dsaToken");
+            localStorage.removeItem("dsaCurrentIndex");
+            navigate("/dsa");
+        }
+    });
 
     // Resizing State
     const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage

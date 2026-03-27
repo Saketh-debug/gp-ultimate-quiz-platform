@@ -6,17 +6,70 @@ import { useEffect, useState, useRef, useCallback } from "react";
  * Features:
  * 1. Fullscreen enforcement (overlay to re-enter on exit)
  * 2. Tab-switch / minimize detection (warning on return)
- * 3. DevTools detection (debugger timing heuristic → reload)
+ * 3. DevTools detection (passive heuristics: window-size + console getter → reload)
  * 4. Keyboard shortcut blocking (F12, Ctrl+Shift+I/J/C, Ctrl+U)
  * 5. Right-click context menu disabled
+ * 6. Auto-disqualification after MAX_VIOLATIONS total violations
  *
  * @param {string} contestPrefix  "rapidfire" | "cascade" | "dsa"
  * @param {object} options
  * @param {boolean} options.contestEnded  When true, suppress all proctoring
+ * @param {Function} options.onDisqualify  Called when violations hit MAX_VIOLATIONS;
+ *   should clear auth tokens and navigate away.
  * @returns {{ showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring }}
  */
-export default function useContestProctoring(contestPrefix, { contestEnded = false } = {}) {
+
+// ─── Configurable constants ────────────────────────────────────────────────────
+// Change MAX_VIOLATIONS to adjust how many proctoring violations are allowed
+// before the user is automatically disqualified and logged out.
+const MAX_VIOLATIONS = 5;
+// ──────────────────────────────────────────────────────────────────────────────
+// --- Passive DevTools detection helpers (defined once outside the hook) ---
+
+/**
+ * Heuristic A: When DevTools is docked, innerWidth/innerHeight shrinks but
+ * outer dimensions stay the same. A delta > 160px is a reliable signal.
+ * (Browser chrome itself is typically 40-80px.)
+ */
+function isDevToolsOpenBySize() {
+    const widthDelta = window.outerWidth - window.innerWidth;
+    const heightDelta = window.outerHeight - window.innerHeight;
+    return widthDelta > 160 || heightDelta > 160;
+}
+
+/**
+ * Heuristic B: console.log getter trick.
+ * Chrome (and Chromium-based browsers) evaluate getters on objects passed to
+ * console.log when the console panel is active. Define a getter on a throwaway
+ * object — if DevTools console is open, the getter fires synchronously.
+ *
+ * @param {Function} onDetected — called immediately if DevTools is open
+ */
+function checkDevToolsViaConsole(onDetected) {
+    let detected = false;
+    const el = new Image();
+    Object.defineProperty(el, 'id', {
+        get: function () {
+            detected = true;
+            onDetected();
+            // Throw to prevent Chrome from trying to log the rest of the object
+            throw new Error('devtools-check');
+        }
+    });
+    try {
+        // eslint-disable-next-line no-console
+        console.log('%c', el);
+    } catch (_) { /* expected from getter throw */ }
+    if (!detected) {
+        // eslint-disable-next-line no-console
+        console.clear();
+    }
+}
+
+export default function useContestProctoring(contestPrefix, { contestEnded = false, onDisqualify = null } = {}) {
     const STORAGE_KEY = `${contestPrefix}_violations`;
+    // sessionStorage key used to signal that a reload was triggered by DevTools detection
+    const DEVTOOLS_RELOAD_FLAG = `${contestPrefix}_devtools_reload`;
 
     const [showWarning, setShowWarning] = useState(false);
     const [warningMessage, setWarningMessage] = useState("");
@@ -47,16 +100,50 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
         });
     }, [STORAGE_KEY]);
 
+    /**
+     * Show the disqualification overlay.
+     * Bypasses the normal showOverlay guard so it always wins over any in-progress overlay.
+     * Sets contestEndedRef to prevent any further proctoring triggers.
+     */
+    const triggerDisqualification = useCallback(() => {
+        contestEndedRef.current = true; // stop all further proctoring loops
+        isShowingWarningRef.current = true; // override any in-progress overlay
+        setWarningMessage(
+            "You have been disqualified for repeated violations. This incident has been recorded and reported to the admin."
+        );
+        setWarningButtonText("Exit Contest");
+        warningActionRef.current = () => {
+            onDisqualify?.(); // contest page clears tokens + navigates away
+        };
+        setShowWarning(true);
+    }, [onDisqualify]);
+
+    /**
+     * Read the current violation count synchronously from sessionStorage.
+     * If it is >= MAX_VIOLATIONS, trigger disqualification and return true.
+     * Callers should skip their normal overlay when this returns true.
+     */
+    const checkViolationLimit = useCallback(() => {
+        const current = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+        if (current >= MAX_VIOLATIONS) {
+            triggerDisqualification();
+            return true;
+        }
+        return false;
+    }, [STORAGE_KEY, triggerDisqualification]);
+
     const showOverlay = useCallback((message, buttonText, action) => {
         if (isShowingWarningRef.current) return; // one at a time
         if (contestEndedRef.current) return;
+        // If this next violation would hit (or exceed) the limit, disqualify instead
+        if (checkViolationLimit()) return;
         isShowingWarningRef.current = true;
         incrementViolations();
         setWarningMessage(message);
         setWarningButtonText(buttonText);
         warningActionRef.current = action;
         setShowWarning(true);
-    }, [incrementViolations]);
+    }, [incrementViolations, checkViolationLimit]);
 
     const dismissWarning = useCallback(() => {
         setShowWarning(false);
@@ -103,7 +190,12 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
 
         // On mount: if not already fullscreen, show the overlay
         // (handles page reload where requestFullscreen can't be called without gesture)
-        if (!document.fullscreenElement) {
+        //
+        // IMPORTANT: Skip if the reload was triggered by DevTools detection.
+        // Effect 3a shows the DevTools warning at 200ms and its action callback
+        // re-enters fullscreen — so showing this overlay too would create a double-overlay.
+        const wasDevToolsReload = sessionStorage.getItem(DEVTOOLS_RELOAD_FLAG) === 'true';
+        if (!document.fullscreenElement && !wasDevToolsReload) {
             // Small delay to let React render settle
             const timer = setTimeout(() => {
                 if (!document.fullscreenElement && !contestEndedRef.current) {
@@ -155,32 +247,82 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, [contestEnded, showOverlay]);
 
-    // --- 3. DevTools detection (debugger timing) ---
+    // --- 3a. DevTools detection — post-reload warning (runs on mount) ---
+    //
+    // When the detection loop (3b) fires, it sets DEVTOOLS_RELOAD_FLAG in
+    // sessionStorage and immediately calls window.location.reload().
+    // On the next mount this effect reads that flag and shows the warning overlay
+    // at 200ms — BEFORE the fullscreen "Enter Fullscreen" overlay (500ms delay).
+    // The action callback re-enters fullscreen so the user only sees one overlay.
+
+    useEffect(() => {
+        if (contestEnded) return;
+
+        const flag = sessionStorage.getItem(DEVTOOLS_RELOAD_FLAG);
+        if (flag !== 'true') return;
+
+        sessionStorage.removeItem(DEVTOOLS_RELOAD_FLAG);
+
+        const timer = setTimeout(() => {
+            if (contestEndedRef.current) return;
+            // If this reload pushed violations to the limit, disqualify instead
+            if (checkViolationLimit()) {
+                // Re-enter fullscreen so the disqualification overlay renders cleanly
+                document.documentElement.requestFullscreen().catch(() => { });
+                return;
+            }
+            showOverlay(
+                "Developer tools were detected! This is a serious violation and could result in disqualification.",
+                "I Understand",
+                () => {
+                    // Re-enter fullscreen after the user dismisses (reload exits fullscreen)
+                    document.documentElement.requestFullscreen().catch(() => { });
+                }
+            );
+        }, 200); // fires before the fullscreen overlay's 500ms delay
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // intentionally empty — only runs once on mount
+
+    // --- 3b. DevTools detection — continuous passive polling ---
+    //
+    // Two heuristics run every 1.5s:
+    //   A. Window size delta  — catches docked DevTools (can't be disabled via browser settings)
+    //   B. console getter     — catches undocked/detached DevTools panel
+    //
+    // On detection: persist the reload flag → reload immediately.
+    // No clearInterval — the interval dies naturally when the page unloads.
 
     useEffect(() => {
         if (contestEnded) return;
 
         const interval = setInterval(() => {
             if (contestEndedRef.current) return;
-            const before = performance.now();
-            // eslint-disable-next-line no-debugger
-            debugger;
-            const after = performance.now();
-            if (after - before > 100) {
-                // DevTools is likely open
-                showOverlay(
-                    "Developer tools detected! This is a serious violation. The page will reload.",
-                    "OK",
-                    () => {
-                        window.location.reload();
-                    }
-                );
-                clearInterval(interval);
+
+            let detected = false;
+
+            // Heuristic A — window size delta
+            if (isDevToolsOpenBySize()) {
+                detected = true;
             }
-        }, 1000);
+
+            // Heuristic B — console getter (Chromium family)
+            if (!detected) {
+                checkDevToolsViaConsole(() => { detected = true; });
+            }
+
+            if (detected) {
+                // Persist flag and violation count BEFORE reloading (synchronous storage ops)
+                incrementViolations();
+                sessionStorage.setItem(DEVTOOLS_RELOAD_FLAG, 'true');
+                window.location.reload();
+                // No clearInterval needed — the page is about to unload
+            }
+        }, 1500);
 
         return () => clearInterval(interval);
-    }, [contestEnded, showOverlay]);
+    }, [contestEnded, incrementViolations, DEVTOOLS_RELOAD_FLAG]);
 
     // --- 4. Keyboard shortcut blocking ---
 

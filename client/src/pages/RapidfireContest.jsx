@@ -114,7 +114,16 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     const isContestEndedRef = useRef(false);
 
     // Proctoring
-    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("rapidfire", { contestEnded: totalTimeLeft === 0 });
+    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("rapidfire", {
+        contestEnded: totalTimeLeft === 0,
+        onDisqualify: () => {
+            cleanupProctoring();
+            clearCodeStorage(STORAGE_PREFIX);
+            localStorage.removeItem("userToken");
+            localStorage.removeItem("userAccessCode");
+            navigate("/rapidfire");
+        }
+    });
 
     // UI State
     const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage

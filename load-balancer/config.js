@@ -5,7 +5,7 @@ module.exports = {
     // ----------------------------------------------------
     // Update these IPs whenever your laptops change networks!
     JUDGE_NODES: [
-        'http://192.168.0.107:2358',
+        'http://192.168.2.126:2358',
         // 'http://192.168.1.143:2358', // Laptop 1
         // 'http://192.168.2.129:2358', // Laptop 2
         // 'http://192.168.1.51:2358'  // Laptop 3 (Add more if you have them)
@@ -25,6 +25,7 @@ module.exports = {
         database: 'contest_db',
         password: 'password', // Matches the docker run command from Phase 2
         port: 5432,
+        max: 20,
     },
 
     // Internal secret — must match INTERNAL_SECRET in server/.env

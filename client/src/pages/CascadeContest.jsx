@@ -113,7 +113,16 @@ export default function CascadeContest({ session }) {
     const backendSocketRef = useRef(null);
 
     // Proctoring
-    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("cascade", { contestEnded: totalTimeLeft === 0 || contestStopped });
+    const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("cascade", {
+        contestEnded: totalTimeLeft === 0 || contestStopped,
+        onDisqualify: () => {
+            cleanupProctoring();
+            clearCodeStorage(STORAGE_PREFIX);
+            localStorage.removeItem("cascadeToken");
+            localStorage.removeItem("cascadeAccessCode");
+            navigate("/cascade");
+        }
+    });
 
     // Listen for admin stop event and force_logout from backend socket
     useEffect(() => {

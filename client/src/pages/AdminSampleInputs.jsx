@@ -1,29 +1,24 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const ROUND_CONFIG = {
-    rapidfire: { label: "Rapid Fire", color: "orange" },
-    cascade: { label: "Coding Cascade", color: "blue" },
-    dsa: { label: "DSA Challenge", color: "purple" },
-};
+const BACKEND_URL = import.meta.env.VITE_API_URL;
+
+const ROUNDS = [
+    { key: "rapidfire", label: "Rapid Fire" },
+    { key: "cascade", label: "Coding Cascade" },
+    { key: "dsa", label: "DSA Challenge" },
+];
 
 export default function AdminSampleInputs() {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const token = localStorage.getItem("adminToken");
 
-    const [activeRound, setActiveRound] = useState(searchParams.get("round") || "rapidfire");
+    const [activeRound, setActiveRound] = useState("rapidfire");
     const [questions, setQuestions] = useState([]);
+    const [inputs, setInputs] = useState({}); // { [questionId]: string }
+    const [saveStatus, setSaveStatus] = useState({}); // { [questionId]: 'saving' | 'saved' | 'error' | null }
     const [loading, setLoading] = useState(false);
-
-    // Track edits: { questionId: "new sample input text" }
-    const [edits, setEdits] = useState({});
-    // Track saving state per question: { questionId: "saving" | "success" | "error" }
-    const [saveStatus, setSaveStatus] = useState({});
-
-    const [globalSaving, setGlobalSaving] = useState(false);
-    const [globalError, setGlobalError] = useState("");
-    const [globalSuccess, setGlobalSuccess] = useState("");
+    const [isSavingAll, setIsSavingAll] = useState(false);
 
     useEffect(() => {
         if (!token) navigate("/admin/login");
@@ -31,28 +26,21 @@ export default function AdminSampleInputs() {
 
     const fetchQuestions = useCallback(async (round) => {
         setLoading(true);
-        setGlobalError("");
-        setEdits({});
-        setSaveStatus({});
         try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/admin/questions/${round}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await fetch(`${BACKEND_URL}/admin/questions/${round}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             const data = await res.json();
             if (res.ok) {
                 setQuestions(data);
-                // Initialize edits with current sample_input
-                const initialEdits = {};
-                data.forEach(q => {
-                    initialEdits[q.id] = q.sample_input || "";
-                });
-                setEdits(initialEdits);
-            } else {
-                setGlobalError(data.error || "Failed to load questions");
+                // seed inputs from current sample_input values
+                const seed = {};
+                data.forEach(q => { seed[q.id] = q.sample_input || ""; });
+                setInputs(seed);
+                setSaveStatus({});
             }
-        } catch {
-            setGlobalError("Network error loading questions");
+        } catch (e) {
+            console.error(e);
         } finally {
             setLoading(false);
         }
@@ -62,82 +50,41 @@ export default function AdminSampleInputs() {
         fetchQuestions(activeRound);
     }, [activeRound, fetchQuestions]);
 
-    function showGlobalSuccess(msg) {
-        setGlobalSuccess(msg);
-        setTimeout(() => setGlobalSuccess(""), 3000);
+    async function saveOne(questionId) {
+        setSaveStatus(s => ({ ...s, [questionId]: "saving" }));
+        try {
+            const res = await fetch(`${BACKEND_URL}/admin/questions/${questionId}/sample-input`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ sample_input: inputs[questionId] ?? "" }),
+            });
+            const data = await res.json();
+            setSaveStatus(s => ({ ...s, [questionId]: res.ok ? "saved" : "error" }));
+            if (!res.ok) console.error("Save failed:", data.error);
+        } catch (e) {
+            setSaveStatus(s => ({ ...s, [questionId]: "error" }));
+        }
+        // Auto-clear success status after 3s
+        setTimeout(() => {
+            setSaveStatus(s => ({ ...s, [questionId]: null }));
+        }, 3000);
     }
 
-    const handleSaveSingle = async (id, inputValue) => {
-        setSaveStatus(prev => ({ ...prev, [id]: "saving" }));
-        try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/admin/questions/${id}/sample-input`,
-                {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ sample_input: inputValue }),
-                }
-            );
+    async function saveAll() {
+        setIsSavingAll(true);
+        await Promise.all(questions.map(q => saveOne(q.id)));
+        setIsSavingAll(false);
+    }
 
-            if (res.ok) {
-                setSaveStatus(prev => ({ ...prev, [id]: "success" }));
-                setTimeout(() => setSaveStatus(prev => ({ ...prev, [id]: null })), 2000);
-            } else {
-                setSaveStatus(prev => ({ ...prev, [id]: "error" }));
-            }
-        } catch {
-            setSaveStatus(prev => ({ ...prev, [id]: "error" }));
-        }
-    };
-
-    const handleSaveAll = async () => {
-        setGlobalSaving(true);
-        setGlobalError("");
-        let successCount = 0;
-        let errorCount = 0;
-
-        for (const q of questions) {
-            const currentVal = edits[q.id] !== undefined ? edits[q.id] : (q.sample_input || "");
-            setSaveStatus(prev => ({ ...prev, [q.id]: "saving" }));
-            try {
-                const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/admin/questions/${q.id}/sample-input`,
-                    {
-                        method: "PATCH",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({ sample_input: currentVal }),
-                    }
-                );
-                if (res.ok) {
-                    setSaveStatus(prev => ({ ...prev, [q.id]: "success" }));
-                    successCount++;
-                } else {
-                    setSaveStatus(prev => ({ ...prev, [q.id]: "error" }));
-                    errorCount++;
-                }
-            } catch {
-                setSaveStatus(prev => ({ ...prev, [q.id]: "error" }));
-                errorCount++;
-            }
-        }
-
-        setGlobalSaving(false);
-        if (errorCount > 0) {
-            setGlobalError(`Saved ${successCount} successfully, but ${errorCount} failed.`);
-        } else {
-            showGlobalSuccess(`Successfully saved all ${successCount} questions.`);
-        }
-
-        // clear local success states after 2s
-        setTimeout(() => {
-            setSaveStatus({});
-        }, 2000);
+    const statusIcon = (qId) => {
+        const s = saveStatus[qId];
+        if (s === "saving") return <span className="text-yellow-400 text-xs font-bold">Saving…</span>;
+        if (s === "saved") return <span className="text-green-400 text-xs font-bold">✓ Saved</span>;
+        if (s === "error") return <span className="text-red-400 text-xs font-bold">✗ Error</span>;
+        return null;
     };
 
     return (
@@ -152,8 +99,11 @@ export default function AdminSampleInputs() {
                         ← Dashboard
                     </button>
                     <h1 className="text-2xl font-bold uppercase tracking-widest text-orange-500">
-                        Sample Input Editor
+                        Sample Inputs
                     </h1>
+                    <span className="text-xs text-gray-600 uppercase font-semibold border border-white/10 rounded px-2 py-0.5">
+                        Temp Tool
+                    </span>
                 </div>
                 <button
                     onClick={() => { localStorage.removeItem("adminToken"); navigate("/admin/login"); }}
@@ -163,97 +113,92 @@ export default function AdminSampleInputs() {
                 </button>
             </header>
 
-            <div className="px-8 py-6 max-w-6xl mx-auto">
+            <div className="px-8 py-6 max-w-5xl mx-auto">
                 {/* Round Tabs */}
-                <div className="flex gap-2 mb-8">
-                    {Object.entries(ROUND_CONFIG).map(([key, cfg]) => (
+                <div className="flex gap-2 mb-6">
+                    {ROUNDS.map(r => (
                         <button
-                            key={key}
-                            onClick={() => setActiveRound(key)}
-                            className={`px-5 py-2 rounded-lg text-sm font-bold uppercase transition border ${activeRound === key
+                            key={r.key}
+                            onClick={() => setActiveRound(r.key)}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold uppercase transition border ${activeRound === r.key
                                 ? "bg-orange-600 border-orange-500 text-white"
                                 : "bg-[#1a1a1a] border-white/10 text-gray-400 hover:text-white hover:border-white/30"
                                 }`}
                         >
-                            {cfg.label}
+                            {r.label}
                         </button>
                     ))}
                 </div>
 
-                <div className="flex justify-between items-center mb-6">
-                    <div className="text-sm font-semibold text-gray-300">
-                        {questions.length} questions
-                    </div>
-                    <button
-                        onClick={handleSaveAll}
-                        disabled={globalSaving || loading || questions.length === 0}
-                        className="px-6 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition"
-                    >
-                        {globalSaving ? "Saving All..." : "Save All"}
-                    </button>
+                {/* Info banner */}
+                <div className="mb-5 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-yellow-300 text-xs leading-relaxed">
+                    <strong>Note:</strong> Set the "Sample Input" that contestants will see pre-filled in their Custom Input box when they open each question.
+                    Use the same format as the problem's stdin (e.g. <code className="bg-black/30 px-1 rounded">3\n1 2 3</code> for multi-line).
+                    Click <strong>Save</strong> per row, or <strong>Save All</strong> to bulk-save.
                 </div>
 
-                {globalError && (
-                    <div className="mb-4 p-3 bg-red-900/40 border border-red-500/50 rounded-lg text-red-300 text-sm">
-                        {globalError}
-                    </div>
-                )}
-                {globalSuccess && (
-                    <div className="mb-4 p-3 bg-green-900/40 border border-green-500/50 rounded-lg text-green-300 text-sm">
-                        ✓ {globalSuccess}
+                {/* Save All */}
+                {!loading && questions.length > 0 && (
+                    <div className="flex justify-end mb-4">
+                        <button
+                            onClick={saveAll}
+                            disabled={isSavingAll}
+                            className="px-5 py-2 bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition"
+                        >
+                            {isSavingAll ? "Saving All…" : "💾 Save All"}
+                        </button>
                     </div>
                 )}
 
-                {loading ? (
-                    <div className="text-center text-gray-500 py-16">Loading questions…</div>
-                ) : (
-                    <div className="space-y-4">
-                        {questions.map(q => (
-                            <div key={q.id} className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start">
-                                <div className="w-full md:w-1/3 shrink-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        {activeRound !== "rapidfire" && (
-                                            <span className="text-[10px] font-bold text-gray-500 uppercase">
-                                                #{q.sequence_order}
-                                            </span>
-                                        )}
-                                        <span className="text-[10px] font-bold bg-white/10 text-gray-300 px-1.5 py-0.5 rounded">
-                                            ID: {q.id}
-                                        </span>
+                {/* Loading */}
+                {loading && (
+                    <div className="text-center text-gray-500 py-20">Loading questions…</div>
+                )}
+
+                {/* Question rows */}
+                {!loading && (
+                    <div className="space-y-3">
+                        {questions.map((q, i) => (
+                            <div
+                                key={q.id}
+                                className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 flex gap-4 items-start"
+                            >
+                                {/* Left: question info */}
+                                <div className="w-64 shrink-0">
+                                    <div className="text-[10px] text-gray-600 uppercase font-bold mb-0.5">
+                                        {activeRound !== "rapidfire" ? `#${q.sequence_order} · ` : ""}ID {q.id}
                                     </div>
-                                    <h3 className="font-semibold text-white text-sm leading-snug">
+                                    <div className="text-sm font-semibold text-white leading-snug">
                                         {q.title}
-                                    </h3>
+                                    </div>
                                 </div>
-                                <div className="flex-1 w-full">
+
+                                {/* Right: textarea + save */}
+                                <div className="flex-1 flex gap-3 items-start">
                                     <textarea
-                                        value={edits[q.id] !== undefined ? edits[q.id] : (q.sample_input || "")}
-                                        onChange={(e) => setEdits(prev => ({ ...prev, [q.id]: e.target.value }))}
-                                        placeholder="Enter sample input here..."
-                                        rows={4}
-                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500/50 resize-y font-mono"
+                                        value={inputs[q.id] ?? ""}
+                                        onChange={e => setInputs(s => ({ ...s, [q.id]: e.target.value }))}
+                                        rows={3}
+                                        placeholder="Paste sample stdin here…"
+                                        className="flex-1 bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-orange-500/50 resize-y"
                                     />
-                                </div>
-                                <div className="w-full md:w-32 shrink-0 flex flex-col items-end gap-2">
-                                    <button
-                                        onClick={() => handleSaveSingle(q.id, edits[q.id])}
-                                        disabled={saveStatus[q.id] === "saving"}
-                                        className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 text-white text-xs font-bold rounded-lg transition"
-                                    >
-                                        {saveStatus[q.id] === "saving" ? "Saving..." : "Save"}
-                                    </button>
-                                    {saveStatus[q.id] === "success" && (
-                                        <span className="text-xs text-green-400 font-bold">✓ Saved</span>
-                                    )}
-                                    {saveStatus[q.id] === "error" && (
-                                        <span className="text-xs text-red-500 font-bold">✗ Error</span>
-                                    )}
+                                    <div className="flex flex-col items-end gap-2 pt-1">
+                                        <button
+                                            onClick={() => saveOne(q.id)}
+                                            disabled={saveStatus[q.id] === "saving"}
+                                            className="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition whitespace-nowrap"
+                                        >
+                                            Save
+                                        </button>
+                                        {statusIcon(q.id)}
+                                    </div>
                                 </div>
                             </div>
                         ))}
+
                         {questions.length === 0 && (
-                            <div className="text-center text-gray-600 py-10">
-                                No questions found.
+                            <div className="text-center text-gray-600 py-20">
+                                No questions found for this round.
                             </div>
                         )}
                     </div>

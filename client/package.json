@@ -13,6 +13,7 @@
     "@fontsource/space-grotesk": "^5.2.10",
     "@monaco-editor/react": "^4.7.0",
     "axios": "^1.13.4",
+    "framer-motion": "^12.38.0",
     "material-symbols": "^0.42.3",
     "monaco-editor": "^0.45.0",
     "react": "^19.2.0",

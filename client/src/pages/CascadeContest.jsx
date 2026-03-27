@@ -980,7 +980,30 @@ export default function CascadeContest({ session }) {
                     <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
 
                     <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeRaw]}
+                            components={{
+                                p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
+                                code: ({ inline, children, ...props }) => {
+                                    return inline ? (
+                                        <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
+                                            {children}
+                                        </code>
+                                    ) : (
+                                        <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
+                                            <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
+                                        </div>
+                                    );
+                                },
+                                strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
+                                h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
+                                h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
+                                ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
+                                li: ({ children }) => <li className="text-gray-300">{children}</li>
+                            }}
+                        >
                             {currentQuestion.description}
                         </ReactMarkdown>
                     </div>

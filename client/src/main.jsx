@@ -37,7 +37,7 @@ loader.init().catch(() => { /* silently ignore — fallback handled by Editor co
 const router = createBrowserRouter([
     {
         path: "/",
-        element: <Rounds />
+        element: <App />
     },
     {
         path: "/app",

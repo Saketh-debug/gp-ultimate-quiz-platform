@@ -7,7 +7,6 @@ function DSA() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Clear stale tokens on mount
   useEffect(() => {
     localStorage.removeItem("dsaToken");
     localStorage.removeItem("dsaAccessCode");
@@ -28,9 +27,8 @@ function DSA() {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("dsaToken", data.accessToken); // JWT for API auth
-        localStorage.setItem("dsaAccessCode", token);       // Raw code for /join resume
-        // Enter fullscreen before navigating (button click provides required gesture)
+        localStorage.setItem("dsaToken", data.accessToken);
+        localStorage.setItem("dsaAccessCode", token);
         await document.documentElement.requestFullscreen().catch(() => { });
         navigate("/dsa-contest", { state: { session: data } });
       } else {
@@ -44,235 +42,213 @@ function DSA() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0c0202] text-slate-100 font-['Space_Grotesk'] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0c0202] text-white font-['Space_Grotesk'] overflow-x-hidden">
 
-      {/* BACKGROUND GLOW */}
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-20%,rgba(244,63,94,0.15),transparent_60%)] z-0" />
+      {/* ORIGINAL DSA BACKGROUND */}
+      {/* <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-20%,rgba(244,63,94,0.15),transparent_60%)] z-0" /> */}
 
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 backdrop-blur-2xl bg-[#0c0202]/90 border-b border-white/5">
-        <div className="max-w-[1440px] mx-auto px-12 h-20 flex items-center justify-between">
+      <video
+        src="/dsa_round_1.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none"
+      />
+
+      {/* NAV (CASCADE STYLE) */}
+      <nav className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10 lg:px-12 lg:py-8 max-w-[1600px] mx-auto">
+        <Link to="/rounds" className="flex items-center gap-4 group">
+          <div className="size-8 sm:size-10 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white/5 transition">
+            <span className="material-symbols-outlined text-sm sm:text-base text-white/70">
+              arrow_back
+            </span>
+          </div>
+          <span className="text-white/50 text-xs sm:text-sm tracking-[0.28em] uppercase">
+            Dashboard
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          <div className="size-2.5 rounded-full bg-[#f43f5e] animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.8)]"></div>
+          <span className="text-xs sm:text-base font-bold tracking-[0.3em] uppercase text-[#f43f5e]/80">
+            DSA Round Active
+          </span>
+        </div>
+      </nav>
+
+      {/* MAIN */}
+      <main className="relative z-10 max-w-[1600px] mx-auto px-6 py-6 sm:px-10 lg:px-12 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
 
           {/* LEFT */}
-          <div className="flex items-center gap-8">
-            <Link to="/" className="size-10 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/5 transition">
-              <span className="material-symbols-outlined text-slate-400 hover:text-[#f43f5e]">
-                arrow_back
-              </span>
-            </Link>
+          <div className="lg:col-span-5 space-y-10">
 
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold tracking-[0.3em] text-[#f43f5e] uppercase">
-                  Operation Opulence
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#f43f5e]/10 border border-[#f43f5e]/20 text-[#f43f5e] text-xs sm:text-sm font-bold uppercase tracking-[0.25em]">
+                <span className="material-symbols-outlined text-sm sm:text-base">
+                  memory
                 </span>
-                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 uppercase">
-                  Mars Sector
-                </span>
+                Cognitive Challenge Mode
               </div>
 
-              <h1 className="text-xl font-bold text-white">
-                Round 3: Martian Ascent
+              <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold leading-none tracking-tight">
+                DSA <br />
+                <span className="bg-gradient-to-r from-[#fb7185] to-[#f43f5e] bg-clip-text text-transparent">
+                  Challenge
+                </span>
               </h1>
+
+              <p className="text-base sm:text-lg lg:text-xl text-white/70 leading-relaxed max-w-lg">
+                Navigate complex data structures and algorithms. Optimize logic,
+                manage time, and maximize efficiency across multiple problems.
+              </p>
+            </div>
+
+            {/* STATS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 lg:p-8">
+                <div className="flex items-center gap-2 text-[#f43f5e]/70 mb-2">
+                  <span className="material-symbols-outlined text-base sm:text-lg">timer</span>
+                  <span className="text-xs sm:text-sm uppercase tracking-widest font-bold">
+                    Duration
+                  </span>
+                </div>
+                <p className="text-3xl sm:text-4xl lg:text-5xl font-bold">
+                  120 <span className="text-base sm:text-lg lg:text-xl text-white/40 font-light">mins</span>
+                </p>
+              </div>
+
+              <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 lg:p-8">
+                <div className="flex items-center gap-2 text-[#f43f5e]/70 mb-2">
+                  <span className="material-symbols-outlined text-base sm:text-lg">dataset</span>
+                  <span className="text-xs sm:text-sm uppercase tracking-widest font-bold">
+                    Tasks
+                  </span>
+                </div>
+                <p className="text-3xl sm:text-4xl lg:text-5xl font-bold">
+                  5 <span className="text-base sm:text-lg lg:text-xl text-white/40 font-light">problems</span>
+                </p>
+              </div>
+            </div>
+
+            {/* START PANEL */}
+            <div className="bg-black/40 backdrop-blur-xl border border-[#f43f5e]/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10">
+              <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">Enter Session</h3>
+
+              <p className="text-white/50 mb-6 sm:mb-8 text-sm sm:text-base">
+                Enter your access token to begin the DSA challenge.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex h-14 sm:h-16 rounded-xl sm:rounded-2xl overflow-hidden bg-black/60 border border-[#f43f5e]/30 shadow-inner focus-within:border-[#f43f5e]/80 transition-colors">
+                  <div className="flex items-center px-4 sm:px-5 text-[#f43f5e]">
+                    <span className="material-symbols-outlined font-light text-lg sm:text-xl">key</span>
+                  </div>
+
+                  <input
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+                    placeholder="ENTER TOKEN"
+                    className="flex-1 w-full min-w-0 bg-transparent px-2 text-white placeholder:text-[#f43f5e]/30 font-mono tracking-widest text-sm sm:text-base focus:outline-none"
+                  />
+
+                  <button
+                    onClick={handleJoin}
+                    disabled={loading || !token}
+                    className="px-4 sm:px-6 lg:px-8 bg-[#f43f5e] hover:bg-[#fb7185] text-white font-bold text-sm sm:text-base transition shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex shrink-0 items-center justify-center gap-1 sm:gap-2"
+                  >
+                    {loading ? (
+                      <span className="material-symbols-outlined animate-spin text-sm sm:text-base">sync</span>
+                    ) : (
+                      <>
+                        <span>JOIN</span> <span className="material-symbols-outlined text-sm sm:text-base">chevron_right</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="text-red-500 text-sm font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
+                    {error}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
           {/* RIGHT */}
-          <div className="flex items-center gap-3">
-            <div className="size-2.5 rounded-full bg-[#f43f5e] animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.8)]"></div>
-            <span className="text-sm font-bold tracking-[0.3em] uppercase text-[#f43f5e]/80">
-              Central Hub Active
-            </span>
-          </div>
-        </div>
-      </header>
+          <div className="lg:col-span-7 space-y-8">
 
-      {/* MAIN */}
-      <main className="relative z-10 max-w-[1440px] mx-auto px-12 py-12">
-
-        {/* HERO */}
-        <div className="rounded-[2.5rem] border border-white/5 p-14 mb-12 bg-[radial-gradient(circle_at_50%_120%,#450a0a_0%,transparent_70%)]">
-
-          <div className="grid grid-cols-12 gap-12">
-
-            {/* LEFT */}
-            <div className="col-span-12 lg:col-span-7">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f43f5e]/10 border border-[#f43f5e]/20 mb-6">
-                <span className="size-2 rounded-full bg-[#f43f5e] animate-pulse" />
-                <span className="text-[10px] font-bold text-[#f43f5e] uppercase tracking-widest">
-                  Active Transmission
+            {/* SCORING */}
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-12">
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-2 sm:gap-3">
+                <span className="material-symbols-outlined text-2xl sm:text-3xl lg:text-4xl text-[#f43f5e]">
+                  insights
                 </span>
-              </div>
+                Scoring Strategy
+              </h3>
 
-              <h2 className="text-6xl font-bold mb-6 tracking-tight leading-[0.9]">
-                DSA <br />
-                <span className="bg-gradient-to-r from-[#f43f5e] to-[#fb923c] bg-clip-text text-transparent">
-                  Challenge
-                </span>
-              </h2>
-
-              <p className="text-slate-300 text-lg max-w-xl leading-relaxed">
-                Navigate the digital dunes. Solve complex algorithmic challenges to
-                establish a secure comm-link across the Martian surface.
-              </p>
-
-              {/* START PANEL */}
-              <div className="mt-10 bg-black/40 backdrop-blur-xl border border-[#f43f5e]/20 rounded-3xl p-8 max-w-md">
-                <h3 className="text-xl font-bold mb-3">
-                  Initiate Ascent
-                </h3>
-
-                <p className="text-white/50 mb-6 text-sm">
-                  Enter your secure access token to authorize entry into the DSA challenge sequence.
-                </p>
-
-                <div className="space-y-4">
-                  <div className="flex h-14 rounded-2xl overflow-hidden bg-black/60 border border-[#f43f5e]/30 shadow-inner focus-within:border-[#f43f5e]/80 transition-colors">
-                    <div className="flex items-center px-4 text-[#f43f5e]">
-                      <span className="material-symbols-outlined font-light">key</span>
+              <div className="space-y-6 sm:space-y-8">
+                {[
+                  ["avg_pace", "Standard Points", "Each correct solution gives base score."],
+                  ["avg_pace", "Complexity Bonus", "Better complexity submissions gives higher scores."],
+                  ["check_alert", "Partial Scoring", "Partial scoring for submissions as per the test cases passed."],
+                ].map(([label, title, desc]) => (
+                  <div key={title} className="flex flex-col sm:flex-row items-start gap-3 sm:gap-6">
+                    <span className="material-symbols-outlined text-2xl sm:text-3xl lg:text-4xl shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-[#f43f5e]/10 border border-[#f43f5e]/40 flex items-center justify-center text-[#f43f5e]">
+                      {label}
+                    </span>
+                    <div>
+                      <h4 className="text-lg sm:text-xl font-bold">{title}</h4>
+                      <p className="text-sm sm:text-base lg:text-lg text-white/50">{desc}</p>
                     </div>
-
-                    <input
-                      value={token}
-                      onChange={(e) => setToken(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
-                      placeholder="ENTER ACCESS TOKEN"
-                      className="flex-1 bg-transparent px-2 text-white placeholder:text-[#f43f5e]/30 font-mono tracking-widest text-sm focus:outline-none"
-                    />
-
-                    <button
-                      onClick={handleJoin}
-                      disabled={loading || !token}
-                      className="px-6 bg-[#f43f5e] hover:bg-[#fb923c] text-white font-bold transition shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {loading ? (
-                        <span className="material-symbols-outlined animate-spin text-sm">sync</span>
-                      ) : (
-                        <>
-                          JOIN <span className="material-symbols-outlined text-sm">chevron_right</span>
-                        </>
-                      )}
-                    </button>
                   </div>
-
-                  {error && (
-                    <p className="text-red-500 text-xs font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
-                      {error}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-            {/* RIGHT STATS */}
-            <div className="col-span-12 lg:col-span-5 flex flex-col justify-end gap-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white/[0.03] backdrop-blur-md p-8 rounded-[2rem] border border-white/10">
-                  <p className="text-[10px] text-slate-500 uppercase font-bold">
-                    Tasks
-                  </p>
-                  <p className="text-4xl font-bold text-white">
-                    5<span className="text-[#f43f5e]">.</span>
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold">
-                    Fixed Order Questions
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.03] backdrop-blur-md p-8 rounded-[2rem] border border-white/10">
-                  <p className="text-[10px] text-slate-500 uppercase font-bold">
-                    Mission Time
-                  </p>
-                  <p className="text-4xl font-bold text-white">
-                    120
-                    <span className="text-[#f43f5e] text-lg ml-1">min</span>
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-2 uppercase font-bold">
-                    Standard Duration
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
 
-          </div>
-        </div>
-
-        {/* CONTENT GRID */}
-        <div className="grid grid-cols-12 gap-12">
-
-          {/* RULES */}
-          <aside className="col-span-12 lg:col-span-4">
-            <div className="bg-[#2d0a0a]/40 backdrop-blur-md p-10 rounded-[2rem] border border-white/5">
-              <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#f43f5e]">
+            {/* RULES */}
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10">
+              <h3 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 flex items-center gap-2">
+                <span className="material-symbols-outlined text-xl sm:text-2xl text-[#f43f5e]">
                   security
                 </span>
                 Rules of Engagement
               </h3>
 
-              <ul className="space-y-6 text-sm">
-                <li className="flex gap-4">
-                  <span className="material-symbols-outlined text-[#f43f5e]">alt_route</span>
-                  <div>
-                    <p className="font-bold text-white">Free Navigation</p>
-                    <p className="text-slate-400 mt-1">Jump between any of the 5 questions at any time.</p>
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 md:gap-8">
+                {[
+                  ["alt_route", "Free Navigation", "Solve problems in any order."],
+                  ["terminal", "Languages", "Python, C++, Java, C supported."],
+                  ["schedule", "Time Limit", "Session ends automatically at 120 minutes."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title} className="flex sm:block items-center sm:items-start gap-4 sm:gap-0">
+                    <div className="mb-0 sm:mb-3 shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-[#f43f5e]/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#f43f5e]">
+                        {icon}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="text-lg sm:text-xl font-bold">{title}</h4>
+                      <p className="text-sm sm:text-base lg:text-lg text-white/50">{desc}</p>
+                    </div>
                   </div>
-                </li>
-
-                <li className="flex gap-4">
-                  <span className="material-symbols-outlined text-[#f43f5e]">terminal</span>
-                  <div>
-                    <p className="font-bold text-white">Languages</p>
-                    <p className="text-slate-400 mt-1">Python, C++, Java supported.</p>
-                  </div>
-                </li>
-
-                <li className="flex gap-4">
-                  <span className="material-symbols-outlined text-[#f43f5e]">hourglass_bottom</span>
-                  <div>
-                    <p className="font-bold text-white">Time Multipliers</p>
-                    <p className="text-slate-400 mt-1">Flat base points. Fast solving yields efficiency bonuses.</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </aside>
-
-          {/* TABLE AREA */}
-          <section className="col-span-12 lg:col-span-8">
-            <div className="bg-[#1a0606]/60 backdrop-blur-xl rounded-[2rem] border border-white/5 overflow-hidden h-full flex flex-col justify-center items-center p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#f43f5e]/10 flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-3xl text-[#f43f5e]">
-                  lock_open
-                </span>
+                ))}
               </div>
-              <h3 className="text-2xl font-bold mb-3">
-                Challenge Unlocked
-              </h3>
-              <p className="text-sm text-slate-500 max-w-sm">
-                Prepare your development environment. The contest begins as soon as you enter your access token.
-              </p>
             </div>
-          </section>
 
+          </div>
         </div>
-
       </main>
 
       {/* FOOTER */}
-      <footer className="max-w-[1440px] mx-auto px-12 py-12 border-t border-white/5 mt-10">
-        <div className="flex justify-between text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em]">
-          <p>© 2024 OPULENCE MARS COMMAND</p>
-          <div className="flex gap-10">
-            <a className="hover:text-[#f43f5e] cursor-pointer">MISSION DOCS</a>
-            <a className="hover:text-[#f43f5e] cursor-pointer">GLOBAL LOGS</a>
-          </div>
-        </div>
+      <footer className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-12 py-10 lg:py-12 text-white/20 text-xs sm:text-sm uppercase tracking-[0.35em] sm:tracking-[0.4em]">
+        © 2026 Opulence Systems // Cognitive Division
       </footer>
-
     </div>
   );
 }
 
-export default DSA;
+export default DSA; 

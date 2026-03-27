@@ -10,7 +10,7 @@ import React from "react";
 import { useRef } from "react";
 import { useEffect } from "react";
 
-import "./styles.css";
+import "./style.css";
 
 const renderMatrix = (ref, color) => {
     let canvas = ref.current;

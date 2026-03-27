@@ -575,7 +575,7 @@ export default function CascadeContest({ session }) {
             {/* COMPLETION OVERLAY */}
             {showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
-                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(255,77,32,0.2)] text-center">
+                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-6 sm:p-12 max-w-md w-[90%] sm:w-full shadow-[0_0_80px_rgba(255,77,32,0.2)] text-center mx-4">
                         <div className="text-7xl mb-6">🏆</div>
                         <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
                         <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
@@ -598,7 +598,7 @@ export default function CascadeContest({ session }) {
             {/* PROCTORING WARNING OVERLAY */}
             {showWarning && !contestStopped && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(255,77,32,0.15)] text-center">
+                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-6 sm:p-10 max-w-md w-[90%] sm:w-full shadow-[0_0_60px_rgba(255,77,32,0.15)] text-center mx-4">
                         <div className="text-6xl mb-6">⚠️</div>
                         <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
                         <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
@@ -639,7 +639,7 @@ export default function CascadeContest({ session }) {
             {/* --- GO BACK MODAL --- */}
             {showGoBackModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(255,77,32,0.1)]">
+                    <div className="bg-[#1f0e0a] border border-[#ff4d20]/30 rounded-2xl p-6 sm:p-8 max-w-md w-[90%] sm:w-full shadow-[0_0_50px_rgba(255,77,32,0.1)] mx-4">
                         <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
                             <FiRotateCcw className="text-[#ff4d20]" /> Confirm Override
                         </h2>
@@ -661,98 +661,100 @@ export default function CascadeContest({ session }) {
 
 
             {/* HEADER */}
-            <nav className="h-[70px] bg-[#1a0b08] border-b border-[#ff4d20]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
+            <nav className="min-h-[70px] bg-[#1a0b08] border-b border-[#ff4d20]/20 flex flex-col lg:flex-row items-center justify-between px-4 lg:px-6 py-4 lg:py-0 shrink-0 z-40 relative gap-4 lg:gap-0">
                 <div className="absolute inset-0 bg-gradient-to-r from-[#ff4d20]/5 to-transparent pointer-events-none" />
 
                 {/* Left Side: Brand & Question Number */}
-                <div className="flex items-center gap-6 relative z-10">
+                <div className="flex items-center gap-4 lg:gap-6 relative z-10 w-full lg:w-auto justify-between lg:justify-start">
                     <div className="flex flex-col">
-                        <span className="text-[#ff4d20] font-black tracking-widest uppercase italic text-sm">Coding Cascade</span>
-                        <span className="text-xs text-white/50 tracking-widest uppercase">Sector 2</span>
+                        <span className="text-[#ff4d20] font-black tracking-widest uppercase italic text-xs lg:text-sm">Coding Cascade</span>
+                        <span className="text-[10px] lg:text-xs text-white/50 tracking-widest uppercase">Sector 2</span>
                     </div>
 
-                    <div className="h-8 w-px bg-white/10"></div>
+                    <div className="hidden lg:block h-8 w-px bg-white/10"></div>
 
-                    <div className="bg-white/5 border border-white/10 px-4 py-1.5 rounded-lg flex items-center gap-3">
-                        <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Node</span>
-                        <span className="text-white font-bold">{currentIndex + 1} / 15</span>
-                        {isReviewMode && <span className="bg-yellow-500/20 text-yellow-500 text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-widest border border-yellow-500/30">Review</span>}
+                    <div className="bg-white/5 border border-white/10 px-3 lg:px-4 py-1 lg:py-1.5 rounded-lg flex items-center gap-2 lg:gap-3">
+                        <span className="text-[10px] lg:text-xs text-white/50 uppercase tracking-widest font-bold">Node</span>
+                        <span className="text-sm lg:text-base text-white font-bold">{currentIndex + 1} / 15</span>
+                        {isReviewMode && <span className="bg-yellow-500/20 text-yellow-500 text-[9px] lg:text-[10px] px-1.5 lg:px-2 py-0.5 rounded font-black uppercase tracking-widest border border-yellow-500/30">Review</span>}
                     </div>
                 </div>
 
                 {/* Center: Streak Counters */}
-                <div className="flex items-center gap-8 relative z-10 bg-black/40 px-8 py-2 rounded-2xl border border-white/5 shadow-inner">
-                    <div className="flex items-center gap-3">
-                        <div className={`size-10 rounded-full flex items-center justify-center border transition-all duration-300
+                <div className="flex items-center gap-4 lg:gap-8 relative z-10 bg-black/40 px-4 lg:px-8 py-2 rounded-2xl border border-white/5 shadow-inner w-full lg:w-auto justify-center">
+                    <div className="flex items-center gap-2 lg:gap-3">
+                        <div className={`size-8 lg:size-10 rounded-full flex items-center justify-center border transition-all duration-300
                             ${currentStreak > 0 ? "border-[#ff4d20] bg-[#ff4d20]/10 shadow-[0_0_15px_rgba(255,77,32,0.3)] animate-pulse" : "border-white/10 bg-white/5"}
                         `}>
-                            <FiZap className={`text-xl ${currentStreak > 0 ? "text-[#ff4d20] fill-[#ff4d20]/20" : "text-white/30"}`} />
+                            <FiZap className={`text-base lg:text-xl ${currentStreak > 0 ? "text-[#ff4d20] fill-[#ff4d20]/20" : "text-white/30"}`} />
                         </div>
                         <div>
-                            <div className="flex items-baseline gap-2">
-                                <span className={`text-2xl font-black ${currentStreak > 0 ? "text-white" : "text-white/30"}`}>{currentStreak}</span>
-                                <span className="text-xs text-[#ff4d20] font-bold">({multiplier})</span>
+                            <div className="flex items-baseline gap-1 lg:gap-2">
+                                <span className={`text-xl lg:text-2xl font-black ${currentStreak > 0 ? "text-white" : "text-white/30"}`}>{currentStreak}</span>
+                                <span className="text-[10px] lg:text-xs text-[#ff4d20] font-bold">({multiplier})</span>
                             </div>
-                            <div className="text-[9px] uppercase tracking-[0.2em] text-white/40 font-bold">Current Streak</div>
+                            <div className="text-[8px] lg:text-[9px] uppercase tracking-[0.1em] lg:tracking-[0.2em] text-white/40 font-bold">Current Streak</div>
                         </div>
                     </div>
 
-                    <div className="w-px h-10 bg-white/10"></div>
+                    <div className="w-px h-8 lg:h-10 bg-white/10"></div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-full flex items-center justify-center border border-yellow-500/30 bg-yellow-500/10 text-yellow-500">
-                            <span className="material-symbols-outlined text-xl">emoji_events</span>
+                    <div className="flex items-center gap-2 lg:gap-3">
+                        <div className="size-8 lg:size-10 rounded-full flex items-center justify-center border border-yellow-500/30 bg-yellow-500/10 text-yellow-500">
+                            <span className="material-symbols-outlined text-base lg:text-xl">emoji_events</span>
                         </div>
                         <div>
-                            <div className="text-2xl font-black text-white">{maxStreak}</div>
-                            <div className="text-[9px] uppercase tracking-[0.2em] text-white/40 font-bold">Max Logged</div>
+                            <div className="text-xl lg:text-2xl font-black text-white">{maxStreak}</div>
+                            <div className="text-[8px] lg:text-[9px] uppercase tracking-[0.1em] lg:tracking-[0.2em] text-white/40 font-bold">Max Logged</div>
                         </div>
                     </div>
                 </div>
 
                 {/* Right: Timer & Actions */}
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex items-center gap-4 bg-black/40 px-5 py-2 rounded-2xl border border-white/5 shadow-inner">
+                <div className="flex items-center gap-3 lg:gap-6 relative z-10 w-full lg:w-auto justify-between lg:justify-end flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-3 lg:gap-4 bg-black/40 px-3 lg:px-5 py-2 rounded-2xl border border-white/5 shadow-inner flex-1 sm:flex-none justify-between">
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-white/40 uppercase font-bold tracking-[0.2em] leading-none mb-1">Current Score</span>
-                            <span className="font-mono text-xl font-black text-white">{cascadeScore}</span>
+                            <span className="text-[9px] lg:text-[10px] text-white/40 uppercase font-bold tracking-[0.1em] lg:tracking-[0.2em] leading-none mb-1">Score</span>
+                            <span className="font-mono text-lg lg:text-xl font-black text-white">{cascadeScore}</span>
                         </div>
-                        <div className="w-px h-8 bg-white/10"></div>
+                        <div className="w-px h-6 lg:h-8 bg-white/10"></div>
                         <div className="flex flex-col items-start translate-y-0.5">
-                            <span className="text-[10px] text-yellow-500/70 uppercase font-bold tracking-[0.2em] leading-none mb-1">Streak Bonus</span>
-                            <span className="font-mono text-xl font-black text-yellow-500">+{maxStreak * STREAK_MULTIPLIER}</span>
+                            <span className="text-[9px] lg:text-[10px] text-yellow-500/70 uppercase font-bold tracking-[0.1em] lg:tracking-[0.2em] leading-none mb-1">Bonus</span>
+                            <span className="font-mono text-lg lg:text-xl font-black text-yellow-500">+{maxStreak * STREAK_MULTIPLIER}</span>
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center min-w-[80px]">
-                        <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Uplink Closes</span>
-                        <span className={`font-mono text-2xl font-black leading-none ${totalTimeLeft !== null && totalTimeLeft < 300 ? "text-red-500 animate-pulse" : "text-[#ff4d20]"}`}>
-                            {totalTimeLeft !== null ? formatTime(totalTimeLeft) : "--:--"}
-                        </span>
-                    </div>
+                    <div className="flex items-center gap-3 lg:gap-4 flex-1 sm:flex-none justify-between">
+                        <div className="flex flex-col items-center min-w-[60px] lg:min-w-[80px]">
+                            <span className="text-[9px] lg:text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Closes</span>
+                            <span className={`font-mono text-xl lg:text-2xl font-black leading-none ${totalTimeLeft !== null && totalTimeLeft < 300 ? "text-red-500 animate-pulse" : "text-[#ff4d20]"}`}>
+                                {totalTimeLeft !== null ? formatTime(totalTimeLeft) : "--:--"}
+                            </span>
+                        </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleRun}
-                            disabled={isRunning}
-                            className="flex items-center justify-center gap-2 size-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
-                            title="Run Code"
-                        >
-                            <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} />
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={isRunning}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#ff4d20] to-[#e63e15] hover:from-[#ff623d] hover:to-[#ff4d20] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
-                        >
-                            {isRunning ? "Transmitting..." : "Submit Node"} <FiUpload />
-                        </button>
+                        <div className="flex items-center gap-2 lg:gap-3">
+                            <button
+                                onClick={handleRun}
+                                disabled={isRunning}
+                                className="flex items-center justify-center gap-2 size-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
+                                title="Run Code"
+                            >
+                                <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} />
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isRunning}
+                                className="flex items-center gap-2 px-3 lg:px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#ff4d20] to-[#e63e15] hover:from-[#ff623d] hover:to-[#ff4d20] text-white font-black uppercase text-xs lg:text-sm tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
+                            >
+                                {isRunning ? "..." : <><span className="hidden sm:inline">Submit Node</span><span className="inline sm:hidden">Submit</span></>} <FiUpload />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </nav>
 
             {/* SECONDARY NAV (Navigation specific to Cascade) */}
-            <div className="h-12 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center justify-between px-6 shrink-0 relative z-30">
+            <div className="min-h-[48px] py-2 lg:py-0 bg-[#140a08] border-b border-[#ff4d20]/10 flex flex-wrap items-center justify-between px-4 lg:px-6 shrink-0 relative z-30 gap-2">
                 <div className="flex gap-4">
                     {!isReviewMode && highestForwardIndex > 0 && (
                         <button
@@ -783,11 +785,11 @@ export default function CascadeContest({ session }) {
             </div>
 
             {/* MAIN CONTENT */}
-            <div className="flex-1 flex overflow-hidden bg-[#0d0605]">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#0d0605] overflow-y-auto lg:overflow-y-hidden">
 
                 {/* IF REVIEW MODE: Show left sidebar list */}
                 {isReviewMode && (
-                    <div className="w-64 border-r border-[#ff4d20]/10 bg-[#140a08] flex flex-col shrink-0">
+                    <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-[#ff4d20]/10 bg-[#140a08] flex flex-col shrink-0 min-h-[150px] lg:min-h-0">
                         <div className="p-4 border-b border-[#ff4d20]/10">
                             <h3 className="text-xs font-black uppercase tracking-widest text-white/50">Skipped Nodes</h3>
                             <p className="text-[10px] text-white/30 mt-1">Select to resolve. Base points only.</p>
@@ -825,7 +827,7 @@ export default function CascadeContest({ session }) {
                 )}
 
                 {/* LEFT: DESCRIPTION */}
-                <div className={`${isReviewMode ? "w-1/3" : "w-1/2"} p-6 overflow-y-auto border-r border-[#ff4d20]/10 relative`}>
+                <div className={`${isReviewMode ? "lg:w-1/3" : "lg:w-1/2"} w-full p-4 lg:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-[#ff4d20]/10 relative min-h-[40vh] lg:min-h-0`}>
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                         <span className="text-8xl font-black font-mono">N{currentIndex + 1}</span>
                     </div>
@@ -855,15 +857,38 @@ export default function CascadeContest({ session }) {
                     <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
 
                     <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                            {currentQuestion.description}
-                        </ReactMarkdown>
+                         <ReactMarkdown
+                             remarkPlugins={[remarkGfm]}
+                             rehypePlugins={[rehypeRaw]}
+                             components={{
+                                 p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
+                                 code: ({ inline, children, ...props }) => {
+                                     return inline ? (
+                                         <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
+                                             {children}
+                                         </code>
+                                     ) : (
+                                         <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
+                                             <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
+                                         </div>
+                                     );
+                                 },
+                                strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
+                                 h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
+                                 h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
+                                 ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
+                                 li: ({ children }) => <li className="text-gray-300">{children}</li>
+                             }}
+                        >
+                             {currentQuestion.description}
+                         </ReactMarkdown>
                     </div>
                 </div>
 
                 {/* RIGHT: EDITOR */}
-                <div className={`${isReviewMode ? "w-2/3" : "w-1/2"} flex flex-col`}>
-                    <div className="h-10 border-b border-[#ff4d20]/10 flex items-center justify-between px-4 bg-[#140a08]">
+                <div className={`${isReviewMode ? "lg:w-2/3" : "lg:w-1/2"} w-full flex flex-col min-h-[60vh] lg:min-h-0 h-auto lg:h-full`}>
+                    <div className="h-12 lg:h-10 border-b border-[#ff4d20]/10 flex items-center justify-between px-2 lg:px-4 bg-[#140a08]">
                         <span className="text-xs font-bold text-white/30 uppercase tracking-widest">Compiler Matrix</span>
                         <div className="flex items-center gap-2">
                             <select

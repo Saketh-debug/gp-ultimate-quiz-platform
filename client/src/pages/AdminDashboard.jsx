@@ -101,18 +101,18 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#111] text-white p-8 font-sans">
-            <header className="flex justify-between items-center mb-12 border-b border-white/10 pb-6">
-                <h1 className="text-3xl font-bold uppercase tracking-widest text-orange-500">Admin Dashboard</h1>
+        <div className="min-h-screen bg-[#111] text-white p-4 md:p-8 font-sans">
+            <header className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0 mt-4 md:mt-0 mb-8 md:mb-12 border-b border-white/10 pb-6 text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-widest text-orange-500">Admin Dashboard</h1>
                 <button
                     onClick={() => { localStorage.removeItem("adminToken"); navigate("/admin/login"); }}
-                    className="text-xs text-gray-500 hover:text-white uppercase font-bold"
+                    className="text-xs text-gray-500 hover:text-white uppercase font-bold px-4 py-2 border border-white/10 md:border-transparent rounded"
                 >
                     Logout
                 </button>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* RAPID FIRE CARD */}
                 <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6">
                     <div className="flex justify-between items-start mb-4">
@@ -134,16 +134,16 @@ export default function AdminDashboard() {
 
                     <button
                         onClick={() => navigate("/admin/questions?round=rapidfire")}
-                        className="w-full mb-3 py-2 bg-[#111] border border-white/10 hover:border-orange-500/50 text-gray-300 hover:text-orange-400 font-bold rounded transition text-xs uppercase"
+                        className="w-full mb-3 py-2.5 bg-[#111] border border-white/10 hover:border-orange-500/50 text-gray-300 hover:text-orange-400 font-bold rounded transition text-xs uppercase"
                     >
                         📋 Manage Questions
                     </button>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col xl:flex-row gap-2">
                         <button
                             onClick={() => startRound("rapidfire")}
                             disabled={rounds.rapidfire?.is_active}
-                            className="flex-1 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded transition text-xs uppercase"
+                            className="flex-1 py-2.5 xl:py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded transition text-xs uppercase"
                         >
                             {rounds.rapidfire?.is_active ? "In Progress" : "Start"}
                         </button>
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
                         {rounds.rapidfire?.is_active && (
                             <button
                                 onClick={() => stopRound("rapidfire")}
-                                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
+                                className="flex-1 py-2.5 xl:py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
                             >
                                 Stop
                             </button>
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
 
                         <button
                             onClick={() => resetRound("rapidfire")}
-                            className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded transition text-xs uppercase"
+                            className="flex-1 py-2.5 xl:py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded transition text-xs uppercase"
                         >
                             Reset
                         </button>
@@ -188,16 +188,16 @@ export default function AdminDashboard() {
 
                     <button
                         onClick={() => navigate("/admin/questions?round=cascade")}
-                        className="w-full mb-3 py-2 bg-[#111] border border-white/10 hover:border-orange-500/50 text-gray-300 hover:text-orange-400 font-bold rounded transition text-xs uppercase"
+                        className="w-full mb-3 py-2.5 bg-[#111] border border-white/10 hover:border-orange-500/50 text-gray-300 hover:text-orange-400 font-bold rounded transition text-xs uppercase"
                     >
                         📋 Manage Questions
                     </button>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col xl:flex-row gap-2">
                         <button
                             onClick={() => startRound("cascade")}
                             disabled={rounds.cascade?.is_active}
-                            className="flex-1 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded transition text-xs uppercase"
+                            className="flex-1 py-2.5 xl:py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded transition text-xs uppercase"
                         >
                             {rounds.cascade?.is_active ? "In Progress" : "Start"}
                         </button>
@@ -205,7 +205,7 @@ export default function AdminDashboard() {
                         {rounds.cascade?.is_active && (
                             <button
                                 onClick={() => stopRound("cascade")}
-                                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
+                                className="flex-1 py-2.5 xl:py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
                             >
                                 Stop
                             </button>
@@ -213,13 +213,12 @@ export default function AdminDashboard() {
 
                         <button
                             onClick={() => resetRound("cascade")}
-                            className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded transition text-xs uppercase"
+                            className="flex-1 py-2.5 xl:py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded transition text-xs uppercase"
                         >
                             Reset
                         </button>
                     </div>
 
-                    {/* Streak Bonus Button */}
                     <button
                         onClick={async () => {
                             if (!confirm("Apply streak bonus (max_streak × 20) to all finished users? This is idempotent — already-applied users are skipped.")) return;
@@ -242,7 +241,7 @@ export default function AdminDashboard() {
                                 alert("Error applying streak bonus");
                             }
                         }}
-                        className="w-full mt-3 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition text-xs uppercase"
+                        className="w-full mt-3 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition text-xs uppercase"
                     >
                         ⚡ Apply Streak Bonus
                     </button>
@@ -270,16 +269,16 @@ export default function AdminDashboard() {
 
                     <button
                         onClick={() => navigate("/admin/questions?round=dsa")}
-                        className="w-full mb-3 py-2 bg-[#111] border border-white/10 hover:border-orange-500/50 text-gray-300 hover:text-orange-400 font-bold rounded transition text-xs uppercase"
+                        className="w-full mb-3 py-2.5 bg-[#111] border border-white/10 hover:border-orange-500/50 text-gray-300 hover:text-orange-400 font-bold rounded transition text-xs uppercase"
                     >
                         📋 Manage Questions
                     </button>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col xl:flex-row gap-2">
                         <button
                             onClick={() => startRound("dsa")}
                             disabled={rounds.dsa?.is_active}
-                            className="flex-1 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded transition text-xs uppercase"
+                            className="flex-1 py-2.5 xl:py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded transition text-xs uppercase"
                         >
                             {rounds.dsa?.is_active ? "In Progress" : "Start"}
                         </button>
@@ -287,7 +286,7 @@ export default function AdminDashboard() {
                         {rounds.dsa?.is_active && (
                             <button
                                 onClick={() => stopRound("dsa")}
-                                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
+                                className="flex-1 py-2.5 xl:py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
                             >
                                 Stop
                             </button>
@@ -295,7 +294,7 @@ export default function AdminDashboard() {
 
                         <button
                             onClick={() => resetRound("dsa")}
-                            className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded transition text-xs uppercase"
+                            className="flex-1 py-2.5 xl:py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded transition text-xs uppercase"
                         >
                             Reset
                         </button>

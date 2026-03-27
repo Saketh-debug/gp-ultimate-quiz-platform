@@ -3,33 +3,38 @@ import { Link } from "react-router-dom";
 
 function Rounds() {
   return (
-    <div className="min-h-screen bg-[#1a0b0b] text-white font-['Space_Grotesk'] relative overflow-x-hidden">
+    <div className="min-h-screen text-white font-['Space_Grotesk'] relative overflow-x-hidden"
+    style={{
+          backgroundImage:
+            "url(/images/martian-landscape.png)",
+          backgroundSize: "cover",
+          backgroundRepeat: "no-repeat",}}>
 
       {/* MARTIAN LANDSCAPE BACKGROUND */}
       <div
         className="fixed bottom-0 left-0 w-full h-[40vh] opacity-80 -z-10"
         style={{
           backgroundImage:
-            "url(https://lh3.googleusercontent.com/aida-public/AB6AXuBWKU71LHCaR-12O4S36n5DP8fLv0yDQ7DthBgduswuRF3uIw5chGApd5dPqordM1TsjcdvBFBJHUG7_l3rVgwdQuN5-DClQMTFh4VFR1hvVVB5cM49KSjgyStPg5r-Pln-9okenBW1J4xJ6Z6KYzVqFXk6BeLW5LXoLTs8NAmgFjmQahsMf0652CDOBEwhnI9iAJ9TX9-2S417I1trrurakwXqee1-EMEJ1QpYFH1aiu0WJs1jrMd8tuMcqMLRiYlukLrGgjseeQo)",
+            "url(/images/martian-landscape.png)",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
         }}
       />
 
-      <div className="mx-auto max-w-[1600px] px-10 pb-32">
+      <div className="mx-auto max-w-[1600px] px-6 sm:px-10 lg:px-12 pb-20 sm:pb-32">
 
         {/* TOP BAR */}
-        <div className="sticky top-0 z-50 flex items-center justify-between h-20 bg-[#1a0b0b]/90 backdrop-blur-md border-b border-white/10">
-          <span className="material-symbols-outlined text-primary cursor-pointer">
+        <div className="sticky top-0 z-50 flex items-center justify-between h-20 backdrop-blur-md border-b border-white/10">
+          <Link to="/"><span className="material-symbols-outlined text-primary cursor-pointer">
             arrow_back_ios_new
-          </span>
+          </span></Link>
 
-          <h2 className="text-xl font-black tracking-tight uppercase italic">
-            Opulence
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight uppercase ">
+            GPrime
           </h2>
 
           <span className="material-symbols-outlined text-primary cursor-pointer">
-            info
+            
           </span>
         </div>
 
@@ -37,15 +42,15 @@ function Rounds() {
         
 
         {/* HEADER */}
-        <section className="mt-16">
-          <h3 className="text-4xl font-black uppercase italic tracking-tight">
+        <section className="mt-10 sm:mt-16">
+          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase  tracking-tight">
             Challenge Tiers
           </h3>
           <div className="h-1 w-24 bg-orange-500 mt-3"></div>
         </section>
 
         {/* ROUNDS GRID */}
-        <section className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <section className="mt-6 sm:mt-10 flex flex-col lg:grid lg:grid-cols-3 gap-6 sm:gap-10">
 
           {/* CARD 1 */}
           <div className="group rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-orange-500/20 hover:-translate-y-2 hover:border-orange-500/60 transition-all duration-500">
@@ -53,38 +58,27 @@ function Rounds() {
             <div
               className="relative h-64 bg-cover bg-center overflow-hidden"
               style={{
-                backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAWUnXJoowbLn4b1vnu9cSYbMp4SB3WRA1tqsltyBsgam3Ob1cQi8MXE4uMt_oODeMYuSWVNPqXGKXB7BWLKaVPEIpquME5eV--eyeBVwTYcLhKHj0mb00kKtA8nuKHkZg8SSiSKW23Wn4Ts6GuSOj8aL6pdLGdry2xgy9GumQzXlyk1U9Gq_jOVthzzYnGI3QYV46HaCW1s9v6Ca-2V5OzSelGCdaAq06EKsHcuGM0SmrEeRnTWMQ6hrYKci6V-N-6UJ7_1eO1ASM")',
+                backgroundImage:'url("/images/rapid-fire.png")',
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
 
-              <span className="absolute top-4 left-4 bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                Active Round
-              </span>
+              
             </div>
 
-            <div className="p-8 space-y-6">
+            <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-orange-500">
+                <span className="material-symbols-outlined text-2xl sm:text-3xl text-orange-500">
                   bolt
                 </span>
-                <h4 className="text-2xl font-black uppercase">
+                <h4 className="text-xl sm:text-2xl font-black uppercase">
                   Rapid Fire
                 </h4>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
-                <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-xs font-bold">
-                  45m
-                </span>
-                <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-xs font-bold">
-                  Speed Bonus
-                </span>
-              </div>
 
-              <Link to="/rapidfire">
-                <button className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-xl transition">
+              <Link to="/rapidfire" className="block">
+                <button className="w-full h-10 sm:h-12 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-lg sm:rounded-xl text-sm sm:text-base transition">
                   Join Round
                 </button>
               </Link>
@@ -92,29 +86,30 @@ function Rounds() {
           </div>
 
           {/* CARD 2 */}
-          <div className="rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-white/10 opacity-90">
+          <div className="group rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-orange-500/20 hover:-translate-y-2 hover:border-orange-500/60 transition-all duration-500">
 
             <div
               className="relative h-64 bg-cover bg-center"
               style={{
-                backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuC4Dw3TZ-ul2-EbqKmI9yIuonlqjDf3TTTa5Q2DS5qfcBg87jrITJsaMI9xQtfL4jFn_scdtfZRloDEhTrWfLx3RFNywQctYOt9I9taaWu42SQj3YIeiywjTJp_vOWccdKYqBO4x48u3qRjnOSs1rbI_76tLM7nq8B62MR3qnCgncSpX5tkuWqyE9XMEL4CgD0oZbFlxeTir8y_AeeVFpbrgEVdG6e7-bDqodYyhMi3NadaxyS_v8pHC3lDQ6fXXqLE34aKoFFrbQE")',
+                backgroundImage: 'url("/images/coding_cascade.png")',
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
 
-              <span className="absolute top-4 left-4 bg-white/10 border border-white/20 text-white/80 text-xs px-3 py-1 rounded-full uppercase">
-                Starts in 2h
-              </span>
+              
             </div>
 
-            <div className="p-8">
-              <h4 className="text-2xl font-black uppercase">
+            <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
+              <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-orange-500">
+                  Terminal
+                </span>
+              <h4 className="text-xl sm:text-2xl font-black uppercase">
                 Coding Cascade
-              </h4>
+              </h4></div>
 
-              <Link to="/cascade">
-                <button className="mt-6 w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-bold transition">
+              <Link to="/cascade" className="block">
+                <button className="w-full h-10 sm:h-12 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-lg sm:rounded-xl text-sm sm:text-base transition">
                   Join Round
                 </button>
               </Link>
@@ -122,28 +117,29 @@ function Rounds() {
           </div>
 
           {/* CARD 3 */}
-          <div className="rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-white/10 opacity-70">
+          <div className="group rounded-3xl overflow-hidden bg-[rgba(45,10,10,0.6)] backdrop-blur-xl border border-orange-500/20 hover:-translate-y-2 hover:border-orange-500/60 transition-all duration-500">
 
             <div
               className="relative h-64 bg-cover bg-center"
               style={{
                 backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAMGCswWEEIgh-jEVU-KOhr6HL3TE-cnowC71MTdkzWZr3UR_sVckX9SIoIMfs4u7aZmfB8vo-rw0iqeB0RrO0c91NCS2YWnRCfZmHjk02pHaZ5i2Q9RaXIAjG6NXWONjtxAu4GN5dN3uWWhePsrRxOjDgK66pIywzwHfucvtbN0vX6GWA6wHdRMHH-r2MATOIMAivArtyQ8SMRlSCCMd_23L1Azl768EorQKT3ZM3TI90U-AcAP0Ioexgu-iGov3o3lkWJsDZiPIQ")',
+                  'url("/images/dsa.png")',
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#450a0a] to-transparent" />
 
-              <span className="absolute top-4 left-4 bg-black/60 text-white/40 text-xs px-3 py-1 rounded-full uppercase">
-                Locked
-              </span>
             </div>
 
-            <div className="p-8">
-              <h4 className="text-2xl font-black uppercase">
+            <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
+              <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-orange-500">
+                  graph_7
+                </span>
+              <h4 className="text-xl sm:text-2xl font-black uppercase">
                 DSA
-              </h4>
-              <Link to="/dsa">
-                <button className="mt-6 w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-bold transition">
+              </h4></div>
+              <Link to="/dsa" className="block">
+                <button className="w-full h-10 sm:h-12 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-lg sm:rounded-xl text-sm sm:text-base transition">
                   Join Round
                 </button>
               </Link>

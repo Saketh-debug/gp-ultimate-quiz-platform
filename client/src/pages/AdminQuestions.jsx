@@ -249,15 +249,15 @@ export default function AdminQuestions() {
     return (
         <div className="min-h-screen bg-[#111] text-white font-sans">
             {/* Header */}
-            <header className="flex justify-between items-center px-8 py-5 border-b border-white/10">
-                <div className="flex items-center gap-4">
+            <header className="flex flex-col sm:flex-row justify-between items-center px-4 md:px-8 py-5 border-b border-white/10 gap-4 sm:gap-0">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <button
                         onClick={() => navigate("/admin/dashboard")}
                         className="text-gray-500 hover:text-white text-sm transition"
                     >
                         ← Dashboard
                     </button>
-                    <h1 className="text-2xl font-bold uppercase tracking-widest text-orange-500">
+                    <h1 className="text-xl md:text-2xl font-bold uppercase tracking-widest text-orange-500 text-center sm:text-left">
                         Question Manager
                     </h1>
                 </div>
@@ -269,9 +269,9 @@ export default function AdminQuestions() {
                 </button>
             </header>
 
-            <div className="px-8 py-6 max-w-6xl mx-auto">
+            <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
                 {/* Round Tabs */}
-                <div className="flex gap-2 mb-8">
+                <div className="flex flex-wrap gap-2 mb-8 justify-center sm:justify-start">
                     {Object.entries(ROUND_CONFIG).map(([key, cfg]) => (
                         <button
                             key={key}
@@ -287,8 +287,8 @@ export default function AdminQuestions() {
                 </div>
 
                 {/* Status bar */}
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+                    <div className="flex flex-wrap items-center gap-3">
                         <span className={`text-sm font-semibold ${poolCount < config.minPool ? "text-red-400" : "text-green-400"}`}>
                             {poolCount} question{poolCount !== 1 ? "s" : ""} in pool
                             {poolCount < config.minPool && ` — ⚠ minimum ${config.minPool} required`}
@@ -301,7 +301,7 @@ export default function AdminQuestions() {
                     </div>
                     <button
                         onClick={openCreate}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg transition"
+                        className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg transition"
                     >
                         + Add Question
                     </button>
@@ -580,7 +580,7 @@ export default function AdminQuestions() {
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="block text-[10px] text-gray-600 mb-1">Input</label>
                                                     <textarea

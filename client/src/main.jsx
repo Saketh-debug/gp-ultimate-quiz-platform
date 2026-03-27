@@ -23,10 +23,6 @@ import AdminQuestions from './pages/AdminQuestions.jsx'
 const router = createBrowserRouter([
     {
         path: "/",
-        element: <Rounds />
-    },
-    {
-        path: "/app",
         element: <App />
     },
     {

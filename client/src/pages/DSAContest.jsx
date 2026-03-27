@@ -562,7 +562,7 @@ export default function DSAContest({ session }) {
             {/* COMPLETION OVERLAY */}
             {showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
-                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(244,63,94,0.2)] text-center">
+                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-6 sm:p-12 max-w-md w-[90%] sm:w-full shadow-[0_0_80px_rgba(244,63,94,0.2)] text-center mx-4">
                         <div className="text-7xl mb-6">🏆</div>
                         <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
                         <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
@@ -585,7 +585,7 @@ export default function DSAContest({ session }) {
             {/* PROCTORING WARNING OVERLAY */}
             {showWarning && !contestStopped && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(244,63,94,0.15)] text-center">
+                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-6 sm:p-10 max-w-md w-[90%] sm:w-full shadow-[0_0_60px_rgba(244,63,94,0.15)] text-center mx-4">
                         <div className="text-6xl mb-6">⚠️</div>
                         <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
                         <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
@@ -623,24 +623,24 @@ export default function DSAContest({ session }) {
             )}
 
             {/* HEADER */}
-            <nav className="h-[70px] bg-[#1a0606] border-b border-[#f43f5e]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
+            <nav className="min-h-[70px] bg-[#1a0606] border-b border-[#f43f5e]/20 flex flex-col lg:flex-row items-center justify-between px-4 lg:px-6 py-4 lg:py-0 shrink-0 z-40 relative gap-4 lg:gap-0">
                 {/* Left Side: Brand */}
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex flex-col">
-                        <span className="text-[#f43f5e] font-black tracking-widest uppercase italic text-sm">DSA Challenge</span>
-                        <span className="text-xs text-white/50 tracking-widest uppercase">Round 3</span>
+                <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-6 relative z-10 w-full lg:w-auto">
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                        <span className="text-[#f43f5e] font-black tracking-widest uppercase italic text-xs lg:text-sm">DSA Challenge</span>
+                        <span className="text-[10px] lg:text-xs text-white/50 tracking-widest uppercase">Round 3</span>
                     </div>
 
-                    <div className="h-8 w-px bg-white/10"></div>
+                    <div className="hidden sm:block h-8 w-px bg-white/10"></div>
 
                     {/* Question Navigator */}
-                    <div className="flex gap-2 bg-black/40 p-1.5 rounded-lg border border-[#f43f5e]/10">
+                    <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-1.5 rounded-lg border border-[#f43f5e]/10">
                         {questions.map((q, idx) => (
                             <button
                                 key={q.id}
                                 onClick={() => handleQuestionSelect(idx)}
                                 disabled={q.status === 'ACCEPTED'}
-                                className={`px-4 py-1.5 rounded-md text-sm font-bold tracking-widest uppercase transition-colors flex items-center gap-2
+                                className={`px-2 lg:px-4 py-1 lg:py-1.5 rounded-md text-xs lg:text-sm font-bold tracking-widest uppercase transition-colors flex items-center gap-1 lg:gap-2
                                     ${currentIndex === idx ? "bg-[#f43f5e] text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]" :
                                         q.status === 'ACCEPTED' ? "bg-green-500/5 text-green-500/50 cursor-not-allowed border border-green-500/10" :
                                             q.status === 'PARTIAL' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20" :
@@ -660,28 +660,28 @@ export default function DSAContest({ session }) {
                 </div>
 
                 {/* Right: Score, Timer & Actions */}
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="bg-black/40 px-6 py-2 rounded-xl border border-white/5 flex flex-col items-center">
-                        <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Score</span>
-                        <span className="font-mono text-xl font-black text-rose-300">
+                <div className="flex flex-wrap sm:flex-nowrap items-center justify-center gap-4 lg:gap-6 relative z-10 w-full lg:w-auto">
+                    <div className="bg-black/40 px-4 lg:px-6 py-2 rounded-xl border border-white/5 flex flex-col items-center flex-1 sm:flex-none">
+                        <span className="text-[9px] lg:text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Score</span>
+                        <span className="font-mono text-lg lg:text-xl font-black text-rose-300">
                             {totalScore}
                         </span>
                     </div>
 
-                    <div className="flex flex-col items-center min-w-[80px]">
-                        <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Time Left</span>
-                        <span className={`font-mono text-2xl font-black leading-none ${totalTimeLeft !== null && totalTimeLeft < 300 ? "text-red-500 animate-pulse" : "text-[#f43f5e]"}`}>
+                    <div className="flex flex-col items-center min-w-[60px] lg:min-w-[80px] flex-1 sm:flex-none">
+                        <span className="text-[9px] lg:text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Time Left</span>
+                        <span className={`font-mono text-xl lg:text-2xl font-black leading-none ${totalTimeLeft !== null && totalTimeLeft < 300 ? "text-red-500 animate-pulse" : "text-[#f43f5e]"}`}>
                             {totalTimeLeft !== null ? formatTime(totalTimeLeft) : "--:--"}
                         </span>
                     </div>
 
-                    <div className="h-8 w-px bg-white/10 mx-2"></div>
+                    <div className="hidden sm:block h-8 w-px bg-white/10 mx-2"></div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 lg:gap-3 w-full sm:w-auto justify-center">
                         <button
                             onClick={handleRun}
                             disabled={isRunning}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold uppercase transition"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1 lg:gap-2 px-3 lg:px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs lg:text-sm font-bold uppercase transition"
                             title="Run Code"
                         >
                             <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} /> Run
@@ -689,21 +689,21 @@ export default function DSAContest({ session }) {
                         <button
                             onClick={handleSubmit}
                             disabled={isRunning}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#f43f5e] to-[#e11d48] hover:from-[#fb923c] hover:to-[#f43f5e] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)]"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1 lg:gap-2 px-4 lg:px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#f43f5e] to-[#e11d48] hover:from-[#fb923c] hover:to-[#f43f5e] text-white font-black uppercase tracking-wide transition text-xs lg:text-sm shadow-[0_0_20px_rgba(244,63,94,0.3)]"
                         >
-                            {isRunning ? "Testing..." : "Submit"} <FiUpload />
+                            {isRunning ? "..." : "Submit"} <FiUpload />
                         </button>
                     </div>
                 </div>
             </nav>
 
             {/* MAIN CONTENT SPLIT */}
-            <div className="flex flex-1 overflow-hidden bg-[#0c0202]">
+            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden bg-[#0c0202] overflow-y-auto lg:overflow-y-hidden">
 
                 {/* LEFT PANEL: PROBLEM DESCRIPTION */}
                 <div
-                    style={{ width: `${leftPanelWidth}%` }}
-                    className="flex flex-col bg-[#1a0606] border-r border-[#f43f5e]/10 relative shrink-0"
+                    style={{ '--left-panel-width': `${leftPanelWidth}%` }}
+                    className="flex flex-col bg-[#1a0606] border-b lg:border-b-0 lg:border-r border-[#f43f5e]/10 relative shrink-0 min-h-[40vh] lg:min-h-0 w-full lg:w-[var(--left-panel-width)]"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none z-0">
                         <span className="text-8xl font-black font-mono">Q{currentIndex + 1}</span>
@@ -724,7 +724,30 @@ export default function DSAContest({ session }) {
                         <h1 className="text-3xl font-bold mb-6 tracking-tight">{currentQuestion.title}</h1>
 
                         <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:shadow-inner text-slate-300">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                                components={{
+                                    p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
+                                    code: ({ inline, children, ...props }) => {
+                                        return inline ? (
+                                            <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
+                                                {children}
+                                            </code>
+                                        ) : (
+                                            <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
+                                                <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
+                                            </div>
+                                        );
+                                    },
+                                    strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                    em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
+                                    h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
+                                    h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
+                                    ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
+                                    li: ({ children }) => <li className="text-gray-300">{children}</li>
+                                }}
+                            >
                                 {currentQuestion.description}
                             </ReactMarkdown>
                         </div>
@@ -734,7 +757,7 @@ export default function DSAContest({ session }) {
                 {/* HORIZONTAL RESIZE HANDLE */}
                 <div
                     onMouseDown={startHorizontalResize}
-                    className="w-2 hover:bg-rose-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+                    className="hidden lg:flex w-2 hover:bg-rose-500/30 cursor-col-resize transition-colors duration-200 z-10 items-center justify-center group"
                 >
                     <div className="w-[1px] h-8 bg-white/20 group-hover:bg-[#f43f5e]" />
                 </div>
@@ -742,8 +765,8 @@ export default function DSAContest({ session }) {
                 {/* RIGHT PANEL: EDITOR & CONSOLE */}
                 <div
                     id="right-panel-container"
-                    style={{ width: `${100 - leftPanelWidth}%` }}
-                    className="flex flex-col gap-0 min-w-0 shrink-0 bg-[#0d0605]"
+                    style={{ '--right-panel-width': `${100 - leftPanelWidth}%` }}
+                    className="flex flex-col gap-0 min-w-0 shrink-0 bg-[#0d0605] min-h-[60vh] lg:min-h-0 flex-1 w-full lg:w-[var(--right-panel-width)]"
                 >
                     {/* TOP: EDITOR SECTION */}
                     <div

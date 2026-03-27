@@ -29,8 +29,8 @@ export default function AdminLogin() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white flex items-center justify-center font-sans">
-            <div className="w-full max-w-md p-8 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md">
+        <div className="min-h-screen bg-black text-white flex items-center justify-center font-sans px-4">
+            <div className="w-full max-w-md p-6 sm:p-8 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md">
                 <h1 className="text-2xl font-bold mb-6 text-center text-orange-500 uppercase tracking-widest">Admin Access</h1>
 
                 {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 text-red-200 text-sm rounded">{error}</div>}

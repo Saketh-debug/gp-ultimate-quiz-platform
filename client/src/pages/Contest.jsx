@@ -226,14 +226,15 @@ export default function Contest({ session }) {
     <div className="h-screen flex flex-col bg-[#1a1a1a]/85 backdrop-blur-xl text-[#eff1f6] font-sans overflow-hidden">
 
       {/* TOP NAVIGATION BAR */}
-      <nav className="h-[50px] bg-[#282828]/80 backdrop-blur-md border-b border-[#3e3e3e] flex items-center justify-between px-4 shrink-0 z-50">
-        <div className="flex items-center gap-4 relative">
+      <nav className="min-h-[50px] bg-[#282828]/80 backdrop-blur-md border-b border-[#3e3e3e] flex flex-wrap items-center justify-between px-2 lg:px-4 py-2 lg:py-0 shrink-0 z-50 gap-2 lg:gap-0">
+        <div className="flex items-center gap-2 lg:gap-4 relative flex-1 min-w-[120px] order-1">
           <div
             onClick={() => setIsProblemListOpen(!isProblemListOpen)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white cursor-pointer transition py-2"
+            className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-medium text-gray-400 hover:text-white cursor-pointer transition py-1 lg:py-2"
           >
-            <FiList className="text-lg" />
-            <span>Problem List</span>
+            <FiList className="text-base lg:text-lg" />
+            <span className="hidden sm:inline">Problem List</span>
+            <span className="inline sm:hidden">Problems</span>
           </div>
 
           {/* DROPDOWN PROBLEM LIST */}
@@ -259,14 +260,14 @@ export default function Contest({ session }) {
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-gray-400">
-            <FiChevronLeft className="cursor-pointer hover:text-white" />
-            <FiChevronRight className="cursor-pointer hover:text-white" />
+          <div className="flex items-center gap-1 lg:gap-2 text-gray-400">
+            <FiChevronLeft className="cursor-pointer hover:text-white text-lg" />
+            <FiChevronRight className="cursor-pointer hover:text-white text-lg" />
           </div>
         </div>
 
         {/* ACTION BUTTONS (RUN & SUBMIT) */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center gap-2 lg:gap-3 w-full sm:w-auto order-3 sm:order-2 mt-2 sm:mt-0">
           <button
             onClick={handleRun}
             disabled={isRunning}
@@ -288,27 +289,27 @@ export default function Contest({ session }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-4 text-gray-400">
-          <FiSettings className="cursor-pointer hover:text-white" />
-          <div className="flex items-center gap-2 text-sm font-mono bg-[#333333] px-3 py-1 rounded-full text-orange-400 border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]">
+        <div className="flex items-center justify-end gap-2 lg:gap-4 text-gray-400 flex-1 min-w-[120px] order-2 sm:order-3">
+          <FiSettings className="cursor-pointer hover:text-white hidden sm:block" />
+          <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-mono bg-[#333333] px-2 lg:px-3 py-1 rounded-full text-orange-400 border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]">
             <FiClock />
             <span>00:00:00</span>
           </div>
           <div className="flex items-center gap-2 hover:text-white cursor-pointer group transition">
-            <span className="text-xs font-medium hidden md:block text-gray-400 group-hover:text-white">{session.team || "Team"}</span>
-            <div className="w-8 h-8 rounded-full bg-[#3e3e3e] flex items-center justify-center border border-[#4e4e4e]">
-              <FiUser />
+            <span className="text-[10px] sm:text-xs font-medium hidden sm:block text-gray-400 group-hover:text-white">{session.team || "Team"}</span>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#3e3e3e] flex items-center justify-center border border-[#4e4e4e]">
+              <FiUser className="text-xs sm:text-sm" />
             </div>
           </div>
         </div>
       </nav>
 
-      <div className="flex flex-1 overflow-hidden p-2 gap-0 bg-transparent">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden p-2 gap-2 lg:gap-0 bg-transparent overflow-y-auto lg:overflow-y-hidden">
 
         {/* LEFT PANEL: PROBLEM DESCRIPTION */}
         <div
-          style={{ width: `${leftPanelWidth}%` }}
-          className="flex flex-col bg-[#282828]/80 backdrop-blur-md rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
+          style={{ '--left-panel-width': `${leftPanelWidth}%` }}
+          className="flex flex-col bg-[#282828]/80 backdrop-blur-md rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0 w-full lg:w-[var(--left-panel-width)] min-h-[40vh] lg:min-h-0"
         >
           {/* Tabs Header */}
           <div className="h-10 bg-[#333333] flex items-center px-2 shrink-0 border-b border-[#3e3e3e]">
@@ -383,7 +384,7 @@ export default function Contest({ session }) {
         {/* HORIZONTAL RESIZE HANDLE */}
         <div
           onMouseDown={startHorizontalResize}
-          className="w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+          className="hidden lg:flex w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 items-center justify-center group"
         >
           <div className="w-[1px] h-8 bg-gray-600 group-hover:bg-orange-500" />
         </div>
@@ -391,8 +392,8 @@ export default function Contest({ session }) {
         {/* RIGHT PANEL: EDITOR & CONSOLE */}
         <div
           id="right-panel-container"
-          style={{ width: `${100 - leftPanelWidth}%` }}
-          className="flex flex-col gap-0 min-w-0 shrink-0"
+          style={{ '--right-panel-width': `${100 - leftPanelWidth}%` }}
+          className="flex flex-col gap-2 lg:gap-0 min-w-0 shrink-0 w-full lg:w-[var(--right-panel-width)] min-h-[60vh] lg:min-h-0 flex-1"
         >
 
           {/* TOP: EDITOR SECTION */}

@@ -54,29 +54,29 @@ function Leaderboard() {
       <div className="min-h-screen bg-black/20 flex flex-col">
 
         {/* HEADER */}
-        <header className="sticky top-0 z-50 h-20 px-12 flex items-center justify-between backdrop-blur-xl bg-black/30 border-b border-white/5">
+        <header className="sticky top-0 z-50 h-16 md:h-20 px-4 md:px-12 flex items-center justify-between backdrop-blur-xl bg-black/30 border-b border-white/5">
 
-          <div className="flex items-center gap-4">
-            <div className="size-10 bg-[#d15b2c] rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined">rocket_launch</span>
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="size-8 md:size-10 bg-[#d15b2c] rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-sm md:text-base">rocket_launch</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               Grand <span className="text-[#f4a460]">Leaderboard</span>
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 px-4 py-2 bg-[#d15b2c]/20 rounded-lg text-[#f4a460] text-sm font-bold border border-[#d15b2c]/30">
-            <span className="material-symbols-outlined text-sm">groups</span>
-            {teams.length} TEAMS
+          <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-[#d15b2c]/20 rounded-lg text-[#f4a460] text-xs md:text-sm font-bold border border-[#d15b2c]/30">
+            <span className="material-symbols-outlined text-xs md:text-sm">groups</span>
+            {teams.length} <span className="hidden sm:inline">TEAMS</span>
           </div>
         </header>
 
         {/* MAIN */}
-        <main className="flex-1 max-w-[1600px] mx-auto w-full px-12 py-12 flex flex-col gap-16">
+        <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-12 py-8 md:py-12 flex flex-col gap-8 md:gap-16">
 
           {/* PODIUM */}
           {podiumTeams.length >= 3 && (
-            <section className="flex items-end justify-center gap-12 pt-12">
+            <section className="flex flex-row items-end justify-center gap-4 md:gap-12 pt-8 md:pt-12 overflow-x-auto pb-4">
               <Podium rank={2} name={podiumTeams[1].team_name} score={podiumTeams[1].total_score} type="silver" />
               <Podium rank={1} name={podiumTeams[0].team_name} score={podiumTeams[0].total_score} type="gold" large />
               <Podium rank={3} name={podiumTeams[2].team_name} score={podiumTeams[2].total_score} type="bronze" />
@@ -90,24 +90,24 @@ function Leaderboard() {
             <div className="col-span-12 flex flex-col gap-6">
 
               <div>
-                <h2 className="text-4xl font-black tracking-tight uppercase">
+                <h2 className="text-2xl md:text-4xl font-black tracking-tight uppercase">
                   Team Rankings
                 </h2>
-                <p className="text-[#f4a460]/70">
+                <p className="text-[#f4a460]/70 text-sm md:text-base mt-2">
                   Cumulative scores across all rounds
                 </p>
               </div>
 
-              <div className="rounded-3xl overflow-hidden bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl">
-                <table className="w-full text-left">
+              <div className="rounded-3xl overflow-x-auto bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl">
+                <table className="w-full text-left min-w-[800px]">
                   <thead>
-                    <tr className="bg-black/40 text-[12px] font-black text-[#f4a460] uppercase tracking-[0.2em]">
-                      <th className="px-10 py-6 text-center">Rank</th>
-                      <th className="px-10 py-6">Team</th>
-                      <th className="px-10 py-6 text-right">Rapid Fire</th>
-                      <th className="px-10 py-6 text-right">Cascade</th>
-                      <th className="px-10 py-6 text-right">DSA</th>
-                      <th className="px-10 py-6 text-right">Total</th>
+                    <tr className="bg-black/40 text-[10px] md:text-[12px] font-black text-[#f4a460] uppercase tracking-[0.2em]">
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-center">Rank</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6">Team</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-right">Rapid Fire</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-right">Cascade</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-right">DSA</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-right">Total</th>
                     </tr>
                   </thead>
 
@@ -141,8 +141,8 @@ function Leaderboard() {
         </main>
 
         {/* FOOTER */}
-        <footer className="border-t border-white/5 py-10 px-12 bg-black/30 backdrop-blur-xl">
-          <div className="max-w-[1600px] mx-auto flex justify-between text-gray-400 text-sm">
+        <footer className="border-t border-white/5 py-8 md:py-10 px-4 md:px-12 bg-black/30 backdrop-blur-xl">
+          <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row justify-between text-gray-400 text-xs md:text-sm text-center sm:text-left">
             <p>© 2026 Grand Prix Quiz Platform</p>
           </div>
         </footer>
@@ -170,13 +170,13 @@ function Podium({ rank, name, score, type, large }) {
   const emoji = { gold: "🥇", silver: "🥈", bronze: "🥉" };
 
   return (
-    <div className={`flex flex-col items-center ${large ? "scale-110" : ""}`}>
-      <div className={`rounded-full border-4 ${colors[type]} ${large ? "size-44" : "size-32"} mb-4 flex items-center justify-center ${bgColors[type]}`}>
-        <span className={`${large ? "text-6xl" : "text-4xl"}`}>{emoji[type]}</span>
+    <div className={`flex flex-col items-center min-w-[100px] md:min-w-0 ${large ? "scale-105 md:scale-110" : ""}`}>
+      <div className={`rounded-full border-4 ${colors[type]} flex items-center justify-center mb-2 md:mb-4 ${bgColors[type]} ${large ? "size-24 sm:size-32 md:size-44" : "size-16 sm:size-24 md:size-32"}`}>
+        <span className={`${large ? "text-4xl sm:text-5xl md:text-6xl" : "text-2xl sm:text-3xl md:text-4xl"}`}>{emoji[type]}</span>
       </div>
-      <h3 className={`font-bold ${large ? "text-2xl" : "text-xl"}`}>{name}</h3>
-      <p className="text-[#f4a460] font-bold">{score} pts</p>
-      <span className="mt-1 font-black">#{rank}</span>
+      <h3 className={`font-bold text-center truncate w-full px-2 ${large ? "text-lg sm:text-xl md:text-2xl" : "text-sm sm:text-lg md:text-xl"}`}>{name}</h3>
+      <p className="text-[#f4a460] font-bold text-sm md:text-base">{score} pts</p>
+      <span className="mt-1 font-black text-xs md:text-base text-white/50">#{rank}</span>
     </div>
   );
 }
@@ -184,12 +184,12 @@ function Podium({ rank, name, score, type, large }) {
 function Row({ rank, name, rapidfire, cascade, dsa, total, highlight }) {
   return (
     <tr className={`${highlight ? "bg-[#d15b2c]/15 border-l-4 border-[#f4a460]" : "hover:bg-white/5"} transition`}>
-      <td className="px-10 py-6 text-center font-bold text-[#f4a460]">{rank}</td>
-      <td className="px-10 py-6 font-bold">{name}</td>
-      <td className="px-10 py-6 text-right font-mono">{rapidfire}</td>
-      <td className="px-10 py-6 text-right font-mono">{cascade}</td>
-      <td className="px-10 py-6 text-right font-mono">{dsa}</td>
-      <td className="px-10 py-6 text-right font-black text-lg">{total}</td>
+      <td className="px-4 md:px-10 py-4 md:py-6 text-center font-bold text-[#f4a460] text-sm md:text-base">{rank}</td>
+      <td className="px-4 md:px-10 py-4 md:py-6 font-bold text-sm md:text-base whitespace-nowrap">{name}</td>
+      <td className="px-4 md:px-10 py-4 md:py-6 text-right font-mono text-sm md:text-base">{rapidfire}</td>
+      <td className="px-4 md:px-10 py-4 md:py-6 text-right font-mono text-sm md:text-base">{cascade}</td>
+      <td className="px-4 md:px-10 py-4 md:py-6 text-right font-mono text-sm md:text-base">{dsa}</td>
+      <td className="px-4 md:px-10 py-4 md:py-6 text-right font-black text-base md:text-lg">{total}</td>
     </tr>
   );
 }

@@ -502,7 +502,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             {/* COMPLETION OVERLAY */}
             {showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
-                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(255,140,0,0.2)] text-center">
+                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-6 sm:p-12 max-w-md w-[90%] sm:w-full shadow-[0_0_80px_rgba(255,140,0,0.2)] text-center mx-4">
                         <div className="text-7xl mb-6">🏆</div>
                         <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
                         <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
@@ -525,7 +525,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             {/* PROCTORING WARNING OVERLAY */}
             {showWarning && !showCompletionOverlay && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-10 max-w-md w-full shadow-[0_0_60px_rgba(255,100,0,0.15)] text-center">
+                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-6 sm:p-10 max-w-md w-[90%] sm:w-full shadow-[0_0_60px_rgba(255,100,0,0.15)] text-center mx-4">
                         <div className="text-6xl mb-6">⚠️</div>
                         <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
                         <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
@@ -541,62 +541,64 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             )}
 
             {/* TOP NAVIGATION BAR */}
-            <nav className="h-[60px] bg-[#282828] border-b border-[#3e3e3e] flex items-center justify-between px-6 shrink-0 z-50">
-                <div className="flex items-center gap-4">
-                    <span className="text-orange-500 font-bold tracking-widest uppercase">Rapid Fire</span>
-                    <div className="bg-[#333] px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
-                        <span className="text-xs text-gray-400">Question</span>
-                        <span className="text-white font-bold">{currentIndex + 1} / {questions.length}</span>
+            <nav className="min-h-[60px] bg-[#282828] border-b border-[#3e3e3e] flex flex-col lg:flex-row items-center justify-between px-4 lg:px-6 py-3 lg:py-0 shrink-0 z-50 gap-4 lg:gap-0">
+                <div className="flex items-center gap-3 lg:gap-4 w-full lg:w-auto justify-between lg:justify-start">
+                    <span className="text-orange-500 font-bold tracking-widest uppercase text-xs lg:text-sm">Rapid Fire</span>
+                    <div className="bg-[#333] px-2 lg:px-3 py-1 rounded-full border border-white/10 flex items-center gap-1 lg:gap-2">
+                        <span className="text-[10px] lg:text-xs text-gray-400">Question</span>
+                        <span className="text-xs lg:text-sm text-white font-bold">{currentIndex + 1} / {questions.length}</span>
                     </div>
                 </div>
 
                 {/* TIMERS */}
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4 lg:gap-6 bg-[#333]/50 lg:bg-transparent px-4 lg:px-0 py-2 lg:py-0 rounded-xl w-full lg:w-auto justify-center">
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] text-gray-500 uppercase font-bold">Question Timer</span>
-                        <span className={`font-mono text-xl font-bold ${timeLeft < 30 ? "text-red-500 animate-pulse" : "text-white"}`}>
+                        <span className="text-[9px] lg:text-[10px] text-gray-500 uppercase font-bold">Question Timer</span>
+                        <span className={`font-mono text-lg lg:text-xl font-bold ${timeLeft < 30 ? "text-red-500 animate-pulse" : "text-white"}`}>
                             {totalTimeLeft !== null && timeLeft !== null ? formatTime(Math.min(timeLeft, totalTimeLeft)) : "--:--"}
                         </span>
                     </div>
-                    <div className="w-px h-8 bg-white/10"></div>
+                    <div className="w-px h-6 lg:h-8 bg-white/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] text-gray-500 uppercase font-bold">Total Time</span>
-                        <span className="font-mono text-xl text-orange-400">
+                        <span className="text-[9px] lg:text-[10px] text-gray-500 uppercase font-bold">Total Time</span>
+                        <span className="font-mono text-lg lg:text-xl text-orange-400">
                             {totalTimeLeft !== null ? formatTime(totalTimeLeft) : "--:--"}
                         </span>
                     </div>
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex items-center gap-3">
-                    <div className="bg-[#333] h-8 px-4 rounded-full border border-white/10 flex items-center gap-2 mr-2 shadow-inner">
-                        <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Score</span>
-                        <span className="text-orange-400 font-mono font-bold text-sm">{rapidfireScore}</span>
-                        <FiZap className="text-orange-500 text-sm" />
+                <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto justify-between lg:justify-end">
+                    <div className="bg-[#333] h-8 px-3 lg:px-4 rounded-full border border-white/10 flex items-center gap-1 lg:gap-2 mr-0 lg:mr-2 shadow-inner">
+                        <span className="text-[9px] lg:text-[10px] text-gray-400 uppercase font-bold tracking-wider">Score</span>
+                        <span className="text-orange-400 font-mono font-bold text-xs lg:text-sm">{rapidfireScore}</span>
+                        <FiZap className="text-orange-500 text-xs lg:text-sm" />
                     </div>
-                    <button
-                        onClick={handleRun}
-                        disabled={isRunning}
-                        className="flex items-center gap-2 px-4 py-2 rounded bg-[#3e3e3e] hover:bg-[#4e4e4e] text-white text-sm font-bold transition"
-                    >
-                        <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} /> Run
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isRunning}
-                        className="flex items-center gap-2 px-6 py-2 rounded bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
-                    >
-                        <FiUpload /> Submit
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleRun}
+                            disabled={isRunning}
+                            className="flex items-center justify-center gap-1 lg:gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded bg-[#3e3e3e] hover:bg-[#4e4e4e] text-white text-xs lg:text-sm font-bold transition"
+                        >
+                            <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} /> Run
+                        </button>
+                        <button
+                            onClick={handleSubmit}
+                            disabled={isRunning}
+                            className="flex items-center justify-center gap-1 lg:gap-2 px-4 lg:px-6 py-1.5 lg:py-2 rounded bg-orange-600 hover:bg-orange-500 text-white text-xs lg:text-sm font-bold transition shadow-lg shadow-orange-500/20"
+                        >
+                            <FiUpload /> <span className="hidden sm:inline">Submit</span>
+                        </button>
+                    </div>
                 </div>
             </nav>
 
-            <div className="flex flex-1 overflow-hidden p-2 gap-0 bg-[#1a1a1a]">
+            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden p-2 gap-2 lg:gap-0 bg-[#1a1a1a] overflow-y-auto lg:overflow-y-hidden">
 
                 {/* LEFT PANEL: PROBLEM DESCRIPTION */}
                 <div
-                    style={{ width: `${leftPanelWidth}%` }}
-                    className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
+                    style={{ '--left-panel-width': `${leftPanelWidth}%` }}
+                    className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0 min-h-[40vh] lg:min-h-0 w-full lg:w-[var(--left-panel-width)]"
                 >
                     {/* Header */}
                     <div className="h-10 bg-[#333333] flex items-center px-4 shrink-0 border-b border-[#3e3e3e]">
@@ -652,7 +654,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 {/* HORIZONTAL RESIZE HANDLE */}
                 <div
                     onMouseDown={startHorizontalResize}
-                    className="w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+                    className="hidden lg:flex w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 items-center justify-center group"
                 >
                     <div className="w-[3px] h-12 bg-gray-600 group-hover:bg-orange-500" />
                 </div>
@@ -660,8 +662,8 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 {/* RIGHT PANEL: EDITOR & CONSOLE */}
                 <div
                     id="right-panel-container"
-                    style={{ width: `${100 - leftPanelWidth}%` }}
-                    className="flex flex-col gap-0 min-w-0 shrink-0"
+                    style={{ '--right-panel-width': `${100 - leftPanelWidth}%` }}
+                    className="flex flex-col gap-2 lg:gap-0 min-w-0 shrink-0 flex-1 min-h-[60vh] lg:min-h-0 w-full lg:w-[var(--right-panel-width)]"
                 >
 
                     {/* TOP: EDITOR SECTION */}

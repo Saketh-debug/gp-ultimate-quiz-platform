@@ -296,21 +296,24 @@ void main(void) {
   float bg=clouds(vec2(st.x+T*.5,-st.y));
   uv*=1.-.3*(sin(T*.2)*.5+.5);
   for (float i=1.; i<12.; i++) {
-    uv+=.1*cos(i*vec2(.1+.01*i, .8)+i*i+T*.5+.1*uv.x);
-    vec2 p=uv;
+    uv+=.1*cos(i*vec2(1.2+.05*i, .08)+i*i+T*1.2+.1*uv.x);
+    // 5 visible streaks: short cycle, staggered so they spread across the screen
+    // Phase offsets (i*0.8) ensure streaks are already on-screen at T=0
+    float drift = mod(T*0.3 + i*0.8, 3.5) - 2.0;
+    vec2 p=uv+vec2(drift, 0.0);
     float d=length(p);
-    // Martian orange color palette: shift from gold/yellow to deep red-orange
-    // cos(sin(i)*vec3(1,2,3)) oscillates in [-1,1]; bias toward warm reds
+    // Martian orange color palette
     vec3 marsColor = vec3(
-      0.757 + 0.243*cos(sin(i)*1.0),   // R: deep red → bright orange
-      0.180 + 0.149*cos(sin(i)*2.0),   // G: low green for warmth
-      0.040 + 0.060*cos(sin(i)*3.0)    // B: near-zero blue, dusty
+      0.757 + 0.243*cos(sin(i)*1.0),
+      0.180 + 0.149*cos(sin(i)*2.0),
+      0.040 + 0.060*cos(sin(i)*3.0)
     );
-    col+=.00125/d*marsColor;
+    // Brighter streaks so multiple are clearly visible
+    col+=.002/d*marsColor;
     float b=noise(i+p+bg*1.731);
-    col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));
-    // Mars surface fog: deep crimson-rust tones instead of amber
-    col=mix(col,vec3(bg*.30,bg*.08,bg*.02),d);
+    col+=.003*b/length(max(p,vec2(b*p.x*.02,p.y)));
+    // Clamp d to [0,1] to prevent color blowout when streaks exit viewport
+    col=mix(col,vec3(bg*.30,bg*.08,bg*.02),clamp(d,0.0,1.0));
   }
   O=vec4(col,1);
 }`;

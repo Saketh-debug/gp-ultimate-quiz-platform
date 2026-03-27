@@ -30,7 +30,9 @@ const supabase = createClient(
 async function upload() {
     console.log("🔌 Connecting to local DB...");
     await localPool.query("SELECT 1");
-    console.log("✅ Local DB connected.\n");
+    // Ensure the sample_input column exists on the local DB just in case
+    await localPool.query("ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS sample_input TEXT DEFAULT ''");
+    console.log("✅ Local DB connected and schema verified.\n");
 
     // ── 1. Read all local questions ──────────────────────────────────────────
     console.log("📖 Reading questions from local DB...");
@@ -103,6 +105,7 @@ async function upload() {
                 base_points: q.base_points,
                 sequence_order: q.sequence_order,
                 time_limit: q.time_limit,
+                sample_input: q.sample_input || '',
             })
             .select("id")
             .single();

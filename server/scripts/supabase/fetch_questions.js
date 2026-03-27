@@ -30,7 +30,9 @@ const supabase = createClient(
 async function fetch() {
     console.log("🔌 Connecting to local DB...");
     await localPool.query("SELECT 1");
-    console.log("✅ Local DB connected.\n");
+    // Ensure the sample_input column exists on the local DB (e.g. for new PC setups)
+    await localPool.query("ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS sample_input TEXT DEFAULT ''");
+    console.log("✅ Local DB connected and schema verified.\n");
 
     // ── 1. Fetch all questions from Supabase ──────────────────────────────────
     console.log("☁️  Fetching questions from Supabase...");

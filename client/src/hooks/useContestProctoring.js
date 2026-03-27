@@ -22,7 +22,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 // ─── Configurable constants ────────────────────────────────────────────────────
 // Change MAX_VIOLATIONS to adjust how many proctoring violations are allowed
 // before the user is automatically disqualified and logged out.
-const MAX_VIOLATIONS = 5;
+const MAX_VIOLATIONS = 10;
 // ──────────────────────────────────────────────────────────────────────────────
 // --- Passive DevTools detection helpers (defined once outside the hook) ---
 

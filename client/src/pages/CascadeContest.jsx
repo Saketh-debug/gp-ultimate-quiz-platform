@@ -869,7 +869,7 @@ export default function CascadeContest({ session }) {
                             disabled={isRunning}
                             className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#ff4d20] to-[#e63e15] hover:from-[#ff623d] hover:to-[#ff4d20] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
                         >
-                            {isRunning ? "Transmitting..." : "Submit Node"} <FiUpload />
+                            {isRunning ? "Transmitting..." : "Submit Question"} <FiUpload />
                         </button>
                     </div>
                 </div>
@@ -883,7 +883,7 @@ export default function CascadeContest({ session }) {
                             onClick={() => setShowGoBackModal(true)}
                             className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff4d20] hover:text-white transition bg-[#ff4d20]/10 hover:bg-[#ff4d20]/20 border border-[#ff4d20]/30 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(255,77,32,0.1)]"
                         >
-                            <FiRotateCcw /> Review Previous Nodes
+                            <FiRotateCcw /> Review Previous Questions
                         </button>
                     )}
                     {isReviewMode && (
@@ -891,7 +891,7 @@ export default function CascadeContest({ session }) {
                             onClick={() => setShowReturnForwardModal(true)}
                             className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-4 py-2 rounded-lg animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.1)]"
                         >
-                            Return to Forward Node <FiArrowRight />
+                            Return to Forward Question <FiArrowRight />
                         </button>
                     )}
                 </div>
@@ -902,7 +902,7 @@ export default function CascadeContest({ session }) {
                         onClick={() => setShowSkipModal(true)}
                         className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 hover:text-[#ff4d20] transition bg-white/5 hover:bg-[#ff4d20]/10 border border-white/10 hover:border-[#ff4d20]/40 px-4 py-2 rounded-lg group shadow-[0_0_10px_rgba(255,255,255,0.02)] hover:shadow-[0_0_15px_rgba(255,77,32,0.15)]"
                     >
-                        Skip Node <FiSkipForward className="group-hover:translate-x-1 transition-transform" />
+                        Skip Question <FiSkipForward className="group-hover:translate-x-1 transition-transform" />
                     </button>
                 )}
             </div>
@@ -914,12 +914,12 @@ export default function CascadeContest({ session }) {
                 {isReviewMode && (
                     <div className="w-64 border-r border-[#ff4d20]/10 bg-[#140a08] flex flex-col shrink-0">
                         <div className="p-4 border-b border-[#ff4d20]/10">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-white/50">Skipped Nodes</h3>
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white/50">Skipped Questions</h3>
                             <p className="text-[10px] text-white/30 mt-1">Select to resolve. Base points only.</p>
                         </div>
                         <div className="flex-1 overflow-y-auto p-2 space-y-2">
                             {reviewQuestions.length === 0 ? (
-                                <div className="p-4 text-center text-xs text-white/20 italic">No unresolved nodes found.</div>
+                                <div className="p-4 text-center text-xs text-white/20 italic">No unresolved questions found.</div>
                             ) : (
                                 reviewQuestions.map((q) => (
                                     <button
@@ -1076,7 +1076,7 @@ export default function CascadeContest({ session }) {
                                     className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
                                         ${rightTab === "result" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
                                 >
-                                    Telemetry
+                                    Output
                                 </button>
                             </div>
 

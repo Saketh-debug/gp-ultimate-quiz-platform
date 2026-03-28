@@ -193,7 +193,7 @@ function DSA() {
               <div className="space-y-6 sm:space-y-8">
                 {[
                   ["avg_pace", "Standard Points", "Each correct solution gives base score."],
-                  ["avg_pace", "Complexity Bonus", "Better complexity submissions gives higher scores."],
+                  ["avg_pace", "Complexity Bonus", "Better time complexity submissions gives higher scores."],
                   ["check_alert", "Partial Scoring", "Partial scoring for submissions as per the test cases passed."],
                 ].map(([label, title, desc]) => (
                   <div key={title} className="flex flex-col sm:flex-row items-start gap-3 sm:gap-6">

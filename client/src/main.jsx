@@ -25,7 +25,9 @@ import AdminLogin from './pages/AdminLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import AdminQuestions from './pages/AdminQuestions.jsx'
 import AdminSampleInputs from './pages/AdminSampleInputs.jsx'
+import ani from './components/ui/animated-shader-hero.jsx'
 import './index.css'
+import AnimatedShaderHero from './components/ui/animated-shader-hero.jsx';
 
 // Point Monaco Editor to local files instead of the CDN (works offline on LAN)
 loader.config({ paths: { vs: `${import.meta.env.BASE_URL}node_modules/monaco-editor/min/vs` } });
@@ -38,6 +40,10 @@ const router = createBrowserRouter([
     {
         path: "/",
         element: <App />
+    },
+    {
+        path: "/ani",
+        element: <AnimatedShaderHero />
     },
     {
         path: "/app",

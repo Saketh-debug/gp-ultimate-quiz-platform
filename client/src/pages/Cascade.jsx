@@ -186,7 +186,7 @@ function Cascade() {
               </div>
 
               <p className="text-center text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-white/30 mt-6">
-                Biometric sync active • Multiplier enabled
+                Token Sync Active • Multiplier enabled
               </p>
             </div>
           </div>

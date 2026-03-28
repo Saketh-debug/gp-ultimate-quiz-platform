@@ -423,7 +423,7 @@ export default function DSAContest({ session }) {
                                 localStorage.setItem("dsaCurrentIndex", nextUnsolvedIndex);
                                 setOutput("");
                                 setStatusMessage("");
-                                setRightTab("result");
+                                setRightTab("input");
                             } else {
                                 triggerCompletion("Congratulations! You have solved all DSA questions!");
                             }
@@ -459,7 +459,7 @@ export default function DSAContest({ session }) {
         localStorage.setItem("dsaCurrentIndex", idx);
         setOutput("");
         setStatusMessage("");
-        setRightTab("result");
+        setRightTab("input");
     };
 
     const handleResetCode = () => {

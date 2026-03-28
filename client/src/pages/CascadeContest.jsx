@@ -542,7 +542,7 @@ export default function CascadeContest({ session }) {
     const resetEditorState = () => {
         setOutput("");
         setStatusMessage("");
-        setRightTab("result");
+        setRightTab("input");
     };
 
     const handleResetCode = () => {

@@ -384,7 +384,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 setCurrentIndex(nextIdx);
                 setOutput("");
                 setStatusMessage("");
-                setRightTab("result");
+                setRightTab("input");
                 // Code for the next question will be loaded from localStorage via getCodeOrBoilerplate in the editor
 
                 // Notify Backend to start timer for this new question and get timeLeft

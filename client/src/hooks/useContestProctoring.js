@@ -102,14 +102,6 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
         backendUrlRef.current = backendUrl;
     }, [backendUrl]);
 
-    const incrementViolations = useCallback(() => {
-        setViolationCount(prev => {
-            const next = prev + 1;
-            sessionStorage.setItem(STORAGE_KEY, String(next));
-            return next;
-        });
-    }, [STORAGE_KEY]);
-
     /**
      * Show the disqualification overlay.
      * Bypasses the normal showOverlay guard so it always wins over any in-progress overlay.
@@ -129,19 +121,16 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
                     round: contestPrefix,
                     violations: MAX_VIOLATIONS,
                 });
-                // sendBeacon: survives navigate() + Component unmount
-                // Falls back to fetch if sendBeacon is unavailable
-                if (navigator.sendBeacon) {
-                    const blob = new Blob([payload], { type: "application/json" });
-                    navigator.sendBeacon(`${url}/admin/disqualify-report`, blob);
-                } else {
-                    fetch(`${url}/admin/disqualify-report`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: payload,
-                        keepalive: true,
-                    }).catch(() => { }); // fire-and-forget
-                }
+                // Use fetch with keepalive:true — survives navigate() + Component unmount.
+                // sendBeacon with application/json Blob triggers a CORS preflight that
+                // sendBeacon cannot handle, causing the request to be silently dropped.
+                // fetch with explicit Content-Type headers is reliable and CORS-safe.
+                fetch(`${url}/admin/disqualify-report`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: payload,
+                    keepalive: true, // survives page unload if user clicks Exit Contest quickly
+                }).catch(() => { }); // fire-and-forget
             }
         } catch (_) { /* non-critical */ }
 
@@ -156,9 +145,10 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
     }, [onDisqualify, contestPrefix]);
 
     /**
-     * Read the current violation count synchronously from sessionStorage.
-     * If it is >= MAX_VIOLATIONS, trigger disqualification and return true.
-     * Callers should skip their normal overlay when this returns true.
+     * Used by the DevTools-reload path (effect 3a) which has already called
+     * incrementViolations() in the polling interval before reloading.
+     * Reads the CURRENT count from sessionStorage and triggers disqualification
+     * if it has already reached MAX_VIOLATIONS.
      */
     const checkViolationLimit = useCallback(() => {
         const current = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
@@ -169,18 +159,37 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
         return false;
     }, [STORAGE_KEY, triggerDisqualification]);
 
+    /**
+     * showOverlay — increment FIRST, then check if the new count hits the limit.
+     *
+     * Previous (buggy) order: check → increment → show warning
+     *   → disqualification only fired on the (MAX_VIOLATIONS + 1)th event
+     *
+     * Fixed order: increment → check → disqualify OR show warning
+     *   → disqualification fires exactly on the MAX_VIOLATIONSth event
+     */
     const showOverlay = useCallback((message, buttonText, action) => {
         if (isShowingWarningRef.current) return; // one at a time
         if (contestEndedRef.current) return;
-        // If this next violation would hit (or exceed) the limit, disqualify instead
-        if (checkViolationLimit()) return;
+
+        // Increment synchronously in sessionStorage so it survives reloads,
+        // and update React state for the UI violation counter.
+        const next = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10) + 1;
+        sessionStorage.setItem(STORAGE_KEY, String(next));
+        setViolationCount(next);
+
+        // If the new count has hit the limit, disqualify instead of a regular warning.
+        if (next >= MAX_VIOLATIONS) {
+            triggerDisqualification();
+            return;
+        }
+
         isShowingWarningRef.current = true;
-        incrementViolations();
         setWarningMessage(message);
         setWarningButtonText(buttonText);
         warningActionRef.current = action;
         setShowWarning(true);
-    }, [incrementViolations, checkViolationLimit]);
+    }, [STORAGE_KEY, triggerDisqualification]);
 
     const dismissWarning = useCallback(() => {
         setShowWarning(false);
@@ -351,7 +360,9 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
 
             if (detected) {
                 // Persist flag and violation count BEFORE reloading (synchronous storage ops)
-                incrementViolations();
+                // Inline increment: sessionStorage must be updated synchronously before reload
+                const nextCount = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10) + 1;
+                sessionStorage.setItem(STORAGE_KEY, String(nextCount));
                 sessionStorage.setItem(DEVTOOLS_RELOAD_FLAG, 'true');
                 window.location.reload();
                 // No clearInterval needed — the page is about to unload
@@ -359,7 +370,8 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
         }, 1500);
 
         return () => clearInterval(interval);
-    }, [contestEnded, incrementViolations, DEVTOOLS_RELOAD_FLAG]);
+    }, [contestEnded, STORAGE_KEY, DEVTOOLS_RELOAD_FLAG]);
+
 
     // --- 4. Keyboard shortcut blocking ---
 

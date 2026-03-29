@@ -123,13 +123,14 @@ router.post("/start-round", async (req, res) => {
 
 // Stop Round
 router.post("/stop-round", async (req, res) => {
-    const { roundName } = req.body; // token removed — handled by router.use middleware
+    const { roundName } = req.body;
     try {
-        await pool.query("UPDATE round_control SET is_active = FALSE WHERE round_name = $1", [roundName]);
+        // Clear pause state when stopping — prevents stale is_paused=TRUE on next restart
+        await pool.query(
+            "UPDATE round_control SET is_active = FALSE, is_paused = FALSE, paused_at = NULL WHERE round_name = $1",
+            [roundName]
+        );
 
-        // Cap active session end_times to now so streak bonus can be applied immediately
-        // Using parameterized JS Date (not SQL NOW()) to stay consistent with how
-        // end_time was originally written — avoids mixed-timezone data in the column
         const now = new Date();
         if (roundName === 'cascade') {
             await pool.query(
@@ -144,11 +145,8 @@ router.post("/stop-round", async (req, res) => {
             );
         }
 
-        // Broadcast to all connected clients
         const io = req.app.get("io");
-        if (io) {
-            io.emit("round_stopped", { roundName });
-        }
+        if (io) io.emit("round_stopped", { roundName });
 
         res.json({ success: true, message: "Round stopped." });
     } catch (err) {
@@ -156,11 +154,101 @@ router.post("/stop-round", async (req, res) => {
     }
 });
 
+// Pause Round
+router.post("/pause-round", async (req, res) => {
+    const { roundName } = req.body;
+    const now = new Date();
+    try {
+        const result = await pool.query(
+            `UPDATE round_control
+             SET is_paused = TRUE, paused_at = $2
+             WHERE round_name = $1 AND is_active = TRUE AND is_paused = FALSE`,
+            [roundName, now]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(400).json({ error: "Round is already paused, not active, or not found." });
+        }
+
+        const io = req.app.get("io");
+        if (io) io.emit("round_paused", { roundName });
+
+        res.json({ success: true, message: "Round paused." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Resume Round
+router.post("/resume-round", async (req, res) => {
+    const { roundName } = req.body;
+    const now = new Date();
+    try {
+        const rcRes = await pool.query(
+            "SELECT paused_at FROM round_control WHERE round_name = $1 AND is_paused = TRUE",
+            [roundName]
+        );
+        if (rcRes.rows.length === 0) {
+            return res.status(400).json({ error: "Round is not paused or not found." });
+        }
+
+        const pausedAt = new Date(rcRes.rows[0].paused_at);
+        const pauseDurationMs = now - pausedAt;
+
+        // Shift timestamps for the specific round being resumed
+        if (roundName === 'rapidfire') {
+            // Shift user_sessions.end_time forward
+            await pool.query(
+                `UPDATE user_sessions
+                 SET end_time = end_time + ($1 || ' milliseconds')::interval
+                 WHERE end_time > $2`,
+                [pauseDurationMs, pausedAt]
+            );
+
+            // Shift user_questions.start_time forward for in-progress questions
+            await pool.query(
+                `UPDATE user_questions
+                 SET start_time = start_time + ($1 || ' milliseconds')::interval
+                 WHERE start_time IS NOT NULL
+                   AND status NOT IN ('ACCEPTED', 'TIMEOUT')`,
+                [pauseDurationMs]
+            );
+        }
+
+        if (roundName === 'cascade') {
+            // Cascade only has a session-level timer — shift cascade_sessions.end_time forward
+            await pool.query(
+                `UPDATE cascade_sessions
+                 SET end_time = end_time + ($1 || ' milliseconds')::interval
+                 WHERE end_time > $2`,
+                [pauseDurationMs, pausedAt]
+            );
+        }
+
+        // Clear pause state
+        await pool.query(
+            "UPDATE round_control SET is_paused = FALSE, paused_at = NULL WHERE round_name = $1",
+            [roundName]
+        );
+
+        const io = req.app.get("io");
+        if (io) io.emit("round_resumed", { roundName });
+
+        res.json({ success: true, message: "Round resumed.", pauseDurationMs });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Reset Round
 router.post("/reset-round", async (req, res) => {
-    const { roundName } = req.body; // token removed — handled by router.use middleware
+    const { roundName } = req.body;
     try {
-        await pool.query("UPDATE round_control SET is_active = FALSE, start_time = NULL WHERE round_name = $1", [roundName]);
+        // Also clear pause state so a fresh start has no stale flags
+        await pool.query(
+            "UPDATE round_control SET is_active = FALSE, start_time = NULL, is_paused = FALSE, paused_at = NULL WHERE round_name = $1",
+            [roundName]
+        );
         res.json({ success: true, message: "Round reset to Not Started." });
     } catch (err) {
         res.status(500).json({ error: err.message });

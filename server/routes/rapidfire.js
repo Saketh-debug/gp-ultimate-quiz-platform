@@ -14,22 +14,28 @@ const BASE_POINTS = 10;
 const QUESTION_DURATION = 300; // 5 minutes per question
 
 /**
- * Helper: Calculate remaining time for a specific question (3 mins max)
+ * Helper: Calculate remaining time for a specific question.
+ * If the round is paused, we cap the effective "now" at pausedAt so the timer
+ * does not advance while the contest is frozen.
  */
-function getQuestionTimeLeft(startTime) {
+function getQuestionTimeLeft(startTime, pausedAt) {
     if (!startTime) return QUESTION_DURATION; // Default full time if not started
     const now = new Date();
-    const elapsedSeconds = Math.floor((now - new Date(startTime)) / 1000);
+    // Cap effective current time at pause moment to prevent timer decay during pause
+    const effectiveNow = pausedAt ? new Date(Math.min(now.getTime(), new Date(pausedAt).getTime())) : now;
+    const elapsedSeconds = Math.floor((effectiveNow - new Date(startTime)) / 1000);
     return Math.max(0, QUESTION_DURATION - elapsedSeconds);
 }
 
 // Join or Resume Rapid Fire Round
+// NOTE: Joining (new session) is blocked while round is paused to prevent
+// users from starting with a full timer during a pause freeze.
 router.post("/join", async (req, res) => {
     try {
         const { token } = req.body;
         const now = new Date();
 
-        // 1. Check Round Status
+        // 1. Check Round Status (including pause state)
         const roundStatusRes = await pool.query(
             "SELECT * FROM round_control WHERE round_name = $1",
             [ROUND_NAME]
@@ -39,7 +45,11 @@ router.post("/join", async (req, res) => {
             return res.status(403).json({ error: "Rapid Fire round has not started yet." });
         }
 
-        const roundStartTime = new Date(roundStatusRes.rows[0].start_time);
+        const roundRow = roundStatusRes.rows[0];
+        const isPaused = roundRow.is_paused ?? false;
+        const pausedAt = roundRow.paused_at ? new Date(roundRow.paused_at) : null;
+
+        const roundStartTime = new Date(roundRow.start_time);
         const diffMinutes = (now - roundStartTime) / 1000 / 60;
 
         if (diffMinutes > GRACE_PERIOD_MINUTES) {
@@ -88,6 +98,7 @@ router.post("/join", async (req, res) => {
             );
 
             // --- Find current question, auto-advance past expired ones ---
+            // Pass pausedAt so timer doesn't decay while round is paused
             let currentIndex = -1;
             for (let i = 0; i < qRes.rows.length; i++) {
                 const q = qRes.rows[i];
@@ -96,8 +107,8 @@ router.post("/join", async (req, res) => {
 
                 // This question is a candidate (status is NULL = in-progress or not started)
                 if (q.start_time) {
-                    const remaining = getQuestionTimeLeft(q.start_time);
-                    if (remaining <= 0) {
+                    const remaining = getQuestionTimeLeft(q.start_time, pausedAt);
+                    if (remaining <= 0 && !isPaused) {
                         // Timer expired while user was away — mark as TIMEOUT
                         await pool.query(
                             "UPDATE user_questions SET status = 'TIMEOUT' WHERE user_id = $1 AND question_id = $2",
@@ -123,22 +134,29 @@ router.post("/join", async (req, res) => {
             }
 
             // Auto-start timer for the current question if it hasn't been started
+            // (only if NOT paused — we don't want to start a fresh timer mid-pause)
             const currentQ = qRes.rows[currentIndex];
-            if (!currentQ.start_time && currentQ.status !== 'ACCEPTED' && currentQ.status !== 'TIMEOUT') {
+            if (!currentQ.start_time && currentQ.status !== 'ACCEPTED' && currentQ.status !== 'TIMEOUT' && !isPaused) {
                 await pool.query(
                     "UPDATE user_questions SET start_time = $3 WHERE user_id = $1 AND question_id = $2",
                     [user.id, currentQ.id, now]
                 );
-                currentQ.start_time = now; // reflect in the object we'll return
+                currentQ.start_time = now;
             }
 
-            // Build output with timeLeft per question
+            // Build output with timeLeft per question (pass pausedAt so timer doesn't decay during pause)
             outputQuestions = qRes.rows.map(q => ({
                 ...q,
-                timeLeft: getQuestionTimeLeft(q.start_time)
+                timeLeft: getQuestionTimeLeft(q.start_time, pausedAt)
             }));
 
-            const totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - now) / 1000));
+            // Compute totalTimeLeft — if paused, we freeze the value at what it was when paused
+            let totalTimeLeft;
+            if (isPaused && pausedAt) {
+                totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - pausedAt) / 1000));
+            } else {
+                totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - now) / 1000));
+            }
 
             // Issue a fresh JWT on resume (re-validates identity, kicks old sockets)
             const versionRes = await pool.query(
@@ -159,12 +177,18 @@ router.post("/join", async (req, res) => {
                 totalTimeLeft,
                 currentIndex,
                 currentScore: user.rapidfire_score || 0,
+                isPaused,
                 questions: outputQuestions,
                 message: "Resumed session"
             });
 
         } else {
             // --- NEW SESSION ---
+
+            // Block new joins while round is paused
+            if (isPaused) {
+                return res.status(503).json({ error: "Contest is currently paused. Please wait for the admin to resume." });
+            }
 
             // Enforce Grace Period for NEW sessions
             if (diffMinutes > GRACE_PERIOD_MINUTES) {
@@ -313,21 +337,32 @@ router.post("/start-question", authenticateToken, async (req, res) => {
 router.post("/time-check", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     try {
-        // 1. Get session end_time
         const now = new Date();
+
+        // 0. Get round pause state — affects all timer computations
+        const rcRes = await pool.query(
+            "SELECT is_paused, paused_at FROM round_control WHERE round_name = $1",
+            [ROUND_NAME]
+        );
+        const isPaused = rcRes.rows[0]?.is_paused ?? false;
+        const pausedAt = rcRes.rows[0]?.paused_at ? new Date(rcRes.rows[0].paused_at) : null;
+        // Effective current time — capped at pausedAt so timers don't decay during pause
+        const effectiveNow = (isPaused && pausedAt) ? pausedAt : now;
+
+        // 1. Get session end_time
         const sessionRes = await pool.query(
             "SELECT end_time FROM user_sessions WHERE user_id = $1 AND end_time > $2",
-            [userId, now]
+            [userId, effectiveNow]
         );
 
         if (sessionRes.rows.length === 0) {
-            return res.json({ totalTimeLeft: 0, questionTimeLeft: 0, contestEnded: true });
+            return res.json({ totalTimeLeft: 0, questionTimeLeft: 0, contestEnded: true, isPaused });
         }
 
         const endTime = new Date(sessionRes.rows[0].end_time);
-        const totalTimeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+        const totalTimeLeft = Math.max(0, Math.floor((endTime - effectiveNow) / 1000));
 
-        // 2. Find current question (auto-advance past expired ones, same logic as /join resume)
+        // 2. Find current question
         const qRes = await pool.query(
             `SELECT uq.question_id, uq.start_time, uq.status, uq.sequence_order
              FROM user_questions uq
@@ -342,13 +377,18 @@ router.post("/time-check", authenticateToken, async (req, res) => {
             if (q.status === 'ACCEPTED' || q.status === 'TIMEOUT') continue;
 
             if (q.start_time) {
-                const remaining = getQuestionTimeLeft(q.start_time);
-                if (remaining <= 0) {
+                const remaining = getQuestionTimeLeft(q.start_time, pausedAt);
+                // Only mark TIMEOUT when NOT paused — during pause the timer is frozen
+                if (remaining <= 0 && !isPaused) {
                     await pool.query(
                         "UPDATE user_questions SET status = 'TIMEOUT' WHERE user_id = $1 AND question_id = $2",
                         [userId, q.question_id]
                     );
                     continue;
+                } else if (remaining <= 0 && isPaused) {
+                    // Timer would expire but we're paused — keep question open
+                    currentIndex = i;
+                    break;
                 }
             }
 
@@ -360,22 +400,22 @@ router.post("/time-check", authenticateToken, async (req, res) => {
             currentIndex = qRes.rows.length - 1;
         }
 
-        // Auto-start timer for the current question if not started
+        // Auto-start timer for the current question if not started (only when not paused)
         const currentQ = qRes.rows[currentIndex];
         let questionTimeLeft = 0;
         if (currentQ && currentQ.status !== 'ACCEPTED' && currentQ.status !== 'TIMEOUT') {
-            if (!currentQ.start_time) {
+            if (!currentQ.start_time && !isPaused) {
                 await pool.query(
                     "UPDATE user_questions SET start_time = $3 WHERE user_id = $1 AND question_id = $2",
                     [userId, currentQ.question_id, now]
                 );
                 questionTimeLeft = QUESTION_DURATION;
             } else {
-                questionTimeLeft = getQuestionTimeLeft(currentQ.start_time);
+                questionTimeLeft = getQuestionTimeLeft(currentQ.start_time, pausedAt);
             }
         }
 
-        res.json({ totalTimeLeft, questionTimeLeft, currentIndex });
+        res.json({ totalTimeLeft, questionTimeLeft, currentIndex, isPaused });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -389,6 +429,16 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
     const userId = req.user.userId; // injected from x-user-id header by dispatcher
     const { questionId } = req.body;
     try {
+        // 0. Reject scoring while round is paused — start_time hasn't been shifted yet,
+        //    so elapsed-time calculation would be wrong. Dispatcher should retry on resume.
+        const pauseCheck = await pool.query(
+            "SELECT is_paused FROM round_control WHERE round_name = $1",
+            [ROUND_NAME]
+        );
+        if (pauseCheck.rows[0]?.is_paused) {
+            return res.status(503).json({ error: "Round is paused — scoring deferred.", retry: true });
+        }
+
         // 1. Fetch question data (also select status for expiry guard)
         const qRes = await pool.query(
             "SELECT start_time, score_awarded, status FROM user_questions WHERE user_id = $1 AND question_id = $2",

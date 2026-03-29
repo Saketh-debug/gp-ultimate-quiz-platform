@@ -124,6 +124,10 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     const [completionMessage, setCompletionMessage] = useState("");
     const isContestEndedRef = useRef(false);
 
+    // Pause state
+    const [isPaused, setIsPaused] = useState(false);
+    const isPausedRef = useRef(false); // stable ref for use inside callbacks/effects
+
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("rapidfire", {
         contestEnded: totalTimeLeft === 0,
@@ -188,25 +192,44 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                     if (data.accessToken) localStorage.setItem('userToken', data.accessToken);
                     setActiveSession(data);
 
-                    // Create an authenticated backend socket so the server
-                    // can map this userId → socketId in userSockets.
-                    // Disconnect any stale socket from a previous page load.
                     if (backendSocketRef.current) backendSocketRef.current.disconnect();
                     const jwt = data.accessToken;
                     const bSocket = io(BACKEND_URL, { auth: { token: jwt } });
                     backendSocketRef.current = bSocket;
 
-                    // Emit register inside the connect callback so the socket
-                    // is guaranteed to be connected before sending.
                     bSocket.on('connect', () => {
                         bSocket.emit('register');
                     });
 
-                    // Listen for force_logout — another device joined with the same token
                     bSocket.on('force_logout', () => {
                         alert('Your session was taken over on another device.');
                         navigate('/rapidfire');
                     });
+
+                    // ── Pause / Resume listeners ──
+                    bSocket.on('round_paused', ({ roundName }) => {
+                        if (roundName === 'rapidfire') {
+                            setIsPaused(true);
+                            isPausedRef.current = true;
+                        }
+                    });
+
+                    bSocket.on('round_resumed', ({ roundName }) => {
+                        if (roundName === 'rapidfire') {
+                            setIsPaused(false);
+                            isPausedRef.current = false;
+                            // Re-sync timers from server (start_time has been shifted)
+                            handleTimeReSync();
+                        }
+                    });
+
+                    // ── Admin round stopped listener (Bug 7 fix) ──
+                    bSocket.on('round_stopped', ({ roundName }) => {
+                        if (roundName === 'rapidfire') {
+                            triggerCompletion(`Contest stopped by admin. Your Rapidfire Score: ${rapidfireScore} points`);
+                        }
+                    });
+
                 } else {
                     alert(data.error || "Session expired");
                     navigate("/rapidfire");
@@ -244,6 +267,12 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 const qTime = activeSession.questions[resumeIndex].timeLeft ?? QUESTION_DURATION;
                 setTimeLeft(qTime);
             }
+
+            // Seed pause state from server
+            if (activeSession.isPaused) {
+                setIsPaused(true);
+                isPausedRef.current = true;
+            }
         }
     }, [activeSession]);
 
@@ -255,17 +284,18 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     }, [currentIndex]);
 
     // Timers — pure decrement, no client clock dependency
+    // Interval is NOT started while paused; React teardown via dep-array cleanup handles freeze.
     useEffect(() => {
         if (!activeSession || timeLeft === null || totalTimeLeft === null) return;
+        if (isPaused) return; // freeze when paused
 
         const timer = setInterval(() => {
-            // Decrement both timers by 1 each second
             setTotalTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1));
             setTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [activeSession, currentIndex, timeLeft !== null, totalTimeLeft !== null]);
+    }, [activeSession, currentIndex, timeLeft !== null, totalTimeLeft !== null, isPaused]);
 
     // triggerCompletion — called from timer expiry and all-questions-done paths
     function triggerCompletion(msg) {
@@ -287,8 +317,9 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     }, [totalTimeLeft]);
 
     // Handle question timer expiry — separate from the interval to avoid side effects in state updater
+    // Skip auto-advance while paused so questions can't accidentally time out during a pause.
     useEffect(() => {
-        if (timeLeft === 0 && totalTimeLeft > 0) {
+        if (timeLeft === 0 && totalTimeLeft > 0 && !isPausedRef.current) {
             handleNextQuestion();
         }
     }, [timeLeft]);
@@ -300,32 +331,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         const handleVisibilityChange = async () => {
             if (document.visibilityState !== 'visible') return;
             if (isSyncingRef.current) return;
-            if (isContestEndedRef.current) return; // don't sync after contest ended
+            if (isContestEndedRef.current) return;
             isSyncingRef.current = true;
 
             try {
-                const jwt = localStorage.getItem('userToken');
-                const res = await axios.post(`${BACKEND_URL}/rapidfire/time-check`, {}, {
-                    headers: { Authorization: `Bearer ${jwt}` }
-                });
-                const { totalTimeLeft: serverTotal, questionTimeLeft, currentIndex: serverIndex, contestEnded } = res.data;
-
-                if (contestEnded || serverTotal <= 0) {
-                    setTotalTimeLeft(0);
-                    return;
-                }
-
-                setTotalTimeLeft(serverTotal);
-                if (questionTimeLeft <= 0) {
-                    // Question expired while away — backend advance is authoritative
-                    setCurrentIndex(serverIndex);
-                    setTimeLeft(0); // triggers timeLeft effect → handleNextQuestion
-                } else {
-                    // Question still running — only sync timers, don't touch currentIndex
-                    setTimeLeft(questionTimeLeft);
-                }
-            } catch (e) {
-                console.error("Failed to re-sync timers", e);
+                await handleTimeReSync();
             } finally {
                 isSyncingRef.current = false;
             }
@@ -334,6 +344,39 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [activeSession?.userId]);
+
+    // Shared time re-sync helper — called from visibility change AND after resume
+    async function handleTimeReSync() {
+        if (isContestEndedRef.current) return;
+        try {
+            const jwt = localStorage.getItem('userToken');
+            const res = await axios.post(`${BACKEND_URL}/rapidfire/time-check`, {}, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            });
+            const { totalTimeLeft: serverTotal, questionTimeLeft, currentIndex: serverIndex, contestEnded, isPaused: serverPaused } = res.data;
+
+            // Sync pause state from server
+            if (serverPaused !== undefined) {
+                setIsPaused(serverPaused);
+                isPausedRef.current = serverPaused;
+            }
+
+            if (contestEnded || serverTotal <= 0) {
+                setTotalTimeLeft(0);
+                return;
+            }
+
+            setTotalTimeLeft(serverTotal);
+            if (questionTimeLeft <= 0 && !serverPaused) {
+                setCurrentIndex(serverIndex);
+                setTimeLeft(0);
+            } else {
+                setTimeLeft(questionTimeLeft);
+            }
+        } catch (e) {
+            console.error("Failed to re-sync timers", e);
+        }
+    }
 
     // Resizing Logic
     useEffect(() => {
@@ -615,6 +658,15 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 </div>
             )}
 
+            {/* PAUSE BANNER — shown when admin has paused the round */}
+            {isPaused && !showCompletionOverlay && (
+                <div className="fixed top-0 inset-x-0 z-[9998] bg-yellow-400 text-black text-center font-black py-2 uppercase tracking-widest text-sm flex items-center justify-center gap-3 shadow-lg">
+                    <span>⏸</span>
+                    <span>Contest Paused by Admin — Please Wait...</span>
+                    <span>⏸</span>
+                </div>
+            )}
+
             {/* TOP NAVIGATION BAR */}
             <nav className="h-[60px] bg-[#282828] border-b border-[#3e3e3e] flex items-center justify-between px-6 shrink-0 z-50">
                 <div className="flex items-center gap-4">
@@ -651,15 +703,17 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                     </div>
                     <button
                         onClick={handleRun}
-                        disabled={isRunning}
-                        className="flex items-center gap-2 px-4 py-2 rounded bg-[#3e3e3e] hover:bg-[#4e4e4e] text-white text-sm font-bold transition"
+                        disabled={isRunning || isPaused}
+                        className="flex items-center gap-2 px-4 py-2 rounded bg-[#3e3e3e] hover:bg-[#4e4e4e] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition"
+                        title={isPaused ? "Contest paused" : ""}
                     >
                         <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} /> Run
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={isRunning}
-                        className="flex items-center gap-2 px-6 py-2 rounded bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
+                        disabled={isRunning || isPaused}
+                        className="flex items-center gap-2 px-6 py-2 rounded bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
+                        title={isPaused ? "Contest paused" : ""}
                     >
                         <FiUpload /> Submit
                     </button>

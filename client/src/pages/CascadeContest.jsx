@@ -117,6 +117,10 @@ export default function CascadeContest({ session }) {
     // Authenticated backend socket ref — created lazily in initSession with JWT
     const backendSocketRef = useRef(null);
 
+    // Pause state
+    const [isPaused, setIsPaused] = useState(false);
+    const isPausedRef = useRef(false); // stable ref for use inside callbacks/effects
+
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("cascade", {
         contestEnded: totalTimeLeft === 0 || contestStopped,
@@ -191,6 +195,23 @@ export default function CascadeContest({ session }) {
                         navigate('/cascade');
                     });
 
+                    // ── Pause / Resume listeners ──
+                    bSocket.on('round_paused', ({ roundName }) => {
+                        if (roundName === 'cascade') {
+                            setIsPaused(true);
+                            isPausedRef.current = true;
+                        }
+                    });
+
+                    bSocket.on('round_resumed', ({ roundName }) => {
+                        if (roundName === 'cascade') {
+                            setIsPaused(false);
+                            isPausedRef.current = false;
+                            // Re-sync timer from server (end_time has been shifted forward)
+                            handleTimeReSync();
+                        }
+                    });
+
                     // Listen for admin round_stopped broadcast
                     bSocket.on('round_stopped', (data) => {
                         if (data.roundName === 'cascade') {
@@ -232,6 +253,12 @@ export default function CascadeContest({ session }) {
             if (activeSession.totalTimeLeft != null) {
                 setTotalTimeLeft(activeSession.totalTimeLeft);
             }
+
+            // Always sync pause state from server on join/resume
+            // (covers the reload-during-pause case \u2014 socket won't replay past round_paused events)
+            const seededPaused = activeSession.isPaused === true;
+            setIsPaused(seededPaused);
+            isPausedRef.current = seededPaused;
         }
     }, [activeSession]);
 
@@ -243,15 +270,17 @@ export default function CascadeContest({ session }) {
     }, [currentIndex]);
 
     // Timer — pure decrement, no client clock dependency
+    // Interval is NOT started while paused; React teardown via dep-array cleanup handles freeze.
     useEffect(() => {
         if (!activeSession || totalTimeLeft === null) return;
+        if (isPaused) return; // freeze when paused
 
         const timer = setInterval(() => {
             setTotalTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [activeSession, totalTimeLeft !== null]);
+    }, [activeSession, totalTimeLeft !== null, isPaused]);
 
     // triggerCompletion — called from timer expiry and all-questions-done paths
     function triggerCompletion(msg) {
@@ -271,6 +300,33 @@ export default function CascadeContest({ session }) {
         }
     }, [totalTimeLeft]);
 
+    // Shared time re-sync helper — called from visibility change AND after resume
+    async function handleTimeReSync() {
+        if (isContestEndedRef.current) return;
+        try {
+            const jwt = localStorage.getItem('cascadeToken');
+            const res = await axios.post(`${BACKEND_URL}/cascade/time-check`, {}, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            });
+            const { totalTimeLeft: serverTotal, contestEnded, isPaused: serverPaused } = res.data;
+
+            // Sync pause state from server
+            if (serverPaused !== undefined) {
+                setIsPaused(serverPaused);
+                isPausedRef.current = serverPaused;
+            }
+
+            if (contestEnded || serverTotal <= 0) {
+                setTotalTimeLeft(0);
+                return;
+            }
+
+            setTotalTimeLeft(serverTotal);
+        } catch (e) {
+            console.error("Failed to re-sync timer", e);
+        }
+    }
+
     // Visibility re-sync — re-fetch server time when tab wakes up
     useEffect(() => {
         if (!activeSession?.userId) return;
@@ -283,20 +339,7 @@ export default function CascadeContest({ session }) {
             isSyncingRef.current = true;
 
             try {
-                const jwt = localStorage.getItem('cascadeToken');
-                const res = await axios.post(`${BACKEND_URL}/cascade/time-check`, {}, {
-                    headers: { Authorization: `Bearer ${jwt}` }
-                });
-                const { totalTimeLeft: serverTotal, contestEnded } = res.data;
-
-                if (contestEnded || serverTotal <= 0) {
-                    setTotalTimeLeft(0);
-                    return;
-                }
-
-                setTotalTimeLeft(serverTotal);
-            } catch (e) {
-                console.error("Failed to re-sync timer", e);
+                await handleTimeReSync();
             } finally {
                 isSyncingRef.current = false;
             }
@@ -376,7 +419,8 @@ export default function CascadeContest({ session }) {
                     }, 1500);
                 } else {
                     setTimeout(() => {
-                        handleAdvance("Next question");
+                        // Don't auto-advance if admin paused during the 1500ms delay
+                        if (!isPausedRef.current) handleAdvance("Next question");
                     }, 1500);
                 }
             }
@@ -429,6 +473,7 @@ export default function CascadeContest({ session }) {
     // Action: SKIP — opens confirmation modal; actual skip logic in confirmSkip
     const confirmSkip = async () => {
         setShowSkipModal(false);
+        if (isPausedRef.current) return; // extra guard: modal may still be open when pause arrives
         setIsConfirming(true);
         try {
             const jwt = localStorage.getItem('cascadeToken');
@@ -470,6 +515,7 @@ export default function CascadeContest({ session }) {
     // Action: GO BACK
     const handleGoBack = async () => {
         setShowGoBackModal(false);
+        if (isPausedRef.current) return; // extra guard: modal may still be open when pause arrives
         try {
             const jwt = localStorage.getItem('cascadeToken');
             await axios.post(`${BACKEND_URL}/cascade/go-back`, {}, {
@@ -510,6 +556,7 @@ export default function CascadeContest({ session }) {
     // Action: RETURN TO FORWARD PROGRESSION — opens confirmation modal; actual logic in confirmReturnForward
     const confirmReturnForward = async () => {
         setShowReturnForwardModal(false);
+        if (isPausedRef.current) return; // extra guard: modal may still be open when pause arrives
         setIsConfirming(true);
         try {
             const jwt = localStorage.getItem('cascadeToken');
@@ -561,6 +608,7 @@ export default function CascadeContest({ session }) {
 
     async function handleRun() {
         if (!currentQuestion) return;
+        if (isPausedRef.current) return; // block while paused
         lastAction.current = "run";
         setIsRunning(true);
         setRightTab("result");
@@ -592,6 +640,7 @@ export default function CascadeContest({ session }) {
 
     async function handleSubmit() {
         if (!currentQuestion) return;
+        if (isPausedRef.current) return; // block while paused
         lastAction.current = "submit";
         setIsRunning(true);
         setRightTab("result");
@@ -718,7 +767,7 @@ export default function CascadeContest({ session }) {
                         </p>
                         <div className="flex gap-4">
                             <button onClick={() => setShowGoBackModal(false)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition">Cancel</button>
-                            <button onClick={handleGoBack} className="flex-1 py-3 bg-[#ff4d20] hover:bg-[#ff623d] rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(255,77,32,0.4)]">
+                            <button onClick={handleGoBack} disabled={isPaused} className="flex-1 py-3 bg-[#ff4d20] hover:bg-[#ff623d] rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(255,77,32,0.4)] disabled:opacity-50 disabled:cursor-not-allowed">
                                 Break Streak & Review <FiRotateCcw />
                             </button>
                         </div>
@@ -748,7 +797,7 @@ export default function CascadeContest({ session }) {
                             </button>
                             <button
                                 onClick={confirmSkip}
-                                disabled={isConfirming}
+                                disabled={isConfirming || isPaused}
                                 className="flex-1 py-3 bg-[#ff4d20] hover:bg-[#ff623d] rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(255,77,32,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Break Streak & Skip <FiSkipForward />
@@ -780,7 +829,7 @@ export default function CascadeContest({ session }) {
                             </button>
                             <button
                                 onClick={confirmReturnForward}
-                                disabled={isConfirming}
+                                disabled={isConfirming || isPaused}
                                 className="flex-1 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold flex justify-center items-center gap-2 transition shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Confirm & Return <FiArrowRight />
@@ -790,6 +839,15 @@ export default function CascadeContest({ session }) {
                 </div>
             )}
 
+
+            {/* PAUSE BANNER — shown when admin has paused the round */}
+            {isPaused && !showCompletionOverlay && !contestStopped && (
+                <div className="fixed top-0 inset-x-0 z-[9998] bg-yellow-400 text-black text-center font-black py-2 uppercase tracking-widest text-sm flex items-center justify-center gap-3 shadow-lg">
+                    <span>⏸</span>
+                    <span>Contest Paused by Admin — Please Wait...</span>
+                    <span>⏸</span>
+                </div>
+            )}
 
             {/* HEADER */}
             <nav className="h-[70px] bg-[#1a0b08] border-b border-[#ff4d20]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
@@ -865,16 +923,17 @@ export default function CascadeContest({ session }) {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleRun}
-                            disabled={isRunning}
-                            className="flex items-center justify-center gap-2 size-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
-                            title="Run Code"
+                            disabled={isRunning || isPaused}
+                            className="flex items-center justify-center gap-2 size-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isPaused ? "Contest paused" : "Run Code"}
                         >
                             <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} />
                         </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={isRunning}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#ff4d20] to-[#e63e15] hover:from-[#ff623d] hover:to-[#ff4d20] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)]"
+                            disabled={isRunning || isPaused}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#ff4d20] to-[#e63e15] hover:from-[#ff623d] hover:to-[#ff4d20] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,77,32,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isPaused ? "Contest paused" : ""}
                         >
                             {isRunning ? "Transmitting..." : "Submit Question"} <FiUpload />
                         </button>
@@ -888,7 +947,8 @@ export default function CascadeContest({ session }) {
                     {!isReviewMode && highestForwardIndex > 0 && (
                         <button
                             onClick={() => setShowGoBackModal(true)}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff4d20] hover:text-white transition bg-[#ff4d20]/10 hover:bg-[#ff4d20]/20 border border-[#ff4d20]/30 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(255,77,32,0.1)]"
+                            disabled={isPaused}
+                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff4d20] hover:text-white transition bg-[#ff4d20]/10 hover:bg-[#ff4d20]/20 border border-[#ff4d20]/30 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(255,77,32,0.1)] disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <FiRotateCcw /> Review Previous Questions
                         </button>
@@ -896,7 +956,8 @@ export default function CascadeContest({ session }) {
                     {isReviewMode && (
                         <button
                             onClick={() => setShowReturnForwardModal(true)}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-4 py-2 rounded-lg animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                            disabled={isPaused}
+                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-green-500 hover:text-green-400 transition bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-4 py-2 rounded-lg animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.1)] disabled:opacity-40 disabled:cursor-not-allowed disabled:animate-none"
                         >
                             Return to Forward Question <FiArrowRight />
                         </button>
@@ -907,7 +968,8 @@ export default function CascadeContest({ session }) {
                 {!isReviewMode && currentIndex === highestForwardIndex && currentIndex < questions.length - 1 && (
                     <button
                         onClick={() => setShowSkipModal(true)}
-                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 hover:text-[#ff4d20] transition bg-white/5 hover:bg-[#ff4d20]/10 border border-white/10 hover:border-[#ff4d20]/40 px-4 py-2 rounded-lg group shadow-[0_0_10px_rgba(255,255,255,0.02)] hover:shadow-[0_0_15px_rgba(255,77,32,0.15)]"
+                        disabled={isPaused}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 hover:text-[#ff4d20] transition bg-white/5 hover:bg-[#ff4d20]/10 border border-white/10 hover:border-[#ff4d20]/40 px-4 py-2 rounded-lg group shadow-[0_0_10px_rgba(255,255,255,0.02)] hover:shadow-[0_0_15px_rgba(255,77,32,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         Skip Question <FiSkipForward className="group-hover:translate-x-1 transition-transform" />
                     </button>

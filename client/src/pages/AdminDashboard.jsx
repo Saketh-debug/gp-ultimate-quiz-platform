@@ -83,8 +83,11 @@ export default function AdminDashboard() {
             playBeep();
             setDisqLogs(prev => [row, ...prev]);
             setNewEventId(row.id);
-            setTimeout(() => setNewEventId(null), 3000); // clear flash after 3s
+            setTimeout(() => setNewEventId(null), 3000);
         });
+
+        socket.on("round_paused", () => fetchStatus());
+        socket.on("round_resumed", () => fetchStatus());
 
         return () => {
             socket.disconnect();
@@ -155,6 +158,38 @@ export default function AdminDashboard() {
         } catch (err) { alert("Error stopping round"); }
     }
 
+    async function pauseRound(roundName) {
+        if (!confirm(`Pause ${roundName}? Timers for all players will freeze.`)) return;
+        try {
+            const res = await fetch(`${BACKEND_URL}/admin/pause-round`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ roundName }),
+            });
+            const data = await res.json();
+            if (res.ok) { alert(data.message); fetchStatus(); }
+            else { alert(data.error || "Failed to pause round"); }
+        } catch (err) { alert("Error pausing round"); }
+    }
+
+    async function resumeRound(roundName) {
+        if (!confirm(`Resume ${roundName}? Timers will continue from where they stopped.`)) return;
+        try {
+            const res = await fetch(`${BACKEND_URL}/admin/resume-round`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ roundName }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                const secs = Math.round((data.pauseDurationMs || 0) / 1000);
+                alert(`${data.message} (paused for ${secs}s)`);
+                fetchStatus();
+            }
+            else { alert(data.error || "Failed to resume round"); }
+        } catch (err) { alert("Error resuming round"); }
+    }
+
     async function resetRound(roundName) {
         if (!confirm(`RESET ${roundName}? This will reset start time.`)) return;
         try {
@@ -204,7 +239,7 @@ export default function AdminDashboard() {
                     >
                         📋 Manage Questions
                     </button>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <button
                             onClick={() => startRound("rapidfire")}
                             disabled={rounds.rapidfire?.is_active}
@@ -212,12 +247,28 @@ export default function AdminDashboard() {
                         >
                             {rounds.rapidfire?.is_active ? "In Progress" : "Start"}
                         </button>
-                        {rounds.rapidfire?.is_active && (
+                        {rounds.rapidfire?.is_active && !rounds.rapidfire?.is_paused && (
                             <button
                                 onClick={() => stopRound("rapidfire")}
                                 className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
                             >
                                 Stop
+                            </button>
+                        )}
+                        {rounds.rapidfire?.is_active && !rounds.rapidfire?.is_paused && (
+                            <button
+                                onClick={() => pauseRound("rapidfire")}
+                                className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition text-xs uppercase"
+                            >
+                                ⏸ Pause
+                            </button>
+                        )}
+                        {rounds.rapidfire?.is_active && rounds.rapidfire?.is_paused && (
+                            <button
+                                onClick={() => resumeRound("rapidfire")}
+                                className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition text-xs uppercase"
+                            >
+                                ▶ Resume
                             </button>
                         )}
                         <button
@@ -253,7 +304,7 @@ export default function AdminDashboard() {
                     >
                         📋 Manage Questions
                     </button>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <button
                             onClick={() => startRound("cascade")}
                             disabled={rounds.cascade?.is_active}
@@ -261,12 +312,28 @@ export default function AdminDashboard() {
                         >
                             {rounds.cascade?.is_active ? "In Progress" : "Start"}
                         </button>
-                        {rounds.cascade?.is_active && (
+                        {rounds.cascade?.is_active && !rounds.cascade?.is_paused && (
                             <button
                                 onClick={() => stopRound("cascade")}
                                 className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
                             >
                                 Stop
+                            </button>
+                        )}
+                        {rounds.cascade?.is_active && !rounds.cascade?.is_paused && (
+                            <button
+                                onClick={() => pauseRound("cascade")}
+                                className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition text-xs uppercase"
+                            >
+                                ⏸ Pause
+                            </button>
+                        )}
+                        {rounds.cascade?.is_active && rounds.cascade?.is_paused && (
+                            <button
+                                onClick={() => resumeRound("cascade")}
+                                className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition text-xs uppercase"
+                            >
+                                ▶ Resume
                             </button>
                         )}
                         <button
@@ -321,7 +388,7 @@ export default function AdminDashboard() {
                     >
                         📋 Manage Questions
                     </button>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <button
                             onClick={() => startRound("dsa")}
                             disabled={rounds.dsa?.is_active}
@@ -329,12 +396,28 @@ export default function AdminDashboard() {
                         >
                             {rounds.dsa?.is_active ? "In Progress" : "Start"}
                         </button>
-                        {rounds.dsa?.is_active && (
+                        {rounds.dsa?.is_active && !rounds.dsa?.is_paused && (
                             <button
                                 onClick={() => stopRound("dsa")}
                                 className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
                             >
                                 Stop
+                            </button>
+                        )}
+                        {rounds.dsa?.is_active && !rounds.dsa?.is_paused && (
+                            <button
+                                onClick={() => pauseRound("dsa")}
+                                className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition text-xs uppercase"
+                            >
+                                ⏸ Pause
+                            </button>
+                        )}
+                        {rounds.dsa?.is_active && rounds.dsa?.is_paused && (
+                            <button
+                                onClick={() => resumeRound("dsa")}
+                                className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition text-xs uppercase"
+                            >
+                                ▶ Resume
                             </button>
                         )}
                         <button

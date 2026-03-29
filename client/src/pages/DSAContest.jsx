@@ -110,11 +110,14 @@ export default function DSAContest({ session }) {
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("dsa", {
         contestEnded: totalTimeLeft === 0 || contestStopped,
+        teamName: activeSession?.team,
+        backendUrl: BACKEND_URL,
         onDisqualify: () => {
             cleanupProctoring();
             clearCodeStorage(STORAGE_PREFIX);
             localStorage.removeItem("dsaToken");
             localStorage.removeItem("dsaCurrentIndex");
+            localStorage.removeItem("dsaAccessCode"); // fix: was missing, unlike other contest pages
             navigate("/dsa");
         }
     });

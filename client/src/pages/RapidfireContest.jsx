@@ -127,6 +127,8 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("rapidfire", {
         contestEnded: totalTimeLeft === 0,
+        teamName: activeSession?.team,
+        backendUrl: BACKEND_URL,
         onDisqualify: () => {
             cleanupProctoring();
             clearCodeStorage(STORAGE_PREFIX);

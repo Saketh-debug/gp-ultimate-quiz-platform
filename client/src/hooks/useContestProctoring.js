@@ -66,7 +66,7 @@ function checkDevToolsViaConsole(onDetected) {
     }
 }
 
-export default function useContestProctoring(contestPrefix, { contestEnded = false, onDisqualify = null } = {}) {
+export default function useContestProctoring(contestPrefix, { contestEnded = false, onDisqualify = null, teamName = null, backendUrl = null } = {}) {
     const STORAGE_KEY = `${contestPrefix}_violations`;
     // sessionStorage key used to signal that a reload was triggered by DevTools detection
     const DEVTOOLS_RELOAD_FLAG = `${contestPrefix}_devtools_reload`;
@@ -89,8 +89,18 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
     useEffect(() => {
         contestEndedRef.current = contestEnded;
     }, [contestEnded]);
+    // Ref to always hold the latest teamName — avoids stale closure if session loads
+    // after the hook first mounts (e.g. DevTools-reload path where activeSession is null
+    // at mount and initSession is still in-flight)
+    const teamNameRef = useRef(teamName);
+    useEffect(() => {
+        teamNameRef.current = teamName;
+    }, [teamName]);
 
-    // --- Helpers ---
+    const backendUrlRef = useRef(backendUrl);
+    useEffect(() => {
+        backendUrlRef.current = backendUrl;
+    }, [backendUrl]);
 
     const incrementViolations = useCallback(() => {
         setViolationCount(prev => {
@@ -108,6 +118,33 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
     const triggerDisqualification = useCallback(() => {
         contestEndedRef.current = true; // stop all further proctoring loops
         isShowingWarningRef.current = true; // override any in-progress overlay
+
+        // Report to admin — use sendBeacon so it survives page unload/navigate
+        // Reads from refs to always get the latest values, even on DevTools-reload path
+        try {
+            const url = backendUrlRef.current;
+            if (url) {
+                const payload = JSON.stringify({
+                    team_name: teamNameRef.current || "Unknown Team",
+                    round: contestPrefix,
+                    violations: MAX_VIOLATIONS,
+                });
+                // sendBeacon: survives navigate() + Component unmount
+                // Falls back to fetch if sendBeacon is unavailable
+                if (navigator.sendBeacon) {
+                    const blob = new Blob([payload], { type: "application/json" });
+                    navigator.sendBeacon(`${url}/admin/disqualify-report`, blob);
+                } else {
+                    fetch(`${url}/admin/disqualify-report`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: payload,
+                        keepalive: true,
+                    }).catch(() => { }); // fire-and-forget
+                }
+            }
+        } catch (_) { /* non-critical */ }
+
         setWarningMessage(
             "You have been disqualified for repeated violations. This incident has been recorded and reported to the admin."
         );
@@ -116,7 +153,7 @@ export default function useContestProctoring(contestPrefix, { contestEnded = fal
             onDisqualify?.(); // contest page clears tokens + navigates away
         };
         setShowWarning(true);
-    }, [onDisqualify]);
+    }, [onDisqualify, contestPrefix]);
 
     /**
      * Read the current violation count synchronously from sessionStorage.

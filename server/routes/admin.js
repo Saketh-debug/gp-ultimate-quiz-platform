@@ -56,6 +56,45 @@ router.get("/leaderboard", async (req, res) => {
 });
 
 // ----------------------------------------------------------
+// Public: report a user disqualification (called by contest pages via sendBeacon)
+// No admin auth — any client can call this endpoint.
+// ----------------------------------------------------------
+const VALID_ROUNDS = new Set(['rapidfire', 'cascade', 'dsa']);
+
+router.post("/disqualify-report", async (req, res) => {
+    const { team_name, round, violations } = req.body;
+
+    // Basic validation
+    if (!VALID_ROUNDS.has(round)) {
+        return res.status(400).json({ error: "Invalid round" });
+    }
+    const safeViolations = Math.max(1, parseInt(violations) || 1);
+    const safeTeamName = (team_name && team_name.trim()) ? team_name.trim() : "Unknown Team";
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO disqualification_log (team_name, round, violations)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [safeTeamName, round, safeViolations]
+        );
+        const row = result.rows[0];
+
+        // Broadcast to all connected clients (including AdminDashboard)
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("disqualification_event", row);
+        }
+
+        console.log(`🚨 Disqualification: ${safeTeamName} | ${round} | ${safeViolations} violations`);
+        res.json({ success: true, log: row });
+    } catch (err) {
+        console.error("❌ DISQUALIFY REPORT ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ----------------------------------------------------------
 // All routes below this line require valid admin JWT
 // ----------------------------------------------------------
 router.use(authenticateToken, authorizeAdmin);
@@ -161,6 +200,19 @@ router.get("/status/:roundName", async (req, res) => {
             res.json({ round_name: roundName, is_active: false });
         }
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get disqualification log (admin-protected)
+router.get("/disqualify-log", async (req, res) => {
+    try {
+        const result = await pool.query(
+            "SELECT * FROM disqualification_log ORDER BY logged_at DESC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error("❌ DISQUALIFY LOG ERROR:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

@@ -120,6 +120,8 @@ export default function CascadeContest({ session }) {
     // Proctoring
     const { showWarning, warningMessage, warningButtonText, warningAction, violationCount, cleanupProctoring } = useContestProctoring("cascade", {
         contestEnded: totalTimeLeft === 0 || contestStopped,
+        teamName: activeSession?.team,
+        backendUrl: BACKEND_URL,
         onDisqualify: () => {
             cleanupProctoring();
             clearCodeStorage(STORAGE_PREFIX);

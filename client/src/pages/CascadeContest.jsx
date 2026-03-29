@@ -39,16 +39,21 @@ const PreBlock = ({ node, children, className, ...props }) => {
         textToCopy = extractText(children).replace(/\n$/, '');
     }
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(textToCopy);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.warn('Copy failed:', err);
+        }
     };
 
     return (
         <div className="relative group not-prose my-4">
             <button
                 onClick={handleCopy}
+                onCopy={(e) => e.stopPropagation()}
                 className="absolute top-2 right-2 p-1.5 rounded-md bg-[#1a1a1a] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-[#ff4d20]/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm font-sans"
                 title="Copy to clipboard"
             >
@@ -979,7 +984,11 @@ export default function CascadeContest({ session }) {
 
                     <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
 
-                    <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
+                    <div
+                        className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10"
+                        style={{ userSelect: 'none' }}
+                        onCopy={(e) => e.preventDefault()}
+                    >
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeRaw]}

@@ -38,20 +38,31 @@ const CodeBlock = ({ inline, children, ...props }) => {
         );
     }
 
-    const handleCopy = () => {
+    const handleCopy = async () => {
+        const extractText = (node) => {
+            if (typeof node === 'string' || typeof node === 'number') return String(node);
+            if (Array.isArray(node)) return node.map(extractText).join('');
+            if (node?.props?.children) return extractText(node.props.children);
+            return '';
+        };
         let text = Array.isArray(children)
-            ? children.map(c => typeof c === 'string' ? c : c?.props?.children || '').join('')
+            ? children.map(extractText).join('')
             : String(children || '');
         text = text.replace(/\n$/, '');
-        navigator.clipboard.writeText(text);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+        try {
+            await navigator.clipboard.writeText(text);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.warn('Copy failed:', err);
+        }
     };
 
     return (
         <div className="relative bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm group">
             <button
                 onClick={handleCopy}
+                onCopy={(e) => e.stopPropagation()}
                 className="absolute top-3 right-3 p-1.5 rounded-md bg-[#282828] border border-[#3e3e3e] text-gray-400 hover:text-white hover:border-orange-500/50 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-1.5 shadow-sm"
                 title="Copy to clipboard"
             >
@@ -679,7 +690,11 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
                             <h4 className="text-lg font-bold mb-4 text-white">Description</h4>
 
-                            <div className="prose prose-invert prose-sm max-w-none markdown-content">
+                            <div
+                                className="prose prose-invert prose-sm max-w-none markdown-content"
+                                style={{ userSelect: 'none' }}
+                                onCopy={(e) => e.preventDefault()}
+                            >
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypeRaw]}

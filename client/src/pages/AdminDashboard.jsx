@@ -220,13 +220,17 @@ export default function AdminDashboard() {
                 <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6">
                     <div className="flex justify-between items-start mb-4">
                         <h2 className="text-xl font-bold">Rapid Fire</h2>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.rapidfire?.is_active
-                            ? (new Date() - new Date(rounds.rapidfire.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
-                            : "bg-red-500/20 text-red-400"
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.rapidfire?.is_paused
+                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                                : rounds.rapidfire?.is_active
+                                    ? (new Date() - new Date(rounds.rapidfire.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
+                                    : "bg-red-500/20 text-red-400"
                             }`}>
-                            {rounds.rapidfire?.is_active
-                                ? (new Date() - new Date(rounds.rapidfire.start_time) > 30 * 60 * 1000 ? "Entry Closed" : "Active")
-                                : "Inactive"}
+                            {rounds.rapidfire?.is_paused
+                                ? "⏸ Paused"
+                                : rounds.rapidfire?.is_active
+                                    ? (new Date() - new Date(rounds.rapidfire.start_time) > 30 * 60 * 1000 ? "Entry Closed" : "Active")
+                                    : "Inactive"}
                         </span>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 mb-6">
@@ -247,7 +251,7 @@ export default function AdminDashboard() {
                         >
                             {rounds.rapidfire?.is_active ? "In Progress" : "Start"}
                         </button>
-                        {rounds.rapidfire?.is_active && !rounds.rapidfire?.is_paused && (
+                        {rounds.rapidfire?.is_active && (
                             <button
                                 onClick={() => stopRound("rapidfire")}
                                 className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
@@ -284,13 +288,17 @@ export default function AdminDashboard() {
                 <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6">
                     <div className="flex justify-between items-start mb-4">
                         <h2 className="text-xl font-bold">Coding Cascade</h2>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.cascade?.is_active
-                            ? (new Date() - new Date(rounds.cascade.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
-                            : "bg-red-500/20 text-red-400"
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.cascade?.is_paused
+                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                                : rounds.cascade?.is_active
+                                    ? (new Date() - new Date(rounds.cascade.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
+                                    : "bg-red-500/20 text-red-400"
                             }`}>
-                            {rounds.cascade?.is_active
-                                ? (new Date() - new Date(rounds.cascade.start_time) > 30 * 60 * 1000 ? "Entry Closed" : "Active")
-                                : "Inactive"}
+                            {rounds.cascade?.is_paused
+                                ? "⏸ Paused"
+                                : rounds.cascade?.is_active
+                                    ? (new Date() - new Date(rounds.cascade.start_time) > 30 * 60 * 1000 ? "Entry Closed" : "Active")
+                                    : "Inactive"}
                         </span>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 mb-6">
@@ -312,7 +320,7 @@ export default function AdminDashboard() {
                         >
                             {rounds.cascade?.is_active ? "In Progress" : "Start"}
                         </button>
-                        {rounds.cascade?.is_active && !rounds.cascade?.is_paused && (
+                        {rounds.cascade?.is_active && (
                             <button
                                 onClick={() => stopRound("cascade")}
                                 className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"
@@ -368,13 +376,17 @@ export default function AdminDashboard() {
                 <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6">
                     <div className="flex justify-between items-start mb-4">
                         <h2 className="text-xl font-bold">DSA Challenge</h2>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.dsa?.is_active
-                            ? (new Date() - new Date(rounds.dsa.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
-                            : "bg-red-500/20 text-red-400"
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.dsa?.is_paused
+                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                                : rounds.dsa?.is_active
+                                    ? (new Date() - new Date(rounds.dsa.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
+                                    : "bg-red-500/20 text-red-400"
                             }`}>
-                            {rounds.dsa?.is_active
-                                ? (new Date() - new Date(rounds.dsa.start_time) > 30 * 60 * 1000 ? "Entry Closed" : "Active")
-                                : "Inactive"}
+                            {rounds.dsa?.is_paused
+                                ? "⏸ Paused"
+                                : rounds.dsa?.is_active
+                                    ? (new Date() - new Date(rounds.dsa.start_time) > 30 * 60 * 1000 ? "Entry Closed" : "Active")
+                                    : "Inactive"}
                         </span>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 mb-6">
@@ -396,7 +408,7 @@ export default function AdminDashboard() {
                         >
                             {rounds.dsa?.is_active ? "In Progress" : "Start"}
                         </button>
-                        {rounds.dsa?.is_active && !rounds.dsa?.is_paused && (
+                        {rounds.dsa?.is_active && (
                             <button
                                 onClick={() => stopRound("dsa")}
                                 className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition text-xs uppercase"

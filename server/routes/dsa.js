@@ -14,7 +14,7 @@ router.post("/join", async (req, res) => {
         const { token } = req.body;
         const now = new Date();
 
-        // 1. Check Round Status
+        // 1. Check Round Status (including pause state)
         const roundStatusRes = await pool.query(
             "SELECT * FROM round_control WHERE round_name = $1",
             [ROUND_NAME]
@@ -24,7 +24,13 @@ router.post("/join", async (req, res) => {
             return res.status(403).json({ error: "DSA round has not started yet." });
         }
 
-        const roundStartTime = new Date(roundStatusRes.rows[0].start_time);
+        const roundRow = roundStatusRes.rows[0];
+        const isPaused = roundRow.is_paused ?? false;
+        const pausedAt = roundRow.paused_at ? new Date(roundRow.paused_at) : null;
+        // Effective current time — capped at pausedAt so timers don't decay during pause
+        const effectiveNow = (isPaused && pausedAt) ? pausedAt : now;
+
+        const roundStartTime = new Date(roundRow.start_time);
         const diffMinutes = (now - roundStartTime) / 1000 / 60;
 
         // 2. Validate user
@@ -52,7 +58,8 @@ router.post("/join", async (req, res) => {
             }
 
             // Block: session timer has expired
-            if (new Date(session.end_time) < now) {
+            // Use effectiveNow so a paused session isn't falsely expired before end_time is shifted
+            if (new Date(session.end_time) < effectiveNow) {
                 return res.status(403).json({ error: "Contest has ended for this user." });
             }
 
@@ -80,7 +87,8 @@ router.post("/join", async (req, res) => {
                 return q;
             });
 
-            const totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - now) / 1000));
+            // Freeze totalTimeLeft at pausedAt so client doesn't receive a decaying value during pause
+            const totalTimeLeft = Math.max(0, Math.floor((new Date(session.end_time) - effectiveNow) / 1000));
 
             // If ALL questions are fully ACCEPTED — mark completed and block re-entry.
             // Partial submissions (PARTIAL status) are intentionally allowed to re-join.
@@ -110,12 +118,20 @@ router.post("/join", async (req, res) => {
                 endTime: session.end_time,
                 totalTimeLeft,
                 totalScore: session.total_score,
+                isPaused,
                 questions: outputQuestions,
                 message: "Resumed session"
             });
 
         } else {
             // --- NEW SESSION ---
+
+            // Block new joins while round is paused — prevents users from getting a fresh
+            // full-length timer while all existing sessions are frozen.
+            if (isPaused) {
+                return res.status(503).json({ error: "Contest is currently paused. Please wait for the admin to resume." });
+            }
+
             if (diffMinutes > GRACE_PERIOD_MINUTES) {
                 return res.status(403).json({ error: "Entry closed. Grace period exceeded." });
             }
@@ -324,26 +340,37 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
 router.post("/time-check", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     try {
+        const now = new Date();
+
+        // Get round pause state — affects all timer computations
+        const rcRes = await pool.query(
+            "SELECT is_paused, paused_at FROM round_control WHERE round_name = $1",
+            [ROUND_NAME]
+        );
+        const isPaused = rcRes.rows[0]?.is_paused ?? false;
+        const pausedAt = rcRes.rows[0]?.paused_at ? new Date(rcRes.rows[0].paused_at) : null;
+        // Effective current time — capped at pausedAt so timers don't decay during pause
+        const effectiveNow = (isPaused && pausedAt) ? pausedAt : now;
+
         const sessionRes = await pool.query(
             "SELECT end_time FROM dsa_sessions WHERE user_id = $1",
             [userId]
         );
 
         if (sessionRes.rows.length === 0) {
-            return res.json({ totalTimeLeft: 0, contestEnded: true });
+            return res.json({ totalTimeLeft: 0, contestEnded: true, isPaused });
         }
 
         const endTime = new Date(sessionRes.rows[0].end_time);
-        const now = new Date();
-        const totalTimeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+        const totalTimeLeft = Math.max(0, Math.floor((endTime - effectiveNow) / 1000));
 
-        if (totalTimeLeft <= 0) {
-            return res.json({ totalTimeLeft: 0, contestEnded: true });
+        if (totalTimeLeft <= 0 && !isPaused) {
+            return res.json({ totalTimeLeft: 0, contestEnded: true, isPaused });
         }
 
-        res.json({ totalTimeLeft, contestEnded: false });
+        res.json({ totalTimeLeft, isPaused });
     } catch (err) {
-        console.error("❌ DSA TIME-CHECK ERROR:", err.message);
+        console.error("DSA TIME-CHECK ERROR:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

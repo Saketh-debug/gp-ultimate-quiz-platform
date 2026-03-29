@@ -132,6 +132,10 @@ export default function DSAContest({ session }) {
     // Authenticated backend socket ref — created lazily in initSession with JWT
     const backendSocketRef = useRef(null);
 
+    // Pause state
+    const [isPaused, setIsPaused] = useState(false);
+    const isPausedRef = useRef(false); // stable ref for use inside callbacks/effects
+
     // Admin Stop Listener + force_logout + 401 interceptor
     useEffect(() => {
         // 401 interceptor — navigate back to join if JWT rejected
@@ -192,6 +196,23 @@ export default function DSAContest({ session }) {
                         navigate('/dsa');
                     });
 
+                    // ── Pause / Resume listeners ──
+                    bSocket.on('round_paused', ({ roundName }) => {
+                        if (roundName === 'dsa') {
+                            setIsPaused(true);
+                            isPausedRef.current = true;
+                        }
+                    });
+
+                    bSocket.on('round_resumed', ({ roundName }) => {
+                        if (roundName === 'dsa') {
+                            setIsPaused(false);
+                            isPausedRef.current = false;
+                            // Re-sync timer from server (end_time has been shifted forward)
+                            handleDSATimeReSync();
+                        }
+                    });
+
                     // Listen for admin round_stopped broadcast
                     bSocket.on('round_stopped', (data) => {
                         if (data.roundName === 'dsa') {
@@ -224,6 +245,12 @@ export default function DSAContest({ session }) {
             if (activeSession.totalTimeLeft != null) {
                 setTotalTimeLeft(activeSession.totalTimeLeft);
             }
+
+            // Always sync pause state from server on join/resume
+            // (covers reload-during-pause — socket won't replay past round_paused events)
+            const seededPaused = activeSession.isPaused === true;
+            setIsPaused(seededPaused);
+            isPausedRef.current = seededPaused;
 
             // Check local storage for previously saved index
             const savedIndexStr = localStorage.getItem("dsaCurrentIndex");
@@ -263,15 +290,17 @@ export default function DSAContest({ session }) {
     }, [currentIndex]);
 
     // Timer — pure decrement, no client clock dependency
+    // Interval is NOT started while paused; React teardown via dep-array cleanup handles freeze.
     useEffect(() => {
         if (!activeSession || totalTimeLeft === null) return;
+        if (isPaused) return; // freeze when paused
 
         const timer = setInterval(() => {
             setTotalTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [activeSession, totalTimeLeft !== null]);
+    }, [activeSession, totalTimeLeft !== null, isPaused]);
 
     // triggerCompletion — called from timer expiry and all-questions-done paths
     function triggerCompletion(msg) {
@@ -291,6 +320,33 @@ export default function DSAContest({ session }) {
         }
     }, [totalTimeLeft]);
 
+    // Shared time re-sync helper — called from visibility change AND after resume
+    async function handleDSATimeReSync() {
+        if (isContestEndedRef.current) return;
+        try {
+            const jwt = localStorage.getItem('dsaToken');
+            const res = await axios.post(`${BACKEND_URL}/dsa/time-check`, {}, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            });
+            const { totalTimeLeft: serverTotal, contestEnded, isPaused: serverPaused } = res.data;
+
+            // Sync pause state from server
+            if (serverPaused !== undefined) {
+                setIsPaused(serverPaused);
+                isPausedRef.current = serverPaused;
+            }
+
+            if (contestEnded || serverTotal <= 0) {
+                setTotalTimeLeft(0);
+                return;
+            }
+
+            setTotalTimeLeft(serverTotal);
+        } catch (e) {
+            console.error("Failed to re-sync DSA timer", e);
+        }
+    }
+
     // Visibility re-sync — re-fetch server time when tab wakes up
     useEffect(() => {
         if (!activeSession?.userId) return;
@@ -302,20 +358,7 @@ export default function DSAContest({ session }) {
             isSyncingRef.current = true;
 
             try {
-                const jwt = localStorage.getItem('dsaToken');
-                const res = await axios.post(`${BACKEND_URL}/dsa/time-check`, {}, {
-                    headers: { Authorization: `Bearer ${jwt}` }
-                });
-                const { totalTimeLeft: serverTotal, contestEnded } = res.data;
-
-                if (contestEnded || serverTotal <= 0) {
-                    setTotalTimeLeft(0);
-                    return;
-                }
-
-                setTotalTimeLeft(serverTotal);
-            } catch (e) {
-                console.error("Failed to re-sync DSA timer", e);
+                await handleDSATimeReSync();
             } finally {
                 isSyncingRef.current = false;
             }
@@ -426,13 +469,13 @@ export default function DSAContest({ session }) {
                                     break;
                                 }
                             }
-                            if (nextUnsolvedIndex !== -1) {
+                            if (nextUnsolvedIndex !== -1 && !isPausedRef.current) {
                                 setCurrentIndex(nextUnsolvedIndex);
                                 localStorage.setItem("dsaCurrentIndex", nextUnsolvedIndex);
                                 setOutput("");
                                 setStatusMessage("");
                                 setRightTab("input");
-                            } else {
+                            } else if (nextUnsolvedIndex === -1) {
                                 triggerCompletion("Congratulations! You have solved all DSA questions!");
                             }
                             return currentQuestions;
@@ -460,6 +503,7 @@ export default function DSAContest({ session }) {
             alert("Wait for the current operation to finish before navigating.");
             return;
         }
+        if (isPausedRef.current) return; // block navigation while paused
         if (questions[idx]?.status === 'ACCEPTED') {
             return; // Block access
         }
@@ -479,6 +523,7 @@ export default function DSAContest({ session }) {
     // Execution Handlers
     async function handleRun() {
         if (!currentQuestion) return;
+        if (isPausedRef.current) return; // block while paused
         lastAction.current = "run";
         setIsRunning(true);
         setRightTab("result");
@@ -510,6 +555,7 @@ export default function DSAContest({ session }) {
 
     async function handleSubmit() {
         if (!currentQuestion) return;
+        if (isPausedRef.current) return; // block while paused
         lastAction.current = "submit";
         setIsRunning(true);
         setRightTab("result");
@@ -684,6 +730,15 @@ export default function DSAContest({ session }) {
                 </div>
             )}
 
+            {/* PAUSE BANNER — shown when admin has paused the round */}
+            {isPaused && !showCompletionOverlay && !contestStopped && (
+                <div className="fixed top-0 inset-x-0 z-[9998] bg-yellow-400 text-black text-center font-black py-2 uppercase tracking-widest text-sm flex items-center justify-center gap-3 shadow-lg">
+                    <span>⏸</span>
+                    <span>Contest Paused by Admin — Please Wait...</span>
+                    <span>⏸</span>
+                </div>
+            )}
+
             {/* HEADER */}
             <nav className="h-[70px] bg-[#1a0606] border-b border-[#f43f5e]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
                 {/* Left Side: Brand */}
@@ -701,12 +756,12 @@ export default function DSAContest({ session }) {
                             <button
                                 key={q.id}
                                 onClick={() => handleQuestionSelect(idx)}
-                                disabled={q.status === 'ACCEPTED'}
+                                disabled={q.status === 'ACCEPTED' || isPaused}
                                 className={`px-4 py-1.5 rounded-md text-sm font-bold tracking-widest uppercase transition-colors flex items-center gap-2
                                     ${currentIndex === idx ? "bg-[#f43f5e] text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]" :
                                         q.status === 'ACCEPTED' ? "bg-green-500/5 text-green-500/50 cursor-not-allowed border border-green-500/10" :
                                             q.status === 'PARTIAL' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20" :
-                                                "text-white/40 hover:text-white hover:bg-white/5"}
+                                                isPaused ? "text-white/25 cursor-not-allowed" : "text-white/40 hover:text-white hover:bg-white/5"}
                                 `}
                             >
                                 <span>Q{idx + 1}</span>
@@ -742,16 +797,17 @@ export default function DSAContest({ session }) {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleRun}
-                            disabled={isRunning}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold uppercase transition"
-                            title="Run Code"
+                            disabled={isRunning || isPaused}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold uppercase transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isPaused ? "Contest paused" : "Run Code"}
                         >
                             <FiPlay className={isRunning ? "animate-spin" : "text-green-500"} /> Run
                         </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={isRunning}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#f43f5e] to-[#e11d48] hover:from-[#fb923c] hover:to-[#f43f5e] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)]"
+                            disabled={isRunning || isPaused}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#f43f5e] to-[#e11d48] hover:from-[#fb923c] hover:to-[#f43f5e] text-white font-black uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isPaused ? "Contest paused" : ""}
                         >
                             {isRunning ? "Testing..." : "Submit"} <FiUpload />
                         </button>
@@ -845,7 +901,8 @@ export default function DSAContest({ session }) {
                                 <select
                                     value={language}
                                     onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
-                                    className="bg-transparent text-[11px] font-bold text-gray-300 outline-none cursor-pointer hover:text-white transition uppercase tracking-wider"
+                                    disabled={isPaused}
+                                    className="bg-transparent text-[11px] font-bold text-gray-300 outline-none cursor-pointer hover:text-white transition uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <option value="python" className="bg-[#140a0a]">Python</option>
                                     <option value="c" className="bg-[#140a0a]">C</option>
@@ -856,8 +913,8 @@ export default function DSAContest({ session }) {
                             </div>
                             <button
                                 onClick={handleResetCode}
-                                disabled={isRunning}
-                                title="Reset to default boilerplate"
+                                disabled={isRunning || isPaused}
+                                title={isPaused ? "Contest paused" : "Reset to default boilerplate"}
                                 className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#f43f5e]/20 text-white/40 hover:text-[#f43f5e] hover:border-[#f43f5e]/50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold uppercase tracking-wider"
                             >
                                 <FiRotateCcw className="text-xs" /> Reset
@@ -887,6 +944,7 @@ export default function DSAContest({ session }) {
                                     padding: { top: 16 },
                                     cursorStyle: 'block',
                                     lineHeight: 22,
+                                    readOnly: isPaused, // freeze editor during admin pause
                                 }}
                             />
                         </div>

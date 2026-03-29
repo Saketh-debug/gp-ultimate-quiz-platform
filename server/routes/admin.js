@@ -225,6 +225,16 @@ router.post("/resume-round", async (req, res) => {
             );
         }
 
+        if (roundName === 'dsa') {
+            // DSA only has a session-level timer — shift dsa_sessions.end_time forward
+            await pool.query(
+                `UPDATE dsa_sessions
+                 SET end_time = end_time + ($1 || ' milliseconds')::interval
+                 WHERE end_time > $2`,
+                [pauseDurationMs, pausedAt]
+            );
+        }
+
         // Clear pause state
         await pool.query(
             "UPDATE round_control SET is_paused = FALSE, paused_at = NULL WHERE round_name = $1",
@@ -264,7 +274,8 @@ router.get("/status/:roundName", async (req, res) => {
             let row = result.rows[0];
 
             // Auto-expire logic: different durations per round
-            if (row.is_active && row.start_time) {
+            // Skip auto-expire while paused — pause time shouldn't count toward the duration cap.
+            if (row.is_active && row.start_time && !row.is_paused) {
                 const now = new Date();
                 const startTime = new Date(row.start_time);
                 const diff = now - startTime;

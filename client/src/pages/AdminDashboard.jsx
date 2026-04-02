@@ -203,9 +203,9 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#111] text-white p-8 font-sans" onClick={unlockAudio}>
-            <header className="flex justify-between items-center mb-12 border-b border-white/10 pb-6">
-                <h1 className="text-3xl font-bold uppercase tracking-widest text-orange-500">Admin Dashboard</h1>
+        <div className="min-h-screen bg-[#111] p-4 font-sans text-white sm:p-6 lg:p-8" onClick={unlockAudio}>
+            <header className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6 sm:mb-12 sm:flex-row sm:items-center sm:justify-between">
+                <h1 className="text-2xl font-bold uppercase tracking-widest text-orange-500 sm:text-3xl">Admin Dashboard</h1>
                 <button
                     onClick={() => { localStorage.removeItem("adminToken"); navigate("/admin/login"); }}
                     className="text-xs text-gray-500 hover:text-white uppercase font-bold"
@@ -215,16 +215,16 @@ export default function AdminDashboard() {
             </header>
 
             {/* ── ROUND CARDS ── */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {/* RAPID FIRE CARD */}
                 <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6">
                     <div className="flex justify-between items-start mb-4">
                         <h2 className="text-xl font-bold">Rapid Fire</h2>
                         <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.rapidfire?.is_paused
-                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                                : rounds.rapidfire?.is_active
-                                    ? (new Date() - new Date(rounds.rapidfire.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
-                                    : "bg-red-500/20 text-red-400"
+                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            : rounds.rapidfire?.is_active
+                                ? (new Date() - new Date(rounds.rapidfire.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
+                                : "bg-red-500/20 text-red-400"
                             }`}>
                             {rounds.rapidfire?.is_paused
                                 ? "⏸ Paused"
@@ -289,10 +289,10 @@ export default function AdminDashboard() {
                     <div className="flex justify-between items-start mb-4">
                         <h2 className="text-xl font-bold">Coding Cascade</h2>
                         <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.cascade?.is_paused
-                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                                : rounds.cascade?.is_active
-                                    ? (new Date() - new Date(rounds.cascade.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
-                                    : "bg-red-500/20 text-red-400"
+                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            : rounds.cascade?.is_active
+                                ? (new Date() - new Date(rounds.cascade.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
+                                : "bg-red-500/20 text-red-400"
                             }`}>
                             {rounds.cascade?.is_paused
                                 ? "⏸ Paused"
@@ -377,10 +377,10 @@ export default function AdminDashboard() {
                     <div className="flex justify-between items-start mb-4">
                         <h2 className="text-xl font-bold">DSA Challenge</h2>
                         <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${rounds.dsa?.is_paused
-                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                                : rounds.dsa?.is_active
-                                    ? (new Date() - new Date(rounds.dsa.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
-                                    : "bg-red-500/20 text-red-400"
+                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            : rounds.dsa?.is_active
+                                ? (new Date() - new Date(rounds.dsa.start_time) > 30 * 60 * 1000 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400")
+                                : "bg-red-500/20 text-red-400"
                             }`}>
                             {rounds.dsa?.is_paused
                                 ? "⏸ Paused"
@@ -445,8 +445,8 @@ export default function AdminDashboard() {
             {/* ── DISQUALIFICATION LOG ── */}
             <div className="mt-10">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
                         <span className="text-lg font-bold uppercase tracking-widest text-red-400">🚨 Disqualification Log</span>
                         {disqLogs.length > 0 && (
                             <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold uppercase border border-red-500/30">
@@ -475,58 +475,56 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Scrollable log body */}
-                    <div className="h-64 overflow-y-auto p-4 space-y-1 font-mono text-sm scrollbar-thin scrollbar-thumb-[#2a2a2a] scrollbar-track-transparent">
-                        {disqLogs.length === 0 ? (
-                            <div className="flex items-center gap-2 text-gray-600 text-xs pt-2">
-                                <span className="text-green-500/60">●</span>
-                                <span>No disqualifications recorded. Monitoring active…</span>
-                            </div>
-                        ) : (
-                            disqLogs.map((log) => {
-                                const isNew = log.id === newEventId;
-                                const roundColor = ROUND_COLORS[log.round] || "text-gray-400 bg-white/5 border-white/10";
-                                return (
-                                    <div
-                                        key={log.id}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all duration-700
-                                            ${isNew
-                                                ? "bg-red-500/15 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.2)]"
-                                                : "bg-white/2 border-white/5 hover:bg-white/4"
-                                            }`}
-                                    >
-                                        {/* Timestamp */}
-                                        <span className="text-gray-600 text-[11px] shrink-0 w-[58px]">
-                                            [{formatLogTime(log.logged_at)}]
+                    <div className="h-64 overflow-x-auto overflow-y-auto p-3 font-mono text-sm scrollbar-thin scrollbar-thumb-[#2a2a2a] scrollbar-track-transparent sm:p-4">                        {disqLogs.length === 0 ? (
+                        <div className="flex items-center gap-2 text-gray-600 text-xs pt-2">
+                            <span className="text-green-500/60">●</span>
+                            <span>No disqualifications recorded. Monitoring active…</span>
+                        </div>
+                    ) : (
+                        disqLogs.map((log) => {
+                            const isNew = log.id === newEventId;
+                            const roundColor = ROUND_COLORS[log.round] || "text-gray-400 bg-white/5 border-white/10";
+                            return (
+                                <div
+                                    key={log.id}
+                                    className={`flex min-w-[640px] items-center gap-3 rounded-lg border px-3 py-2 transition-all duration-700                                            ${isNew
+                                        ? "bg-red-500/15 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.2)]"
+                                        : "bg-white/2 border-white/5 hover:bg-white/4"
+                                        }`}
+                                >
+                                    {/* Timestamp */}
+                                    <span className="text-gray-600 text-[11px] shrink-0 w-[58px]">
+                                        [{formatLogTime(log.logged_at)}]
+                                    </span>
+
+                                    {/* Red dot indicator */}
+                                    <span className={`text-[8px] shrink-0 ${isNew ? "text-red-400 animate-pulse" : "text-red-500/50"}`}>●</span>
+
+                                    {/* Team name */}
+                                    <span className="font-bold text-white truncate flex-1">
+                                        {log.team_name}
+                                    </span>
+
+                                    {/* Round badge */}
+                                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border shrink-0 ${roundColor}`}>
+                                        {log.round}
+                                    </span>
+
+                                    {/* Violation count */}
+                                    <span className="text-red-400/80 text-[11px] font-bold shrink-0 tabular-nums">
+                                        {log.violations}v
+                                    </span>
+
+                                    {/* New badge */}
+                                    {isNew && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-red-500 text-white animate-pulse shrink-0">
+                                            NEW
                                         </span>
-
-                                        {/* Red dot indicator */}
-                                        <span className={`text-[8px] shrink-0 ${isNew ? "text-red-400 animate-pulse" : "text-red-500/50"}`}>●</span>
-
-                                        {/* Team name */}
-                                        <span className="font-bold text-white truncate flex-1">
-                                            {log.team_name}
-                                        </span>
-
-                                        {/* Round badge */}
-                                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border shrink-0 ${roundColor}`}>
-                                            {log.round}
-                                        </span>
-
-                                        {/* Violation count */}
-                                        <span className="text-red-400/80 text-[11px] font-bold shrink-0 tabular-nums">
-                                            {log.violations}v
-                                        </span>
-
-                                        {/* New badge */}
-                                        {isNew && (
-                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-red-500 text-white animate-pulse shrink-0">
-                                                NEW
-                                            </span>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        )}
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
                     </div>
                 </div>
 

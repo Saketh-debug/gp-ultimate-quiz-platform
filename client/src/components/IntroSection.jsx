@@ -12,7 +12,7 @@ export default function IntroSection() {
                     initial={{ opacity: 0, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1, delay: 0.4 }}
-                    className="opulence-title-font text-[clamp(2.5rem,10vw,7rem)] leading-[0.95] bg-gradient-to-r from-[#d9ae75] via-[#bf752a] to-[#ab4113] bg-clip-text text-transparent drop-shadow-[0_4px_0_rgba(20,4,3,0.9)] sm:drop-shadow-[0_6px_0_rgba(20,4,3,0.9)]"
+                    className="opulence-title-font text-[clamp(1.9rem,6vw,4.75rem)] font-bold leading-[0.95] tracking-[0.08em] bg-gradient-to-r from-[#d9ae75] via-[#bf752a] to-[#ab4113] bg-clip-text text-transparent drop-shadow-[0_4px_0_rgba(20,4,3,0.9)] sm:drop-shadow-[0_6px_0_rgba(20,4,3,0.9)]"
                 >
                     AAC PRESENTS
                 </motion.h1>

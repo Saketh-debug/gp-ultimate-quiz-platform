@@ -249,8 +249,8 @@ export default function AdminQuestions() {
     return (
         <div className="min-h-screen bg-[#111] text-white font-sans">
             {/* Header */}
-            <header className="flex justify-between items-center px-8 py-5 border-b border-white/10">
-                <div className="flex items-center gap-4">
+            <header className="flex flex-col gap-4 border-b border-white/10 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+                <div className="flex flex-wrap items-center gap-4">
                     <button
                         onClick={() => navigate("/admin/dashboard")}
                         className="text-gray-500 hover:text-white text-sm transition"
@@ -269,9 +269,9 @@ export default function AdminQuestions() {
                 </button>
             </header>
 
-            <div className="px-8 py-6 max-w-6xl mx-auto">
+            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
                 {/* Round Tabs */}
-                <div className="flex gap-2 mb-8">
+                <div className="mb-8 flex flex-wrap gap-2">
                     {Object.entries(ROUND_CONFIG).map(([key, cfg]) => (
                         <button
                             key={key}
@@ -420,7 +420,7 @@ export default function AdminQuestions() {
                         })}
 
                         {!loading && questions.length === 0 && (
-                            <div className="col-span-3 text-center text-gray-600 py-20">
+                            <div className="col-span-full text-center text-gray-600 py-20">
                                 No questions yet for {config.label}. Click "+ Add Question" to get started.
                             </div>
                         )}
@@ -429,8 +429,8 @@ export default function AdminQuestions() {
 
                 {/* Create / Edit Form */}
                 {showForm && (
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6 mb-8">
-                        <div className="flex justify-between items-center mb-5">
+                    <div className="mb-8 rounded-xl border border-white/10 bg-[#1a1a1a] p-4 sm:p-6">
+                        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <h2 className="text-lg font-bold uppercase tracking-wide text-orange-400">
                                 {editingId ? `Edit Question #${editingId}` : `New ${config.label} Question`}
                             </h2>
@@ -580,17 +580,16 @@ export default function AdminQuestions() {
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-[10px] text-gray-600 mb-1">Input</label>
-                                                    <textarea
-                                                        value={tc.input}
-                                                        onChange={e => updateTestCase(idx, "input", e.target.value)}
-                                                        rows={3}
-                                                        className="w-full bg-[#0d0d0d] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-orange-500/40 resize-y"
-                                                        placeholder="stdin input..."
-                                                    />
-                                                </div>
+                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">                                                <div>
+                                                <label className="block text-[10px] text-gray-600 mb-1">Input</label>
+                                                <textarea
+                                                    value={tc.input}
+                                                    onChange={e => updateTestCase(idx, "input", e.target.value)}
+                                                    rows={3}
+                                                    className="w-full bg-[#0d0d0d] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-orange-500/40 resize-y"
+                                                    placeholder="stdin input..."
+                                                />
+                                            </div>
                                                 <div>
                                                     <label className="block text-[10px] text-gray-600 mb-1">Expected Output</label>
                                                     <textarea

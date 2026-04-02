@@ -176,7 +176,7 @@ router.post("/join", async (req, res) => {
                 endTime: session.end_time,
                 totalTimeLeft,
                 currentIndex,
-                currentScore: user.rapidfire_score || 0,
+                currentScore: parseFloat(user.rapidfire_score) || 0,
                 isPaused,
                 questions: outputQuestions,
                 message: "Resumed session"
@@ -262,7 +262,7 @@ router.post("/join", async (req, res) => {
                 endTime,
                 totalTimeLeft: CONTEST_DURATION_MINUTES * 60,
                 currentIndex: 0,
-                currentScore: user.rapidfire_score || 0,
+                currentScore: parseFloat(user.rapidfire_score) || 0,
                 questions: outputQuestions,
                 message: "New session started"
             });
@@ -452,7 +452,7 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
         const question = qRes.rows[0];
 
         // 2. Idempotency: already scored? Return existing score
-        if (question.score_awarded > 0) {
+        if (parseFloat(question.score_awarded) > 0) {
             const userRes = await pool.query(
                 "SELECT rapidfire_score FROM users WHERE id = $1",
                 [userId]
@@ -460,8 +460,8 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
             return res.json({
                 success: true,
                 message: "Already scored",
-                scoreAwarded: question.score_awarded,
-                totalRoundScore: userRes.rows[0]?.rapidfire_score || 0
+                scoreAwarded: parseFloat(question.score_awarded),
+                totalRoundScore: parseFloat(userRes.rows[0]?.rapidfire_score) || 0
             });
         }
 
@@ -516,7 +516,7 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
         }
 
         // 4. Calculate score: base + time bonus
-        const score = Math.round(BASE_POINTS + 5 * (remainingTime / QUESTION_DURATION));
+        const score = parseFloat((BASE_POINTS + 5 * (remainingTime / QUESTION_DURATION)).toFixed(3));
 
         // 5. Atomic update — only if score_awarded is still 0 (prevents double-scoring)
         // Also mark status = 'ACCEPTED' so the /join re-entry gate can skip completed questions.
@@ -535,7 +535,7 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
                 success: true,
                 message: "Already scored (race)",
                 scoreAwarded: score,
-                totalRoundScore: userRes.rows[0]?.rapidfire_score || 0
+                totalRoundScore: parseFloat(userRes.rows[0]?.rapidfire_score) || 0
             });
         }
 
@@ -545,7 +545,7 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
             [score, userId]
         );
 
-        const totalRoundScore = userUpdateRes.rows[0]?.rapidfire_score || 0;
+        const totalRoundScore = parseFloat(userUpdateRes.rows[0]?.rapidfire_score) || 0;
 
         console.log(`🏆 Rapidfire Score: User ${userId}, Q ${questionId} → +${score} pts (remaining: ${remainingTime.toFixed(1)}s) | Total: ${totalRoundScore}`);
 

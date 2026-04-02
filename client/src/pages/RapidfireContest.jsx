@@ -226,7 +226,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                     // ── Admin round stopped listener (Bug 7 fix) ──
                     bSocket.on('round_stopped', ({ roundName }) => {
                         if (roundName === 'rapidfire') {
-                            triggerCompletion(`Contest stopped by admin. Your Rapidfire Score: ${rapidfireScore} points`);
+                            triggerCompletion(`Contest stopped by admin. Your Rapidfire Score: ${parseFloat(rapidfireScore).toFixed(3)} points`);
                         }
                     });
 
@@ -255,7 +255,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
             // Seed score from server so it survives page reloads
             if (activeSession.currentScore != null) {
-                setRapidfireScore(activeSession.currentScore);
+                setRapidfireScore(parseFloat(activeSession.currentScore) || 0);
             }
 
             // Use backend-provided currentIndex instead of guessing
@@ -312,7 +312,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     // Handle contest end — fires from both interval ticks and re-sync updates
     useEffect(() => {
         if (totalTimeLeft === 0) {
-            triggerCompletion(`Contest Over! Your Rapidfire Score: ${rapidfireScore} points`);
+            triggerCompletion(`Contest Over! Your Rapidfire Score: ${parseFloat(rapidfireScore).toFixed(3)} points`);
         }
     }, [totalTimeLeft]);
 
@@ -461,7 +461,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 }
 
             } else {
-                triggerCompletion(`All questions completed! Your Rapidfire Score: ${rapidfireScore} points`);
+                triggerCompletion(`All questions completed! Your Rapidfire Score: ${parseFloat(rapidfireScore).toFixed(3)} points`);
             }
         } finally {
             isAdvancingRef.current = false;
@@ -503,8 +503,8 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 // Score is computed server-side (dispatcher calls submit-result internally).
                 // It arrives pre-attached to the socket payload — no separate API call needed.
                 if (data.scoreAwarded != null) {
-                    setRapidfireScore(data.totalRoundScore);
-                    setOutput(`Correct! +${data.scoreAwarded} pts (Total: ${data.totalRoundScore})`);
+                    setRapidfireScore(parseFloat(data.totalRoundScore) || 0);
+                    setOutput(`Correct! +${parseFloat(data.scoreAwarded).toFixed(3)} pts (Total: ${parseFloat(data.totalRoundScore).toFixed(3)})`);
                 } else {
                     setOutput("Correct! Moving to next question...");
                 }
@@ -698,7 +698,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 <div className="flex items-center gap-3">
                     <div className="bg-[#333] h-8 px-4 rounded-full border border-white/10 flex items-center gap-2 mr-2 shadow-inner">
                         <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Score</span>
-                        <span className="text-orange-400 font-mono font-bold text-sm">{rapidfireScore}</span>
+                        <span className="text-orange-400 font-mono font-bold text-sm">{parseFloat(rapidfireScore || 0).toFixed(3)}</span>
                         <FiZap className="text-orange-500 text-sm" />
                     </div>
                     <button

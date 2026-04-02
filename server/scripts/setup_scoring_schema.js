@@ -16,7 +16,7 @@ async function setupScoringSchema() {
         // 1. Add per-round score columns to users table
         console.log("Adding score columns to users table...");
         await pool.query(`
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS rapidfire_score INTEGER DEFAULT 0;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS rapidfire_score NUMERIC(10,3) DEFAULT 0;
         `);
         await pool.query(`
             ALTER TABLE users ADD COLUMN IF NOT EXISTS cascade_score INTEGER DEFAULT 0;
@@ -29,7 +29,7 @@ async function setupScoringSchema() {
         // 2. Add score_awarded column to user_questions (for rapidfire per-question tracking)
         console.log("Adding score_awarded column to user_questions table...");
         await pool.query(`
-            ALTER TABLE user_questions ADD COLUMN IF NOT EXISTS score_awarded INTEGER DEFAULT 0;
+            ALTER TABLE user_questions ADD COLUMN IF NOT EXISTS score_awarded NUMERIC(10,3) DEFAULT 0;
         `);
         console.log("✅ user_questions table updated with score_awarded");
 

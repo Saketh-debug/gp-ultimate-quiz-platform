@@ -175,7 +175,7 @@ function Podium({ rank, name, score, type, large }) {
         <span className={`${large ? "text-6xl" : "text-4xl"}`}>{emoji[type]}</span>
       </div>
       <h3 className={`font-bold ${large ? "text-2xl" : "text-xl"}`}>{name}</h3>
-      <p className="text-[#f4a460] font-bold">{score} pts</p>
+      <p className="text-[#f4a460] font-bold">{parseFloat(score).toFixed(3)} pts</p>
       <span className="mt-1 font-black">#{rank}</span>
     </div>
   );
@@ -186,10 +186,10 @@ function Row({ rank, name, rapidfire, cascade, dsa, total, highlight }) {
     <tr className={`${highlight ? "bg-[#d15b2c]/15 border-l-4 border-[#f4a460]" : "hover:bg-white/5"} transition`}>
       <td className="px-10 py-6 text-center font-bold text-[#f4a460]">{rank}</td>
       <td className="px-10 py-6 font-bold">{name}</td>
-      <td className="px-10 py-6 text-right font-mono">{rapidfire}</td>
+      <td className="px-10 py-6 text-right font-mono">{parseFloat(rapidfire).toFixed(3)}</td>
       <td className="px-10 py-6 text-right font-mono">{cascade}</td>
       <td className="px-10 py-6 text-right font-mono">{dsa}</td>
-      <td className="px-10 py-6 text-right font-black text-lg">{total}</td>
+      <td className="px-10 py-6 text-right font-black text-lg">{parseFloat(total).toFixed(3)}</td>
     </tr>
   );
 }

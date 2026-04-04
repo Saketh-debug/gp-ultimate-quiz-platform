@@ -62,6 +62,8 @@ export default function AdminDashboard() {
     const [rounds, setRounds] = useState({});
     const [disqLogs, setDisqLogs] = useState([]); // newest first
     const [newEventId, setNewEventId] = useState(null); // flash highlight
+    const [feedbackMode, setFeedbackMode] = useState(false);
+    const [feedbackToggling, setFeedbackToggling] = useState(false);
     const socketRef = useRef(null);
     const navigate = useNavigate();
     const token = localStorage.getItem("adminToken");
@@ -71,6 +73,7 @@ export default function AdminDashboard() {
         if (!token) { navigate("/admin/login"); return; }
         fetchStatus();
         fetchDisqLog();
+        fetchFeedbackMode();
 
         // Unlock audio on any first interaction
         document.addEventListener("click", unlockAudio, { once: true });
@@ -88,6 +91,9 @@ export default function AdminDashboard() {
 
         socket.on("round_paused", () => fetchStatus());
         socket.on("round_resumed", () => fetchStatus());
+        socket.on("feedback_mode_changed", ({ enabled }) => {
+            setFeedbackMode(enabled);
+        });
 
         return () => {
             socket.disconnect();
@@ -200,6 +206,37 @@ export default function AdminDashboard() {
             });
             fetchStatus();
         } catch (err) { }
+    }
+
+    async function fetchFeedbackMode() {
+        try {
+            const res = await fetch(`${BACKEND_URL}/admin/feedback-mode`);
+            const data = await res.json();
+            setFeedbackMode(!!data.enabled);
+        } catch (err) {
+            console.error("Failed to fetch feedback mode");
+        }
+    }
+
+    async function toggleFeedbackMode() {
+        setFeedbackToggling(true);
+        try {
+            const res = await fetch(`${BACKEND_URL}/admin/feedback-mode`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ enabled: !feedbackMode }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setFeedbackMode(data.enabled);
+            } else {
+                alert(data.error || "Failed to toggle feedback mode");
+            }
+        } catch (err) {
+            alert("Error toggling feedback mode");
+        } finally {
+            setFeedbackToggling(false);
+        }
     }
 
     return (
@@ -532,6 +569,68 @@ export default function AdminDashboard() {
                 <p className="mt-2 text-[10px] text-gray-600 font-mono">
                     Format: [HH:MM:SS] · team name · round · violation count · events persist across server restarts
                 </p>
+            </div>
+
+            {/* ── FEEDBACK MODE TOGGLE ── */}
+            <div className="mt-10">
+                <style>{`
+                    .fb-toggle-track {
+                        position: relative;
+                        width: 52px;
+                        height: 28px;
+                        border-radius: 9999px;
+                        cursor: pointer;
+                        transition: background 0.25s;
+                        border: 1px solid rgba(255,255,255,0.1);
+                        flex-shrink: 0;
+                    }
+                    .fb-toggle-track.on  { background: #16a34a; border-color: #16a34a; }
+                    .fb-toggle-track.off { background: #2a2a2a; }
+                    .fb-toggle-thumb {
+                        position: absolute;
+                        top: 3px;
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 9999px;
+                        background: white;
+                        transition: left 0.25s;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+                    }
+                    .fb-toggle-track.on  .fb-toggle-thumb { left: 28px; }
+                    .fb-toggle-track.off .fb-toggle-thumb { left: 4px; }
+                    .fb-toggle-track.disabled { opacity: 0.5; cursor: not-allowed; }
+                `}</style>
+
+                <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6 max-w-md">
+                    <div className="flex justify-between items-start mb-4">
+                        <h2 className="text-xl font-bold">📝 Feedback Mode</h2>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${feedbackMode
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                            : "bg-red-500/20 text-red-400 border border-red-500/30"
+                            }`}>
+                            {feedbackMode ? "Active" : "Inactive"}
+                        </span>
+                    </div>
+
+                    <p className="text-sm text-gray-400 mb-6">
+                        When enabled, the Leaderboard shows an event feedback form instead of the rankings.
+                        Submitted responses are saved to the database.
+                    </p>
+
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleFeedbackMode}
+                            disabled={feedbackToggling}
+                            className={`fb-toggle-track ${feedbackMode ? "on" : "off"} ${feedbackToggling ? "disabled" : ""}`}
+                            title={feedbackMode ? "Click to disable feedback mode" : "Click to enable feedback mode"}
+                        >
+                            <span className="fb-toggle-thumb" />
+                        </button>
+                        <span className="text-sm font-bold text-gray-300">
+                            {feedbackToggling ? "Updating\u2026" : feedbackMode ? "Feedback form is visible to participants" : "Leaderboard is showing normally"}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     );

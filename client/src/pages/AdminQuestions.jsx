@@ -287,8 +287,8 @@ export default function AdminQuestions() {
                 </div>
 
                 {/* Status bar */}
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
+                <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
                         <span className={`text-sm font-semibold ${poolCount < config.minPool ? "text-red-400" : "text-green-400"}`}>
                             {poolCount} question{poolCount !== 1 ? "s" : ""} in pool
                             {poolCount < config.minPool && ` — ⚠ minimum ${config.minPool} required`}
@@ -301,7 +301,7 @@ export default function AdminQuestions() {
                     </div>
                     <button
                         onClick={openCreate}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg transition"
+                        className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-green-500 sm:w-auto"
                     >
                         + Add Question
                     </button>
@@ -580,16 +580,17 @@ export default function AdminQuestions() {
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">                                                <div>
-                                                <label className="block text-[10px] text-gray-600 mb-1">Input</label>
-                                                <textarea
-                                                    value={tc.input}
-                                                    onChange={e => updateTestCase(idx, "input", e.target.value)}
-                                                    rows={3}
-                                                    className="w-full bg-[#0d0d0d] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-orange-500/40 resize-y"
-                                                    placeholder="stdin input..."
-                                                />
-                                            </div>
+                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                <div>
+                                                    <label className="block text-[10px] text-gray-600 mb-1">Input</label>
+                                                    <textarea
+                                                        value={tc.input}
+                                                        onChange={e => updateTestCase(idx, "input", e.target.value)}
+                                                        rows={3}
+                                                        className="w-full bg-[#0d0d0d] border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-orange-500/40 resize-y"
+                                                        placeholder="stdin input..."
+                                                    />
+                                                </div>
                                                 <div>
                                                     <label className="block text-[10px] text-gray-600 mb-1">Expected Output</label>
                                                     <textarea

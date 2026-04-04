@@ -42,7 +42,7 @@ function Rapidfire() {
   }
 
   return (
-    <div className="min-h-screen bg-black/90 text-white font-['Space_Grotesk'] overflow-x-hidden">
+    <div className="min-h-screen bg-black/90 text-white font-['Space_Grotesk'] overflow-x-hidden ">
       {/* BACKGROUND VIDEO */}
       <video
         src="/0326_1.mp4"
@@ -50,7 +50,7 @@ function Rapidfire() {
         loop
         muted
         playsInline
-        className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none"
+        className="fixed inset-0 w-full h-full  object-cover z-0 pointer-events-none"
       />
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-tr from-orange-900/30 via-transparent to-red-600/10" />
 
@@ -247,7 +247,7 @@ function Rapidfire() {
       </main>
 
       <footer className="relative z-10 mx-auto max-w-[1600px] px-6 py-10 text-xs uppercase tracking-[0.35em] text-white/20 sm:px-10 sm:text-sm lg:px-12 lg:py-12">
-        © 2026 RapidFire Systems
+        © 2026 AAC - Opulence
       </footer>
     </div>
   );

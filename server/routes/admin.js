@@ -95,6 +95,89 @@ router.post("/disqualify-report", async (req, res) => {
 });
 
 // ----------------------------------------------------------
+// Public: get feedback mode on/off
+// Returns { enabled: false } as safe default if table not yet created.
+// ----------------------------------------------------------
+router.get("/feedback-mode", async (req, res) => {
+    try {
+        const result = await pool.query(
+            "SELECT value FROM app_settings WHERE key = 'feedback_mode'"
+        );
+        const enabled = result.rows.length > 0 && result.rows[0].value === 'true';
+        res.json({ enabled });
+    } catch (err) {
+        // Safe fallback if migration hasn't been run yet
+        console.warn("⚠️ app_settings table missing — returning feedback_mode: false");
+        res.json({ enabled: false });
+    }
+});
+
+// ----------------------------------------------------------
+// Public: submit event feedback (called from Leaderboard page)
+// Uses ON CONFLICT DO NOTHING to handle duplicate submits gracefully.
+// ----------------------------------------------------------
+router.post("/feedback", async (req, res) => {
+    const {
+        team_name,
+        participant_name,
+        institution,
+        q_event_flow,
+        q_hospitality,
+        q_fav_part,
+        q_overall_rating,
+        q_suggestions,
+    } = req.body;
+
+    // Validate required fields server-side
+    if (!team_name || !participant_name || !institution || !q_event_flow ||
+        !q_hospitality || !q_overall_rating || !q_suggestions) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const rating = parseInt(q_overall_rating);
+    if (isNaN(rating) || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "q_overall_rating must be 1-5" });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO event_feedback
+               (team_name, participant_name, institution,
+                q_event_flow, q_hospitality, q_fav_part,
+                q_overall_rating, q_suggestions)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (team_name) DO NOTHING
+             RETURNING id`,
+            [
+                team_name.trim(),
+                participant_name.trim(),
+                institution.trim(),
+                q_event_flow.trim(),
+                q_hospitality.trim(),
+                q_fav_part ? q_fav_part.trim() : null,
+                rating,
+                q_suggestions.trim(),
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            // Conflict: already submitted for this team — treat as success so client
+            // sets the localStorage flag and moves on.
+            return res.status(409).json({
+                error: "Feedback already submitted for this team",
+                alreadySubmitted: true,
+            });
+        }
+
+        console.log(`📝 Feedback received from team: ${team_name.trim()}`);
+        res.json({ success: true, id: result.rows[0].id });
+    } catch (err) {
+        console.error("❌ FEEDBACK SUBMIT ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ----------------------------------------------------------
 // All routes below this line require valid admin JWT
 // ----------------------------------------------------------
 router.use(authenticateToken, authorizeAdmin);
@@ -620,6 +703,48 @@ router.patch("/questions/:id/sample-input", async (req, res) => {
     }
 });
 
+// ----------------------------------------------------------
+// Admin: toggle feedback mode on/off
+// Broadcasts feedback_mode_changed Socket.IO event so Leaderboard
+// clients know immediately (if they poll, they'll catch it on next poll).
+// ----------------------------------------------------------
+router.post("/feedback-mode", async (req, res) => {
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: "'enabled' must be a boolean" });
+    }
+    try {
+        await pool.query(
+            `INSERT INTO app_settings (key, value)
+             VALUES ('feedback_mode', $1)
+             ON CONFLICT (key) DO UPDATE SET value = $1`,
+            [enabled ? 'true' : 'false']
+        );
+
+        const io = req.app.get("io");
+        if (io) io.emit("feedback_mode_changed", { enabled });
+
+        console.log(`📝 Feedback mode set to: ${enabled}`);
+        res.json({ success: true, enabled });
+    } catch (err) {
+        console.error("❌ FEEDBACK MODE TOGGLE ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ----------------------------------------------------------
+// Admin: list all feedback responses (for post-event review)
+// ----------------------------------------------------------
+router.get("/feedback-responses", async (req, res) => {
+    try {
+        const result = await pool.query(
+            "SELECT * FROM event_feedback ORDER BY submitted_at DESC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error("❌ FEEDBACK RESPONSES ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
-
-

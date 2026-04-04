@@ -17,6 +17,7 @@ import {
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
 import useContestProctoring from "../hooks/useContestProctoring";
+import useIsCompactLayout from "../hooks/useIsCompactLayout";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -85,9 +86,42 @@ const markdownComponents = {
     li: ({ children }) => <li className="text-gray-300">{children}</li>
 };
 
+/* ── Completion overlay with auto-redirect countdown ── */
+function CompletionOverlay({ completionMessage, countdown, setCountdown, onRedirect }) {
+    useEffect(() => {
+        if (countdown <= 0) {
+            onRedirect();
+            return;
+        }
+        const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [countdown]);
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
+            <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(255,140,0,0.2)] text-center">
+                <div className="text-7xl mb-6">🏆</div>
+                <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
+                <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
+                <p className="text-orange-400/70 text-sm mb-8">
+                    Redirecting to leaderboard in <span className="font-black text-orange-400">{countdown}</span>s...
+                </p>
+                <button
+                    onClick={onRedirect}
+                    className="w-full px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(255,100,0,0.4)] flex items-center justify-center gap-3 text-sm"
+                >
+                    <span>View Leaderboard ({countdown})</span>
+                    <span>→</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function RapidfireContest({ session }) { // Prop session is fallback
     const navigate = useNavigate();
     const location = useLocation();
+    const isCompactLayout = useIsCompactLayout();
 
     // Use prop if available (e.g. testing wrapper), else use null to force fetch
     const [activeSession, setActiveSession] = useState(session || null);
@@ -118,10 +152,17 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
     // Scoring State
     const [rapidfireScore, setRapidfireScore] = useState(0);
+    const rapidfireScoreRef = useRef(0); // stable ref for closures
+    const activeSessionRef = useRef(null); // stable ref for closures
+
+    // Keep refs in sync with state
+    useEffect(() => { rapidfireScoreRef.current = rapidfireScore; }, [rapidfireScore]);
+    useEffect(() => { activeSessionRef.current = activeSession; }, [activeSession]);
 
     // Completion overlay
     const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
     const [completionMessage, setCompletionMessage] = useState("");
+    const [redirectCountdown, setRedirectCountdown] = useState(5);
     const isContestEndedRef = useRef(false);
 
     // Pause state
@@ -226,7 +267,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                     // ── Admin round stopped listener (Bug 7 fix) ──
                     bSocket.on('round_stopped', ({ roundName }) => {
                         if (roundName === 'rapidfire') {
-                            triggerCompletion(`Contest stopped by admin. Your Rapidfire Score: ${parseFloat(rapidfireScore).toFixed(3)} points`);
+                            triggerCompletion(`Contest stopped by admin. Your Rapidfire Score: ${rapidfireScoreRef.current} points`);
                         }
                     });
 
@@ -255,7 +296,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
 
             // Seed score from server so it survives page reloads
             if (activeSession.currentScore != null) {
-                setRapidfireScore(parseFloat(activeSession.currentScore) || 0);
+                setRapidfireScore(activeSession.currentScore);
             }
 
             // Use backend-provided currentIndex instead of guessing
@@ -303,16 +344,21 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
         isContestEndedRef.current = true;
         cleanupProctoring();
         clearCodeStorage(STORAGE_PREFIX);
+        // Store team name so Leaderboard can show user-specific stats
+        if (activeSessionRef.current?.team) {
+            localStorage.setItem("currentTeam", activeSessionRef.current.team);
+        }
         // Tokens are kept alive until the user clicks the button
         // so ProtectedContestRoute doesn't kick in on a re-render
         setCompletionMessage(msg);
         setShowCompletionOverlay(true);
+        setRedirectCountdown(5);
     }
 
     // Handle contest end — fires from both interval ticks and re-sync updates
     useEffect(() => {
-        if (totalTimeLeft === 0) {
-            triggerCompletion(`Contest Over! Your Rapidfire Score: ${parseFloat(rapidfireScore).toFixed(3)} points`);
+        if (totalTimeLeft === 0 && !isContestEndedRef.current) {
+            triggerCompletion(`Contest Over! Your Rapidfire Score: ${rapidfireScoreRef.current} points`);
         }
     }, [totalTimeLeft]);
 
@@ -461,7 +507,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 }
 
             } else {
-                triggerCompletion(`All questions completed! Your Rapidfire Score: ${parseFloat(rapidfireScore).toFixed(3)} points`);
+                triggerCompletion(`All questions completed! Your Rapidfire Score: ${rapidfireScoreRef.current} points`);
             }
         } finally {
             isAdvancingRef.current = false;
@@ -503,8 +549,8 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 // Score is computed server-side (dispatcher calls submit-result internally).
                 // It arrives pre-attached to the socket payload — no separate API call needed.
                 if (data.scoreAwarded != null) {
-                    setRapidfireScore(parseFloat(data.totalRoundScore) || 0);
-                    setOutput(`Correct! +${parseFloat(data.scoreAwarded).toFixed(3)} pts (Total: ${parseFloat(data.totalRoundScore).toFixed(3)})`);
+                    setRapidfireScore(data.totalRoundScore);
+                    setOutput(`Correct! +${data.scoreAwarded} pts (Total: ${data.totalRoundScore})`);
                 } else {
                     setOutput("Correct! Moving to next question...");
                 }
@@ -615,29 +661,20 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     if (!currentQuestion) return <div className="text-white">Loading...</div>;
 
     return (
-        <div className="h-screen flex flex-col bg-[#1a1a1a] text-[#eff1f6] font-sans overflow-hidden">
+        <div className="flex min-h-screen flex-col overflow-x-hidden bg-[#1a1a1a] font-sans text-[#eff1f6] lg:h-screen lg:overflow-hidden">
 
             {/* COMPLETION OVERLAY */}
             {showCompletionOverlay && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
-                    <div className="bg-[#1f1f1f] border border-orange-500/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(255,140,0,0.2)] text-center">
-                        <div className="text-7xl mb-6">🏆</div>
-                        <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
-                        <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
-                        <p className="text-orange-400/70 text-sm mb-8">Check the leaderboard to see where you stand among other teams.</p>
-                        <button
-                            onClick={() => {
-                                localStorage.removeItem("userToken");
-                                localStorage.removeItem("userAccessCode");
-                                navigate("/leaderboard");
-                            }}
-                            className="w-full px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(255,100,0,0.4)] flex items-center justify-center gap-3 text-sm"
-                        >
-                            <span>View Leaderboard</span>
-                            <span>→</span>
-                        </button>
-                    </div>
-                </div>
+                <CompletionOverlay
+                    completionMessage={completionMessage}
+                    countdown={redirectCountdown}
+                    setCountdown={setRedirectCountdown}
+                    onRedirect={() => {
+                        localStorage.removeItem("userToken");
+                        localStorage.removeItem("userAccessCode");
+                        navigate("/leaderboard");
+                    }}
+                />
             )}
 
             {/* PROCTORING WARNING OVERLAY */}
@@ -668,8 +705,8 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
             )}
 
             {/* TOP NAVIGATION BAR */}
-            <nav className="h-[60px] bg-[#282828] border-b border-[#3e3e3e] flex items-center justify-between px-6 shrink-0 z-50">
-                <div className="flex items-center gap-4">
+            <nav className="z-50 flex min-h-[60px] flex-wrap items-center justify-between gap-4 border-b border-[#3e3e3e] bg-[#282828] px-4 py-3 sm:px-6">
+                <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
                     <span className="text-orange-500 font-bold tracking-widest uppercase">Rapid Fire</span>
                     <div className="bg-[#333] px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
                         <span className="text-xs text-gray-400">Question</span>
@@ -678,7 +715,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 </div>
 
                 {/* TIMERS */}
-                <div className="flex items-center gap-6">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] text-gray-500 uppercase font-bold">Question Timer</span>
                         <span className={`font-mono text-xl font-bold ${timeLeft < 30 ? "text-red-500 animate-pulse" : "text-white"}`}>
@@ -695,10 +732,10 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex items-center gap-3">
+                <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:flex-nowrap">
                     <div className="bg-[#333] h-8 px-4 rounded-full border border-white/10 flex items-center gap-2 mr-2 shadow-inner">
                         <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Score</span>
-                        <span className="text-orange-400 font-mono font-bold text-sm">{parseFloat(rapidfireScore || 0).toFixed(3)}</span>
+                        <span className="text-orange-400 font-mono font-bold text-sm">{rapidfireScore}</span>
                         <FiZap className="text-orange-500 text-sm" />
                     </div>
                     <button
@@ -720,12 +757,12 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 </div>
             </nav>
 
-            <div className="flex flex-1 overflow-hidden p-2 gap-0 bg-[#1a1a1a]">
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto bg-[#1a1a1a] p-2 lg:flex-row lg:gap-0 lg:overflow-hidden">
 
                 {/* LEFT PANEL: PROBLEM DESCRIPTION */}
                 <div
-                    style={{ width: `${leftPanelWidth}%` }}
-                    className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg shrink-0"
+                    style={{ width: isCompactLayout ? "100%" : `${leftPanelWidth}%` }}
+                    className="flex min-h-[38vh] shrink-0 flex-col overflow-hidden rounded-xl border border-[#3e3e3e] bg-[#282828] shadow-lg lg:min-h-0"
                 >
                     {/* Header */}
                     <div className="h-10 bg-[#333333] flex items-center px-4 shrink-0 border-b border-[#3e3e3e]">
@@ -766,7 +803,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 {/* HORIZONTAL RESIZE HANDLE */}
                 <div
                     onMouseDown={startHorizontalResize}
-                    className="w-2 hover:bg-orange-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+                    className={`${isCompactLayout ? "hidden" : "flex"} z-10 w-2 cursor-col-resize items-center justify-center transition-colors duration-200 group hover:bg-orange-500/30`}
                 >
                     <div className="w-[3px] h-12 bg-gray-600 group-hover:bg-orange-500" />
                 </div>
@@ -774,14 +811,14 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                 {/* RIGHT PANEL: EDITOR & CONSOLE */}
                 <div
                     id="right-panel-container"
-                    style={{ width: `${100 - leftPanelWidth}%` }}
-                    className="flex flex-col gap-0 min-w-0 shrink-0"
+                    style={{ width: isCompactLayout ? "100%" : `${100 - leftPanelWidth}%` }}
+                    className="flex min-h-[70vh] min-w-0 shrink-0 flex-col gap-2 lg:min-h-0 lg:gap-0"
                 >
 
                     {/* TOP: EDITOR SECTION */}
                     <div
-                        style={{ height: `${editorHeight}%` }}
-                        className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg relative shrink-0"
+                        style={{ height: isCompactLayout ? "52vh" : `${editorHeight}%` }}
+                        className="relative flex shrink-0 flex-col overflow-hidden rounded-xl border border-[#3e3e3e] bg-[#282828] shadow-lg"
                     >
                         <div className="h-10 bg-[#333333] flex items-center justify-between px-3 shrink-0 border-b border-[#3e3e3e]">
                             <div className="flex items-center gap-2">
@@ -847,15 +884,15 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                     {/* VERTICAL RESIZE HANDLE */}
                     <div
                         onMouseDown={startVerticalResize}
-                        className="h-2 hover:bg-orange-500/30 cursor-row-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+                        className={`${isCompactLayout ? "hidden" : "flex"} z-10 h-2 cursor-row-resize items-center justify-center transition-colors duration-200 group hover:bg-orange-500/30`}
                     >
                         <div className="w-12 h-[3px] bg-gray-600 group-hover:bg-orange-500" />
                     </div>
 
                     {/* BOTTOM: CONSOLE SECTION */}
                     <div
-                        style={{ height: `${100 - editorHeight}%` }}
-                        className="flex flex-col bg-[#282828] rounded-xl overflow-hidden border border-[#3e3e3e] shadow-lg relative shrink-0"
+                        style={{ height: isCompactLayout ? "20rem" : `${100 - editorHeight}%` }}
+                        className="relative flex shrink-0 flex-col overflow-hidden rounded-xl border border-[#3e3e3e] bg-[#282828] shadow-lg"
                     >
                         <div className="h-10 bg-[#333333] flex items-center justify-between px-4 shrink-0 border-b border-[#3e3e3e]">
                             <div className="flex items-center gap-4">
@@ -874,7 +911,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                             </div>
 
                             {statusMessage && (
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${statusMessage === "Accepted" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${statusMessage === "Accepted" ? "bg-green-500/20 text-green-400" : statusMessage === "Run Complete" ? "bg-blue-500/20 text-blue-400" : statusMessage === "Running..." ? "bg-yellow-500/20 text-yellow-400" : "bg-red-500/20 text-red-400"}`}>
                                     {statusMessage}
                                 </span>
                             )}

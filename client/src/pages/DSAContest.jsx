@@ -15,6 +15,7 @@ import {
 } from "../utils/codeStorage";
 import { formatErrorForDisplay } from "../utils/errorFormatter";
 import useContestProctoring from "../hooks/useContestProctoring";
+import useIsCompactLayout from "../hooks/useIsCompactLayout";
 
 // Configuration
 const BACKEND_URL = import.meta.env.VITE_API_URL;
@@ -68,9 +69,42 @@ const markdownComponents = {
     pre: PreBlock
 };
 
+/* ── Completion overlay with auto-redirect countdown ── */
+function DSACompletionOverlay({ completionMessage, countdown, setCountdown, onRedirect }) {
+    useEffect(() => {
+        if (countdown <= 0) {
+            onRedirect();
+            return;
+        }
+        const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [countdown]);
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
+            <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(244,63,94,0.2)] text-center">
+                <div className="text-7xl mb-6">🏆</div>
+                <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
+                <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
+                <p className="text-[#f43f5e]/70 text-sm mb-8">
+                    Redirecting to leaderboard in <span className="font-black text-[#f43f5e]">{countdown}</span>s...
+                </p>
+                <button
+                    onClick={onRedirect}
+                    className="w-full px-8 py-4 bg-[#f43f5e] hover:bg-rose-500 text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(244,63,94,0.4)] flex items-center justify-center gap-3 text-sm"
+                >
+                    <span>View Leaderboard ({countdown})</span>
+                    <span>→</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function DSAContest({ session }) {
     const navigate = useNavigate();
     const location = useLocation();
+    const isCompactLayout = useIsCompactLayout();
 
     // Read session from prop or location state
     const initialSession = session || location.state?.session || null;
@@ -104,6 +138,7 @@ export default function DSAContest({ session }) {
     const [contestStopped, setContestStopped] = useState(false);
     const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
     const [completionMessage, setCompletionMessage] = useState("");
+    const [redirectCountdown, setRedirectCountdown] = useState(5);
     const isSyncingRef = useRef(false); // Guard for visibility re-sync
     const isContestEndedRef = useRef(false); // Guard for completion
 
@@ -135,6 +170,10 @@ export default function DSAContest({ session }) {
     // Pause state
     const [isPaused, setIsPaused] = useState(false);
     const isPausedRef = useRef(false); // stable ref for use inside callbacks/effects
+    const activeSessionRef = useRef(null); // stable ref for closures
+
+    // Keep ref in sync with state
+    useEffect(() => { activeSessionRef.current = activeSession; }, [activeSession]);
 
     // Admin Stop Listener + force_logout + 401 interceptor
     useEffect(() => {
@@ -308,9 +347,14 @@ export default function DSAContest({ session }) {
         isContestEndedRef.current = true;
         cleanupProctoring();
         clearCodeStorage(STORAGE_PREFIX);
+        // Store team name so Leaderboard can show user-specific stats
+        if (activeSession?.team) {
+            localStorage.setItem("currentTeam", activeSession.team);
+        }
         // Tokens deferred to button click so ProtectedDSARoute doesn't kick in
         setCompletionMessage(msg);
         setShowCompletionOverlay(true);
+        setRedirectCountdown(5);
     }
 
     // Handle contest end — fires from both interval ticks and re-sync updates
@@ -319,6 +363,23 @@ export default function DSAContest({ session }) {
             triggerCompletion("Contest Over! Your final DSA score has been recorded.");
         }
     }, [totalTimeLeft]);
+
+    // Auto-redirect countdown when admin stops the contest
+    useEffect(() => {
+        if (!contestStopped || showCompletionOverlay) return;
+        if (activeSessionRef.current?.team) localStorage.setItem("currentTeam", activeSessionRef.current.team);
+        if (redirectCountdown <= 0) {
+            cleanupProctoring();
+            clearCodeStorage(STORAGE_PREFIX);
+            localStorage.removeItem("dsaToken");
+            localStorage.removeItem("dsaCurrentIndex");
+            localStorage.removeItem("dsaAccessCode");
+            window.location.href = "/leaderboard";
+            return;
+        }
+        const t = setTimeout(() => setRedirectCountdown((c) => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [contestStopped, redirectCountdown, showCompletionOverlay]);
 
     // Shared time re-sync helper — called from visibility change AND after resume
     async function handleDSATimeReSync() {
@@ -665,29 +726,20 @@ export default function DSAContest({ session }) {
     }
 
     return (
-        <div className="h-screen flex flex-col bg-[#0c0202] text-[#eff1f6] font-sans overflow-hidden">
+        <div className="flex min-h-screen flex-col overflow-x-hidden bg-[#0c0202] font-sans text-[#eff1f6] lg:h-screen lg:overflow-hidden">
 
             {/* COMPLETION OVERLAY */}
             {showCompletionOverlay && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md">
-                    <div className="bg-[#1a0606] border border-[#f43f5e]/30 rounded-2xl p-12 max-w-md w-full shadow-[0_0_80px_rgba(244,63,94,0.2)] text-center">
-                        <div className="text-7xl mb-6">🏆</div>
-                        <h2 className="text-3xl font-black text-white mb-3 uppercase tracking-widest">Round Complete!</h2>
-                        <p className="text-gray-300 mb-8 leading-relaxed text-base">{completionMessage}</p>
-                        <p className="text-[#f43f5e]/70 text-sm mb-8">Check the leaderboard to see where you stand among other teams.</p>
-                        <button
-                            onClick={() => {
-                                localStorage.removeItem("dsaToken");
-                                localStorage.removeItem("dsaCurrentIndex");
-                                navigate("/leaderboard");
-                            }}
-                            className="w-full px-8 py-4 bg-[#f43f5e] hover:bg-rose-500 text-white font-black rounded-xl uppercase tracking-widest transition shadow-[0_0_30px_rgba(244,63,94,0.4)] flex items-center justify-center gap-3 text-sm"
-                        >
-                            <span>View Leaderboard</span>
-                            <span>→</span>
-                        </button>
-                    </div>
-                </div>
+                <DSACompletionOverlay
+                    completionMessage={completionMessage}
+                    countdown={redirectCountdown}
+                    setCountdown={setRedirectCountdown}
+                    onRedirect={() => {
+                        localStorage.removeItem("dsaToken");
+                        localStorage.removeItem("dsaCurrentIndex");
+                        navigate("/leaderboard");
+                    }}
+                />
             )}
 
             {/* PROCTORING WARNING OVERLAY */}
@@ -716,15 +768,18 @@ export default function DSAContest({ session }) {
                         <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-widest">
                             Contest Stopped
                         </h1>
-                        <p className="text-gray-400 text-lg mb-8">
+                        <p className="text-gray-400 text-lg mb-4">
                             The DSA Challenge has been stopped by the admin.<br />
                             Your progress has been saved.
+                        </p>
+                        <p className="text-[#f43f5e]/70 text-sm mb-8">
+                            Redirecting in <span className="font-black text-[#f43f5e]">{redirectCountdown}</span>s...
                         </p>
                         <button
                             onClick={() => { cleanupProctoring(); clearCodeStorage(STORAGE_PREFIX); localStorage.removeItem("dsaToken"); localStorage.removeItem("dsaCurrentIndex"); navigate("/leaderboard"); }}
                             className="px-8 py-3 bg-[#f43f5e] hover:bg-rose-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)]"
                         >
-                            Check Leaderboard
+                            Check Leaderboard ({redirectCountdown})
                         </button>
                     </div>
                 </div>
@@ -740,9 +795,9 @@ export default function DSAContest({ session }) {
             )}
 
             {/* HEADER */}
-            <nav className="h-[70px] bg-[#1a0606] border-b border-[#f43f5e]/20 flex items-center justify-between px-6 shrink-0 z-40 relative">
+            <nav className="relative z-40 flex min-h-[70px] flex-wrap items-center justify-between gap-4 border-b border-[#f43f5e]/20 bg-[#1a0606] px-4 py-3 sm:px-6">
                 {/* Left Side: Brand */}
-                <div className="flex items-center gap-6 relative z-10">
+                <div className="relative z-10 flex min-w-0 flex-wrap items-center gap-4 sm:gap-6">
                     <div className="flex flex-col">
                         <span className="text-[#f43f5e] font-black tracking-widest uppercase italic text-sm">DSA Challenge</span>
                         <span className="text-xs text-white/50 tracking-widest uppercase">Round 3</span>
@@ -751,7 +806,7 @@ export default function DSAContest({ session }) {
                     <div className="h-8 w-px bg-white/10"></div>
 
                     {/* Question Navigator */}
-                    <div className="flex gap-2 bg-black/40 p-1.5 rounded-lg border border-[#f43f5e]/10">
+                    <div className="flex max-w-full gap-2 overflow-x-auto rounded-lg border border-[#f43f5e]/10 bg-black/40 p-1.5">
                         {questions.map((q, idx) => (
                             <button
                                 key={q.id}
@@ -777,8 +832,8 @@ export default function DSAContest({ session }) {
                 </div>
 
                 {/* Right: Score, Timer & Actions */}
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="bg-black/40 px-6 py-2 rounded-xl border border-white/5 flex flex-col items-center">
+                <div className="relative z-10 flex w-full flex-wrap items-center gap-4 lg:w-auto lg:gap-6">
+                    <div className="flex flex-col items-center rounded-xl border border-white/5 bg-black/40 px-4 py-2 sm:px-6">
                         <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest leading-none mb-1">Score</span>
                         <span className="font-mono text-xl font-black text-rose-300">
                             {totalScore}
@@ -794,7 +849,7 @@ export default function DSAContest({ session }) {
 
                     <div className="h-8 w-px bg-white/10 mx-2"></div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:flex-nowrap">
                         <button
                             onClick={handleRun}
                             disabled={isRunning || isPaused}
@@ -816,12 +871,12 @@ export default function DSAContest({ session }) {
             </nav>
 
             {/* MAIN CONTENT SPLIT */}
-            <div className="flex flex-1 overflow-hidden bg-[#0c0202]">
+            <div className="flex flex-1 flex-col overflow-y-auto bg-[#0c0202] lg:flex-row lg:overflow-hidden">
 
                 {/* LEFT PANEL: PROBLEM DESCRIPTION */}
                 <div
-                    style={{ width: `${leftPanelWidth}%` }}
-                    className="flex flex-col bg-[#1a0606] border-r border-[#f43f5e]/10 relative shrink-0"
+                    style={{ width: isCompactLayout ? "100%" : `${leftPanelWidth}%` }}
+                    className="relative flex min-h-[36vh] shrink-0 flex-col border-b border-[#f43f5e]/10 bg-[#1a0606] lg:min-h-0 lg:border-b-0 lg:border-r"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none z-0">
                         <span className="text-8xl font-black font-mono">Q{currentIndex + 1}</span>
@@ -879,7 +934,7 @@ export default function DSAContest({ session }) {
                 {/* HORIZONTAL RESIZE HANDLE */}
                 <div
                     onMouseDown={startHorizontalResize}
-                    className="w-2 hover:bg-rose-500/30 cursor-col-resize transition-colors duration-200 z-10 flex items-center justify-center group"
+                    className={`${isCompactLayout ? "hidden" : "flex"} z-10 w-2 cursor-col-resize items-center justify-center transition-colors duration-200 group hover:bg-rose-500/30`}
                 >
                     <div className="w-[1px] h-8 bg-white/20 group-hover:bg-[#f43f5e]" />
                 </div>
@@ -887,13 +942,13 @@ export default function DSAContest({ session }) {
                 {/* RIGHT PANEL: EDITOR & CONSOLE */}
                 <div
                     id="right-panel-container"
-                    style={{ width: `${100 - leftPanelWidth}%` }}
-                    className="flex flex-col gap-0 min-w-0 shrink-0 bg-[#0d0605]"
+                    style={{ width: isCompactLayout ? "100%" : `${100 - leftPanelWidth}%` }}
+                    className="flex min-h-[72vh] min-w-0 shrink-0 flex-col gap-2 bg-[#0d0605] lg:min-h-0 lg:gap-0"
                 >
                     {/* TOP: EDITOR SECTION */}
                     <div
-                        style={{ height: `${editorHeight}%` }}
-                        className="flex flex-col border-b border-[#f43f5e]/10 shrink-0"
+                        style={{ height: isCompactLayout ? "52vh" : `${editorHeight}%` }}
+                        className="flex shrink-0 flex-col border-b border-[#f43f5e]/10"
                     >
                         <div className="h-10 bg-[#140a0a] flex items-center justify-between px-4 shrink-0 border-b border-[#f43f5e]/10">
                             <div className="flex items-center gap-2">
@@ -953,15 +1008,15 @@ export default function DSAContest({ session }) {
                     {/* VERTICAL RESIZE HANDLE */}
                     <div
                         onMouseDown={startVerticalResize}
-                        className="h-2 hover:bg-rose-500/30 cursor-row-resize transition-colors duration-200 z-10 flex items-center justify-center group shrink-0"
+                        className={`${isCompactLayout ? "hidden" : "flex"} z-10 h-2 shrink-0 cursor-row-resize items-center justify-center transition-colors duration-200 group hover:bg-rose-500/30`}
                     >
                         <div className="h-[1px] w-8 bg-white/20 group-hover:bg-[#f43f5e]" />
                     </div>
 
                     {/* BOTTOM: CONSOLE SECTION */}
                     <div
-                        style={{ height: `${100 - editorHeight}%` }}
-                        className="flex flex-col bg-[#140a0a] shrink-0"
+                        style={{ height: isCompactLayout ? "20rem" : `${100 - editorHeight}%` }}
+                        className="flex shrink-0 flex-col bg-[#140a0a]"
                     >
                         <div className="h-10 border-b border-[#f43f5e]/10 flex items-center justify-between px-4 shrink-0">
                             <div className="flex h-full gap-6">
@@ -986,7 +1041,7 @@ export default function DSAContest({ session }) {
                                 {statusMessage && (
                                     <span
                                         className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border
-                        ${statusMessage === "Accepted" ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                        ${statusMessage.includes("Accepted") ? "bg-green-500/10 text-green-400 border-green-500/20" :
                                                 statusMessage === "Wrong Answer" ? "bg-red-500/10 text-red-400 border-red-500/20" :
                                                     statusMessage === "Running..." ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
                                                         "bg-[#f43f5e]/10 text-[#f43f5e] border-[#f43f5e]/20"}`}

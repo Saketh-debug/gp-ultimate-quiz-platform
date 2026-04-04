@@ -90,8 +90,9 @@ export default function AdminSampleInputs() {
     return (
         <div className="min-h-screen bg-[#111] text-white font-sans">
             {/* Header */}
-            <header className="flex justify-between items-center px-8 py-5 border-b border-white/10">
-                <div className="flex items-center gap-4">
+
+            <header className="flex flex-col gap-4 border-b border-white/10 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+                <div className="flex flex-wrap items-center gap-4">
                     <button
                         onClick={() => navigate("/admin/dashboard")}
                         className="text-gray-500 hover:text-white text-sm transition"
@@ -113,9 +114,10 @@ export default function AdminSampleInputs() {
                 </button>
             </header>
 
-            <div className="px-8 py-6 max-w-5xl mx-auto">
+            <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
                 {/* Round Tabs */}
-                <div className="flex gap-2 mb-6">
+                <div className="mb-6 flex flex-wrap gap-2">
+
                     {ROUNDS.map(r => (
                         <button
                             key={r.key}
@@ -139,11 +141,11 @@ export default function AdminSampleInputs() {
 
                 {/* Save All */}
                 {!loading && questions.length > 0 && (
-                    <div className="flex justify-end mb-4">
+                    <div className="mb-4 flex justify-stretch sm:justify-end">
                         <button
                             onClick={saveAll}
                             disabled={isSavingAll}
-                            className="px-5 py-2 bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition"
+                            className="w-full rounded-lg bg-green-700 px-5 py-2 text-sm font-bold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 sm:w-auto"
                         >
                             {isSavingAll ? "Saving All…" : "💾 Save All"}
                         </button>
@@ -161,10 +163,10 @@ export default function AdminSampleInputs() {
                         {questions.map((q, i) => (
                             <div
                                 key={q.id}
-                                className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 flex gap-4 items-start"
+                                className="flex flex-col gap-4 rounded-xl border border-white/10 bg-[#1a1a1a] p-4 lg:flex-row lg:items-start"
                             >
                                 {/* Left: question info */}
-                                <div className="w-64 shrink-0">
+                                <div className="w-full shrink-0 lg:w-64">
                                     <div className="text-[10px] text-gray-600 uppercase font-bold mb-0.5">
                                         {activeRound !== "rapidfire" ? `#${q.sequence_order} · ` : ""}ID {q.id}
                                     </div>
@@ -174,22 +176,20 @@ export default function AdminSampleInputs() {
                                 </div>
 
                                 {/* Right: textarea + save */}
-                                <div className="flex-1 flex gap-3 items-start">
-                                    <textarea
-                                        value={inputs[q.id] ?? ""}
-                                        onChange={e => setInputs(s => ({ ...s, [q.id]: e.target.value }))}
-                                        rows={3}
-                                        placeholder="Paste sample stdin here…"
-                                        className="flex-1 bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-orange-500/50 resize-y"
-                                    />
-                                    <div className="flex flex-col items-end gap-2 pt-1">
-                                        <button
-                                            onClick={() => saveOne(q.id)}
-                                            disabled={saveStatus[q.id] === "saving"}
-                                            className="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition whitespace-nowrap"
-                                        >
-                                            Save
-                                        </button>
+                                <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-start">                                    <textarea
+                                    value={inputs[q.id] ?? ""}
+                                    onChange={e => setInputs(s => ({ ...s, [q.id]: e.target.value }))}
+                                    rows={3}
+                                    placeholder="Paste sample stdin here…"
+                                    className="flex-1 bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-orange-500/50 resize-y"
+                                />
+                                    <div className="flex flex-row items-center justify-between gap-3 pt-1 sm:flex-col sm:items-end">                                        <button
+                                        onClick={() => saveOne(q.id)}
+                                        disabled={saveStatus[q.id] === "saving"}
+                                        className="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition whitespace-nowrap"
+                                    >
+                                        Save
+                                    </button>
                                         {statusIcon(q.id)}
                                     </div>
                                 </div>

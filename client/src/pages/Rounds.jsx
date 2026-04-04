@@ -14,7 +14,7 @@ const ROUNDS = [
     subtitle: "Speed is your weapon",
     description:
       "High-speed trivia blitz. Answer fast, score big. Every second counts on the red plains. Burn through questions before the clock burns you.",
-    chips: ["50 min", "Speed","Quick-witted "],
+    chips: ["50 min", "Speed", "Quick-witted "],
     image: "/images/rapid-fire.png",
     to: "/rapidfire",
     accent: "#f97316",
@@ -28,7 +28,7 @@ const ROUNDS = [
     subtitle: "Chain your solutions",
     description:
       "A waterfall of algorithmic challenges. Chain your solutions and conquer the canyon. Each problem unlocks the next — think in sequences.",
-    chips: ["60 min", "Streak","Decisive"],
+    chips: ["60 min", "Streak", "Decisive"],
     image: "/images/coding_cascade.png",
     to: "/cascade",
     accent: "#f97316",
@@ -42,7 +42,7 @@ const ROUNDS = [
     subtitle: "Prove your mastery",
     description:
       "Data Structures & Algorithms arena. Navigate complex structures under the Martian sky. Only the most efficient solutions survive the hidden tests.",
-    chips: ["120 min", "Competitive","Optimal"],
+    chips: ["120 min", "Competitive", "Optimal"],
     image: "/images/dsa.png",
     to: "/dsa",
     accent: "#f97316",
@@ -253,6 +253,7 @@ export default function Rounds() {
   const [cardVisible, setCardVisible] = useState(true);
   const [isMoving, setIsMoving] = useState(false);
   const [roverX, setRoverX] = useState(null);
+  const [roverWidth, setRoverWidth] = useState(140);
   const [direction, setDirection] = useState(1); // 1=right, -1=left
   const trackRef = useRef(null);
   const flagRefs = useRef([]);
@@ -267,6 +268,12 @@ export default function Rounds() {
     return ["16%", "50%", "90%"];
   }, []);
 
+  const getRoverWidth = useCallback(() => {
+    if (window.innerWidth < 640) return 104;
+    if (window.innerWidth < 1024) return 122;
+    return 140;
+  }, []);
+
   /* ── Compute rover pixel X from flag ── */
   const updateRoverPosition = useCallback((index) => {
     const flag = flagRefs.current[index];
@@ -275,8 +282,10 @@ export default function Rounds() {
     const flagRect = flag.getBoundingClientRect();
     const trackRect = track.getBoundingClientRect();
     const flagCenterX = flagRect.left + flagRect.width / 2 - trackRect.left;
-    setRoverX(flagCenterX - 160); // stops just before the flag
-  }, []);
+    const nextWidth = getRoverWidth();
+    setRoverWidth(nextWidth);
+    setRoverX(flagCenterX - nextWidth * 0.86); // stops just before the flag
+  }, [getRoverWidth]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -292,10 +301,13 @@ export default function Rounds() {
   }, [activeRound, updateRoverPosition]);
 
   useEffect(() => {
-    const handler = () => updateRoverPosition(activeRound);
+    const handler = () => {
+      setRoverWidth(getRoverWidth());
+      updateRoverPosition(activeRound);
+    };
     window.addEventListener("resize", handler);
     return () => window.removeEventListener("resize", handler);
-  }, [activeRound, updateRoverPosition]);
+  }, [activeRound, getRoverWidth, updateRoverPosition]);
 
   /* ── Navigate ── */
   const goTo = useCallback(
@@ -342,17 +354,20 @@ export default function Rounds() {
 
   const round = ROUNDS[activeRound];
 
-  /* ── Rover trail X positions for dust ── */
-  const dustXPositions = useMemo(() => {
-    if (roverX === null) return [];
-    return [-28, -18, -10, -6];
-  }, [roverX]);
-
   return (
     <div
-      className="relative h-screen w-full flex flex-col overflow-hidden text-white select-none"
+      className="relative h-[100svh] w-full overflow-hidden text-white select-none"
       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
     >
+      <div className="absolute left-4 top-4 z-50 sm:left-6 sm:top-6">
+        <Link to="/" className="group flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full  transition group-hover:bg-white/5 sm:h-14 sm:w-14">
+            <span className="material-symbols-outlined text-3xl text-white/80 sm:text-[2.25rem]">
+              keyboard_double_arrow_left
+            </span>
+          </div>
+        </Link>
+      </div>
       {/* ── BACKGROUND: Mars sunset illustration ── */}
       {/* Base illustration — full opacity */}
       <div
@@ -445,10 +460,10 @@ export default function Rounds() {
       </div>
 
       {/* ── TOP NAV ── */}
-      <nav className="relative z-50 flex items-center justify-center h-28 px-8 shrink-0"
+      <nav className="relative z-40 flex h-20 items-center justify-center px-4 sm:h-24 sm:px-8"
       >
 
-        <h2 className="text-5xl font-black tracking-tight uppercase italic" style={{ letterSpacing: "0.04em" }}>
+        <h2 className="text-3xl font-black tracking-tight uppercase italic sm:text-4xl lg:text-5xl" style={{ letterSpacing: "0.04em" }}>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">G-</span>Prime
         </h2>
 
@@ -456,11 +471,11 @@ export default function Rounds() {
 
 
       {/* ── MAIN AREA ── */}
-      <div className="relative flex-1 flex flex-col min-h-0 w-full">
+      <div className="relative flex h-[calc(100svh-5rem)] flex-col sm:h-[calc(100svh-6rem)]">
 
 
         {/* ── ROUND CARD (main content) ── */}
-        <div className="flex-1 flex items-center justify-center px-6 pb-4 pt-2">
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-40 pt-2 sm:px-6 sm:pb-48 lg:pb-52">
           <div
             style={{
               opacity: cardVisible ? 1 : 0,
@@ -470,11 +485,12 @@ export default function Rounds() {
               transition: "opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
               width: "100%",
               maxWidth: 760,
+              maxHeight: "100%",
             }}
           >
             {/* Glass card */}
             <div
-              className="rounded-3xl overflow-hidden"
+              className="overflow-hidden rounded-[1.75rem] sm:rounded-3xl"
               style={{
                 background: "rgba(30, 8, 8, 0.78)",
                 backdropFilter: "blur(24px)",
@@ -486,7 +502,7 @@ export default function Rounds() {
               <div
                 className="relative bg-cover bg-center overflow-hidden"
                 style={{
-                  height: 280,
+                  height: "clamp(160px, 24vh, 280px)",
                   backgroundImage: `url("${round.image}")`,
                   backgroundPosition: round.key === "dsa" ? "center 42%" : "center",
                 }}
@@ -518,35 +534,35 @@ export default function Rounds() {
                 </div>
 
                 {/* Bottom content overlay */}
-                <div className="absolute bottom-0 left-0 right-0 px-7 pb-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400/70 mb-2">{round.subtitle}</p>
+                <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 sm:px-7 sm:pb-6">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400/70">{round.subtitle}</p>
                   <div className="h-px w-24 bg-gradient-to-r from-orange-500/80 to-transparent" />
                 </div>
               </div>
 
               {/* Card body */}
-              <div className="px-8 py-8 space-y-6">
+              <div className="space-y-4 px-5 py-5 sm:space-y-6 sm:px-8 sm:py-8">
                 {/* Title row */}
                 <div className="flex items-center gap-3">
                   <div
                     className="flex items-center justify-center rounded-xl"
-                    style={{ width: 48, height: 48, background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)" }}
+                    style={{ width: 48, height: 48, minWidth: 48, background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)" }}
                   >
                     <IconSVG name={round.icon} className="text-orange-500" style={{ fontSize: 22 }} />
                   </div>
-                  <h1 className="text-3xl md:text-[2.1rem] font-black uppercase tracking-tight" style={{ letterSpacing: "-0.02em" }}>
+                  <h1 className="text-2xl font-black uppercase tracking-tight sm:text-3xl md:text-[2.1rem]" style={{ letterSpacing: "-0.02em" }}>
                     {round.name}
                   </h1>
                 </div>
 
-                <p className="text-[15px] text-white/60 leading-relaxed">{round.description}</p>
+                <p className="text-sm leading-relaxed text-white/60 sm:text-[15px]">{round.description}</p>
 
                 {/* Chips */}
-                <div className="flex gap-3 flex-wrap pb-3">
+                <div className="flex flex-wrap gap-2 pb-1 sm:gap-3 sm:pb-3">
                   {round.chips.map((chip) => (
                     <span
                       key={chip}
-                      className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
+                      className="rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest"
                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                     >
                       {chip}
@@ -557,7 +573,7 @@ export default function Rounds() {
                 {/* CTA button */}
                 <Link to={round.to}>
                   <button
-                    className="group w-full h-14 rounded-2xl font-black uppercase tracking-widest text-sm transition-all duration-300 relative overflow-hidden"
+                    className="group relative h-12 w-full overflow-hidden rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-300 sm:h-14"
                     style={{
                       background: "transparent",
                       border: "1px solid rgba(249,115,22,0.35)",
@@ -588,7 +604,7 @@ export default function Rounds() {
         </div>
 
         {/* ── TERRAIN TRACK ── */}
-        <div className="relative w-full" style={{ height: 220, flexShrink: 0 }}>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 w-full" style={{ height: "clamp(160px, 24vh, 220px)" }}>
           {/* SVG terrain */}
           <TerrainSVG />
 
@@ -599,7 +615,7 @@ export default function Rounds() {
             <div
               className="absolute"
               style={{
-                bottom: 72,
+                bottom: "clamp(56px, 7vh, 72px)",
                 left: "6%",
                 right: "6%",
                 height: 2,
@@ -613,7 +629,7 @@ export default function Rounds() {
                 key={i}
                 className="absolute rounded-full"
                 style={{
-                  bottom: 72,
+                  bottom: "clamp(56px, 7vh, 72px)",
                   left: `${8 + i * 4}%`,
                   width: 3,
                   height: 3,
@@ -629,7 +645,7 @@ export default function Rounds() {
             <div
               className="absolute"
               style={{
-                bottom: 71,
+                bottom: "clamp(55px, 7vh, 71px)",
                 left: "8%",
                 width: `${activeRound === 0 ? 1 : activeRound === 1 ? 42 : 84}%`,
                 height: 4,
@@ -645,9 +661,9 @@ export default function Rounds() {
               <div
                 className="absolute"
                 style={{
-                  bottom: 70,
+                  bottom: "clamp(54px, 7vh, 70px)",
                   left: roverX,
-                  width: 140,
+                  width: roverWidth,
                   transition: roverMounted.current ? "left 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none",
                   zIndex: 10,
                 }}
@@ -655,10 +671,10 @@ export default function Rounds() {
                 {/* Dust trail (left side, behind rover) */}
                 {isMoving && (
                   <>
-                    <DustParticle x={direction > 0 ? -30 : 150} delay={0} size={8} />
-                    <DustParticle x={direction > 0 ? -22 : 158} delay={0.1} size={5} />
-                    <DustParticle x={direction > 0 ? -15 : 165} delay={0.18} size={4} />
-                    <DustParticle x={direction > 0 ? -8 : 172} delay={0.25} size={3} />
+                    <DustParticle x={direction > 0 ? -24 : roverWidth + 10} delay={0} size={8} />
+                    <DustParticle x={direction > 0 ? -16 : roverWidth + 18} delay={0.1} size={5} />
+                    <DustParticle x={direction > 0 ? -9 : roverWidth + 25} delay={0.18} size={4} />
+                    <DustParticle x={direction > 0 ? -2 : roverWidth + 32} delay={0.25} size={3} />
                   </>
                 )}
                 {/* Ground shadow */}
@@ -674,7 +690,7 @@ export default function Rounds() {
                   }}
                 />
                 {/* Rover body bob */}
-                <div style={{ animation: isMoving ? "rover-bob 0.22s ease-in-out infinite" : "none" }}>
+                <div style={{ animation: isMoving ? "rover-bob 0.22s ease-in-out infinite" : "none", transformOrigin: "bottom left" }}>
                   <RoverSVG moving={isMoving} />
                 </div>
               </div>
@@ -688,9 +704,9 @@ export default function Rounds() {
                   key={r.key}
                   ref={(el) => (flagRefs.current[i] = el)}
                   onClick={() => goTo(i)}
-                  className="absolute flex flex-col items-center cursor-pointer group"
+                  className="pointer-events-auto absolute flex cursor-pointer flex-col items-center group"
                   style={{
-                    bottom: 74,
+                    bottom: "clamp(58px, 7vh, 74px)",
                     left: FLAG_POSITIONS[i],
                     transform: "translateX(-50%)",
                     zIndex: 5,
@@ -706,7 +722,7 @@ export default function Rounds() {
                     />
                   )}
 
-                  <FlagSVG active={isActive} size={isActive ? 68 : 48} />
+                  <FlagSVG active={isActive} size={isActive ? 60 : 42} />
 
                   {/* Label */}
                   <span

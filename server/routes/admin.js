@@ -41,11 +41,18 @@ router.post("/login", async (req, res) => {
 router.get("/leaderboard", async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT username, team_name,
-                   rapidfire_score, cascade_score, dsa_score,
-                   (rapidfire_score + cascade_score + dsa_score) AS total_score
-            FROM users
-            ORDER BY total_score DESC, username ASC
+            SELECT u.username, u.team_name,
+                   u.rapidfire_score, u.cascade_score, u.dsa_score,
+                   (u.rapidfire_score + u.cascade_score + u.dsa_score) AS total_score
+            FROM users u
+            LEFT JOIN (
+                SELECT DISTINCT ON (user_id) user_id, last_score_update
+                FROM dsa_sessions
+                ORDER BY user_id, join_time DESC
+            ) ds ON ds.user_id = u.id
+            ORDER BY total_score DESC,
+                     ds.last_score_update ASC NULLS LAST,
+                     u.username ASC
         `);
 
         res.json(result.rows);

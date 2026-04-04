@@ -303,13 +303,16 @@ router.post("/submit-result", authenticateInternal, async (req, res) => {
         );
 
         // 6. Recalculate total_score as SUM of all score_awarded (atomic, no drift)
+        // Also stamp last_score_update so the leaderboard can use it as a tiebreaker.
+        // This block is only reached when newScore > existingScore, so last_score_update
+        // is only set on genuine score improvements — never on no-improvement submissions.
         const totalRes = await pool.query(
             `UPDATE dsa_sessions SET total_score = (
                 SELECT COALESCE(SUM(score_awarded), 0)
                 FROM dsa_user_questions WHERE user_id = $1
-             )
+             ), last_score_update = NOW()
              WHERE user_id = $1
-             RETURNING total_score`,
+             RETURNING total_score, last_score_update`,
             [userId]
         );
         const newTotalScore = totalRes.rows[0]?.total_score || 0;

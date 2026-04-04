@@ -684,7 +684,7 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
                         <div className="text-6xl mb-6">⚠️</div>
                         <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-widest">Warning</h2>
                         <p className="text-gray-300 mb-4 leading-relaxed">{warningMessage}</p>
-                        <p className="text-sm text-orange-400/70 mb-8 font-bold">Violations recorded: {violationCount}</p>
+                        {/* <p className="text-sm text-orange-400/70 mb-8 font-bold">Violations recorded: {violationCount}</p> */}
                         <button
                             onClick={warningAction}
                             className="px-8 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl uppercase tracking-wide transition shadow-[0_0_20px_rgba(255,100,0,0.3)] w-full"

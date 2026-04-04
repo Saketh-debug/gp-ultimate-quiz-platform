@@ -101,7 +101,7 @@ function Cascade() {
 
               <p className="text-base sm:text-lg lg:text-xl text-white/70 leading-relaxed max-w-lg">
                 Speed meets precision. Solve complex algorithmic problems in
-                sequence to build your multiplier. Every correct answer fuels
+                sequence to build your streak. Every correct answer fuels
                 the cascade, but a mistake resets the flow.
               </p>
             </div>
@@ -186,7 +186,7 @@ function Cascade() {
               </div>
 
               <p className="text-center text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-white/30 mt-6">
-                Token Sync Active • Multiplier enabled
+                Token Sync Active • Streak enabled
               </p>
             </div>
           </div>
@@ -207,7 +207,7 @@ function Cascade() {
                 {[
                   ["currency_bitcoin", "Base Points", "Nominal scoring for initial solves."],
                   ["show_chart", "Cascade Surge", "Unlocked by solving questions consecutively."],
-                  ["warning", "Warning  ", "Any incorrect submission or skipped question resets the multiplier to 1.0x."],
+                  ["warning", "Warning  ", "Any incorrect submission or skipped question resets the streak to 1.0x."],
                 ].map(([icon, title, desc]) => (
                   <div key={icon} className="flex flex-col sm:flex-row items-start gap-3 sm:gap-6">
                     <span className="material-symbols-outlined text-2xl sm:text-3xl text-orange-400 shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-[#ff4d20]/10 border border-[#ff4d20]/40 flex items-center justify-center font-bold text-[#ff4d20]">
@@ -234,7 +234,7 @@ function Cascade() {
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 md:gap-8">
                 {[
                   ["account_tree", "Sequential Order", "Questions must be solved in order."],
-                  ["terminal", "Languages Allowed", "Python, C++, Java, C supported."],
+                  ["terminal", "Languages Allowed", "Python, C++, Java, C, Go supported."],
                   ["history", "Auto Submission", "Session ends automatically at 60 minutes."],
                 ].map(([icon, title, desc]) => (
                   <div key={title} className="flex sm:block items-center sm:items-start gap-4 sm:gap-0">

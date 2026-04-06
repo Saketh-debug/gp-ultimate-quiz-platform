@@ -318,11 +318,13 @@ export default function RapidfireContest({ session }) { // Prop session is fallb
     }, [activeSession]);
 
     // Auto-populate customInput with sample_input when question changes
+    // Depends on currentQuestion?.id so it also fires when questions first load
+    // (if currentIndex stays 0 after session init, the index dep alone won't retrigger)
     useEffect(() => {
         if (currentQuestion) {
             setCustomInput(currentQuestion.sample_input || "");
         }
-    }, [currentIndex]);
+    }, [currentIndex, currentQuestion?.id]);
 
     // Timers — pure decrement, no client clock dependency
     // Interval is NOT started while paused; React teardown via dep-array cleanup handles freeze.

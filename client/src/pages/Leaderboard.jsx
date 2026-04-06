@@ -5,8 +5,6 @@ const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 /* ── Keyframes injected once ── */
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap');
-
   @keyframes podium-rise {
     from { transform: scaleY(0); opacity: 0; }
     to   { transform: scaleY(1); opacity: 1; }
@@ -573,15 +571,15 @@ function FeedbackForm({ teams, currentTeamName, onSubmitted }) {
           borderBottom: "1px solid rgba(249,115,22,0.12)",
         }}
       >
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-4 shrink-0">
           <div
-            className="flex items-center justify-center rounded-xl w-10 h-10"
+            className="flex items-center justify-center rounded-2xl w-14 h-14"
             style={{
               background: "linear-gradient(135deg,#d15b2c,#7c2114)",
-              boxShadow: "0 0 16px rgba(209,91,44,0.45)",
+              boxShadow: "0 0 20px rgba(209,91,44,0.45)",
             }}
           >
-            <span className="material-symbols-outlined text-base text-white">rocket_launch</span>
+            <span className="material-symbols-outlined text-2xl text-white">rocket_launch</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight">
             Grand <span style={{ color: "#f4a460" }}>Feedback</span>

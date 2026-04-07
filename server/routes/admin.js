@@ -20,6 +20,9 @@ router.post("/login", async (req, res) => {
         }
 
         // Compare with hashed password
+        if (!admin.password_hash) {
+            return res.status(401).json({ error: "Admin account not configured (no password hash). Run the hash migration script." });
+        }
         const valid = await bcrypt.compare(password, admin.password_hash);
         if (!valid) {
             return res.status(401).json({ error: "Invalid credentials" });

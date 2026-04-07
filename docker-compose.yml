@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  gprime-app:
+    build: .
+    container_name: gprime-app
+    ports:
+      - "3000:3000"
+      - "3100:3100"
+      - "4173:4173"
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres
+      - PG_DATABASE=gprime
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gprime
+      - REDIS_URL=redis://redis:6379
+      # If Judge0 endpoints are hardcoded, they need to point to the judge0-server on port 2358
+      - JUDGE0_URL=http://judge0-server:2358
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      judge0-server:
+        condition: service_started
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: gprime-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gprime
+    ports:
+      - "5432:5432"
+    volumes:
+      - gprime-db-data:/var/lib/postgresql/data
+      - ./sudhamsh_updated.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gprime"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: gprime-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - gprime-redis-data:/data
+
+  # --- Judge0 Infrastructure ---
+  judge0-db:
+    image: postgres:13
+    container_name: judge0-db
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0
+      - POSTGRES_DB=judge0
+    volumes:
+      - judge0-db-data:/var/lib/postgresql/data
+
+  judge0-redis:
+    image: redis:6.0
+    container_name: judge0-redis
+    volumes:
+      - judge0-redis-data:/data
+
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-server
+    ports:
+      - "2358:2358"
+    privileged: true
+    environment:
+      - JUDGE0_POSTGRES_HOST=judge0-db
+      - JUDGE0_POSTGRES_PORT=5432
+      - JUDGE0_POSTGRES_USER=judge0
+      - JUDGE0_POSTGRES_PASSWORD=judge0
+      - JUDGE0_POSTGRES_DB=judge0
+      - JUDGE0_REDIS_HOST=judge0-redis
+      - JUDGE0_REDIS_PORT=6379
+    depends_on:
+      - judge0-db
+      - judge0-redis
+
+  judge0-worker:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-worker
+    command: ["./scripts/worker"]
+    privileged: true
+    environment:
+      - JUDGE0_POSTGRES_HOST=judge0-db
+      - JUDGE0_POSTGRES_PORT=5432
+      - JUDGE0_POSTGRES_USER=judge0
+      - JUDGE0_POSTGRES_PASSWORD=judge0
+      - JUDGE0_POSTGRES_DB=judge0
+      - JUDGE0_REDIS_HOST=judge0-redis
+      - JUDGE0_REDIS_PORT=6379
+    depends_on:
+      - judge0-db
+      - judge0-redis
+
+volumes:
+  gprime-db-data:
+  gprime-redis-data:
+  judge0-db-data:
+  judge0-redis-data:

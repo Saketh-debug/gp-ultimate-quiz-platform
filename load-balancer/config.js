@@ -5,28 +5,23 @@ module.exports = {
     // ----------------------------------------------------
     // Update these IPs whenever your laptops change networks!
     JUDGE_NODES: [
-        'http://192.168.1.126:2358',
-        // 'http://192.168.0.222:2358', // Laptop 1
-        // 'http://192.168.0.111:2358', // Laptop 1
-        // 'http://192.168.0.16:2358', // Laptop 1
-        // 'http://192.168.2.129:2358', // Laptop 2
-        // 'http://192.168.1.51:2358'  // Laptop 3 (Add more if you have them)
+        process.env.JUDGE0_URL || 'http://192.168.1.113:2358',
     ],
 
     // ----------------------------------------------------
     // 2. INFRASTRUCTURE CONFIGURATION (The Brain)
     // ----------------------------------------------------
     REDIS_CONFIG: {
-        host: 'localhost',
-        port: 6379
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379
     },
 
     PG_CONFIG: {
-        user: 'postgres',
-        host: 'localhost',
-        database: 'contest_db',
-        password: 'password', // Matches the docker run command from Phase 2
-        port: 5432,
+        user: process.env.PG_USER || 'postgres',
+        host: process.env.PG_HOST || 'localhost',
+        database: process.env.PG_DATABASE || 'contest_db',
+        password: process.env.PG_PASSWORD || 'password', // Matches the docker run command from Phase 2
+        port: process.env.PG_PORT || 5432,
         max: 20,
     },
 

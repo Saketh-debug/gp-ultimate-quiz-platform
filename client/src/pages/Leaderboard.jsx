@@ -670,7 +670,7 @@ function FeedbackForm({ teams, currentTeamName, onSubmitted }) {
             </h3>
           </div>
 
-          <img src="/CRAZY.svg" alt="" />
+          <img src="/gprimeqr.png" alt="" />
         </div>
       </main>
 

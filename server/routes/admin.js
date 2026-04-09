@@ -222,6 +222,12 @@ router.post("/stop-round", async (req, res) => {
         );
 
         const now = new Date();
+        if (roundName === 'rapidfire') {
+            await pool.query(
+                "UPDATE user_sessions SET end_time = $1 WHERE end_time > $1",
+                [now]
+            );
+        }
         if (roundName === 'cascade') {
             await pool.query(
                 "UPDATE cascade_sessions SET end_time = $1 WHERE end_time > $1",

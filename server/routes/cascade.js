@@ -9,8 +9,8 @@ const GRACE_PERIOD_MINUTES = 30;
 const CONTEST_DURATION_MINUTES = 60;
 
 // Scoring Configuration (change these to adjust scoring)
-const BASE_POINTS_CASCADE = 12;
-const STREAK_MULTIPLIER = 20;
+const BASE_POINTS_CASCADE = 10;
+const STREAK_MULTIPLIER = 10;
 
 // Join or Resume Cascade Round
 router.post("/join", async (req, res) => {

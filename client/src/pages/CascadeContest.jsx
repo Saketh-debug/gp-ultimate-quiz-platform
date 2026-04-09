@@ -23,7 +23,7 @@ const SUBMISSION_URL = import.meta.env.VITE_SUBMISSION_URL;
 const socket = io(SUBMISSION_URL); // LB has no auth
 
 const STORAGE_PREFIX = "cascade";
-const STREAK_MULTIPLIER = 20;
+const STREAK_MULTIPLIER = 10;
 
 const PreBlock = ({ node, children, className, ...props }) => {
     const [isCopied, setIsCopied] = useState(false);

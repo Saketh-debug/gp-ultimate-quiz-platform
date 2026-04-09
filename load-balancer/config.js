@@ -5,7 +5,7 @@ module.exports = {
     // ----------------------------------------------------
     // Update these IPs whenever your laptops change networks!
     JUDGE_NODES: [
-        'http://192.168.2.126:2358',
+        'http://192.168.1.126:2358',
         // 'http://192.168.0.222:2358', // Laptop 1
         // 'http://192.168.0.111:2358', // Laptop 1
         // 'http://192.168.0.16:2358', // Laptop 1

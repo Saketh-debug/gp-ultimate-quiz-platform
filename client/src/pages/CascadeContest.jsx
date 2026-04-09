@@ -153,6 +153,14 @@ export default function CascadeContest({ session }) {
     const isContestEndedRef = useRef(false); // Guard for completion
     const editorRef = useRef(null);
     const prevEditorKeyRef = useRef(null); // tracks "questionId__language" to detect real switches
+
+    // ── Resizable pane state ──
+    const [leftWidth, setLeftWidth] = useState(50);       // % of inner container
+    const [consoleHeight, setConsoleHeight] = useState(250); // px
+    const isDraggingH = useRef(false);
+    const isDraggingV = useRef(false);
+    const innerContainerRef = useRef(null); // description + editor wrapper
+    const editorColRef = useRef(null);
     // Authenticated backend socket ref — created lazily in initSession with JWT
     const backendSocketRef = useRef(null);
 
@@ -655,6 +663,34 @@ export default function CascadeContest({ session }) {
         setRightTab("input");
     };
 
+    // ── Horizontal splitter (left ↔ right) ──
+    const onHSplitterPointerDown = (e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        isDraggingH.current = true;
+    };
+    const onHSplitterPointerMove = (e) => {
+        if (!isDraggingH.current || !innerContainerRef.current) return;
+        const rect = innerContainerRef.current.getBoundingClientRect();
+        const pct = ((e.clientX - rect.left) / rect.width) * 100;
+        setLeftWidth(Math.min(75, Math.max(20, pct)));
+    };
+    const onHSplitterPointerUp = () => { isDraggingH.current = false; };
+
+    // ── Vertical splitter (editor ↔ console) ──
+    const onVSplitterPointerDown = (e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        isDraggingV.current = true;
+    };
+    const onVSplitterPointerMove = (e) => {
+        if (!isDraggingV.current || !editorColRef.current) return;
+        const rect = editorColRef.current.getBoundingClientRect();
+        const fromBottom = rect.bottom - e.clientY;
+        setConsoleHeight(Math.min(500, Math.max(80, fromBottom)));
+    };
+    const onVSplitterPointerUp = () => { isDraggingV.current = false; };
+
     const handleResetCode = () => {
         if (!currentQuestion || !editorRef.current) return;
         // setValue triggers onChange → which updates codes state + saves to localStorage
@@ -1067,176 +1103,209 @@ export default function CascadeContest({ session }) {
                     </div>
                 )}
 
-                {/* LEFT: DESCRIPTION */}
-                <div className={`${isReviewMode ? "lg:w-1/3" : "lg:w-1/2"} relative overflow-y-auto border-b border-[#ff4d20]/10 p-4 sm:p-6 lg:border-b-0 lg:border-r`}>
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                        <span className="text-8xl font-black font-mono">N{currentIndex + 1}</span>
-                    </div>
+                {/* Inner container — description + splitter + editor */}
+                <div className="flex flex-1 flex-col min-w-0 lg:flex-row" ref={innerContainerRef}>
 
-                    <div className="mb-6 flex gap-3 flex-wrap">
-                        <span className="px-3 py-1 rounded bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20 text-xs font-bold tracking-widest uppercase">
-                            {currentQuestion.base_points} Base Pts
-                        </span>
-                        {currentQuestion.time_limit != null && (
-                            <span className="px-3 py-1 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-xs font-bold tracking-widest uppercase flex items-center gap-1">
-                                ⚡ TL: {currentQuestion.time_limit}s
-                            </span>
-                        )}
-                        {!currentQuestion.is_streak_eligible && (
-                            <span className="px-3 py-1 rounded bg-white/5 text-white/50 border border-white/10 text-xs font-bold tracking-widest uppercase">
-                                Non-Streak
-                            </span>
-                        )}
-                        {currentQuestion.status === 'ACCEPTED' && (
-                            <span className="px-3 py-1 rounded bg-green-500/10 text-green-500 border border-green-500/20 text-xs font-bold tracking-widest uppercase flex items-center gap-1">
-                                <FiCheckCircle /> Resolved
-                            </span>
-                        )}
-                    </div>
-
-
-                    <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
-
+                    {/* LEFT: DESCRIPTION */}
                     <div
-                        className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10"
-                        style={{ userSelect: 'none' }}
-                        onCopy={(e) => e.preventDefault()}
+                        className="relative overflow-y-auto border-b border-[#ff4d20]/10 p-4 sm:p-6 lg:border-b-0 lg:border-r"
+                        style={isCompactLayout ? {} : { flexBasis: leftWidth + '%', flexShrink: 0, minWidth: 0 }}
                     >
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeRaw]}
-                            components={{
-                                p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
-                                code: ({ inline, children, ...props }) => {
-                                    return inline ? (
-                                        <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
-                                            {children}
-                                        </code>
-                                    ) : (
-                                        <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
-                                            <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
-                                        </div>
-                                    );
-                                },
-                                strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
-                                em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
-                                h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
-                                h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
-                                ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
-                                li: ({ children }) => <li className="text-gray-300">{children}</li>
-                            }}
-                        >
-                            {currentQuestion.description}
-                        </ReactMarkdown>
-                    </div>
-                </div>
-
-                {/* RIGHT: EDITOR */}
-                <div className={`${isReviewMode ? "lg:w-2/3" : "lg:w-1/2"} flex min-h-[70vh] flex-col`}>
-                    <div className="h-10 border-b border-[#ff4d20]/10 flex items-center justify-between px-4 bg-[#140a08]">
-                        <span className="text-xs font-bold text-white/30 uppercase tracking-widest">Compiler Matrix</span>
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={language}
-                                onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
-                                className="bg-black/50 text-xs text-[#ff4d20] font-bold tracking-wider px-3 py-1 rounded border border-[#ff4d20]/20 focus:outline-none uppercase"
-                            >
-                                <option value="python">Python</option>
-                                <option value="c">C</option>
-                                <option value="cpp">C++</option>
-                                <option value="java">Java</option>
-                                <option value="go">Go</option>
-                            </select>
-                            <button
-                                onClick={handleResetCode}
-                                disabled={isRunning}
-                                title="Reset to default boilerplate"
-                                className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#ff4d20]/20 text-white/40 hover:text-[#ff4d20] hover:border-[#ff4d20]/50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold uppercase tracking-wider"
-                            >
-                                <FiRotateCcw className="text-xs" /> Reset
-                            </button>
+                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                            <span className="text-8xl font-black font-mono">N{currentIndex + 1}</span>
                         </div>
-                    </div>
 
-                    <div className="flex-1 bg-[#1e1e1e]">
-                        <Editor
-                            height="100%"
-                            language={language}
-                            theme="vs-dark"
-                            defaultValue={getCodeOrBoilerplate(STORAGE_PREFIX, currentQuestion.id, language)}
-                            onMount={(editor) => { editorRef.current = editor; }}
-                            onChange={(val) => {
-                                setCodes(prev => ({
-                                    ...prev,
-                                    [currentQuestion.id]: { ...prev[currentQuestion.id], [language]: val }
-                                }));
-                                saveCode(STORAGE_PREFIX, currentQuestion.id, language, val);
-                            }}
-                            options={{
-                                fontSize: 14,
-                                minimap: { enabled: false },
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                padding: { top: 16 }
-                            }}
-                        />
-                    </div>
-
-                    {/* CONSOLE */}
-                    <div className="h-[250px] bg-[#0d0605] border-t border-[#ff4d20]/20 flex flex-col shrink-0">
-                        <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center px-4 justify-between">
-                            <div className="flex items-center gap-6">
-                                <button
-                                    onClick={() => setRightTab("input")}
-                                    className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
-                                        ${rightTab === "input" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
-                                >
-                                    Custom Input
-                                </button>
-                                <button
-                                    onClick={() => setRightTab("result")}
-                                    className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
-                                        ${rightTab === "result" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
-                                >
-                                    Output
-                                </button>
-                            </div>
-
-                            {statusMessage && (
-                                <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded 
-                                    ${statusMessage.includes("Accepted") ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-                                        statusMessage.includes("Running") ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
-                                            "bg-[#ff4d20]/20 text-[#ff4d20] border border-[#ff4d20]/30"}`}>
-                                    {statusMessage}
+                        <div className="mb-6 flex gap-3 flex-wrap">
+                            <span className="px-3 py-1 rounded bg-[#ff4d20]/10 text-[#ff4d20] border border-[#ff4d20]/20 text-xs font-bold tracking-widest uppercase">
+                                {currentQuestion.base_points} Base Pts
+                            </span>
+                            {currentQuestion.time_limit != null && (
+                                <span className="px-3 py-1 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-xs font-bold tracking-widest uppercase flex items-center gap-1">
+                                    ⚡ TL: {currentQuestion.time_limit}s
+                                </span>
+                            )}
+                            {!currentQuestion.is_streak_eligible && (
+                                <span className="px-3 py-1 rounded bg-white/5 text-white/50 border border-white/10 text-xs font-bold tracking-widest uppercase">
+                                    Non-Streak
+                                </span>
+                            )}
+                            {currentQuestion.status === 'ACCEPTED' && (
+                                <span className="px-3 py-1 rounded bg-green-500/10 text-green-500 border border-green-500/20 text-xs font-bold tracking-widest uppercase flex items-center gap-1">
+                                    <FiCheckCircle /> Resolved
                                 </span>
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-hidden relative">
-                            {rightTab === "input" ? (
-                                <textarea
-                                    value={customInput}
-                                    onChange={(e) => setCustomInput(e.target.value)}
-                                    placeholder="Enter test parameters..."
-                                    className="w-full h-full bg-[#0d0605] p-4 text-sm font-mono text-white/70 focus:outline-none resize-none placeholder:text-white/20"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 p-4 font-mono text-sm overflow-auto text-white/70 bg-[#0d0605]">
-                                    {isRunning ? (
-                                        <div className="flex items-center gap-3 text-[#ff4d20]/50 italic animate-pulse">
-                                            <FiPlay className="animate-spin" /> Transmitting sequence...
-                                        </div>
-                                    ) : (
-                                        <pre className={`whitespace-pre-wrap ${statusMessage.includes("Wrong") || statusMessage.includes("Error") ? "text-[#ff4d20]" : statusMessage.includes("Accepted") ? "text-green-400" : ""}`}>
-                                            {output || <span className="opacity-30 italic text-white/30">System idle. Awaiting code execution.</span>}
-                                        </pre>
-                                    )}
-                                </div>
-                            )}
+
+                        <h1 className="text-3xl font-bold mb-4">{currentQuestion.title}</h1>
+
+                        <div
+                            className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10"
+                            style={{ userSelect: 'none' }}
+                            onCopy={(e) => e.preventDefault()}
+                        >
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                                components={{
+                                    p: ({ children }) => <p className="text-[#eff1f6] leading-relaxed mb-4 text-[15px] font-sans opacity-90">{children}</p>,
+                                    code: ({ inline, children, ...props }) => {
+                                        return inline ? (
+                                            <code className="bg-[#3e3e3e] px-1.5 py-0.5 rounded text-gray-200 text-sm font-mono border border-white/5" {...props}>
+                                                {children}
+                                            </code>
+                                        ) : (
+                                            <div className="bg-[#333333]/50 p-5 rounded-xl border border-[#3e3e3e] mb-6 font-mono text-sm">
+                                                <pre className="overflow-x-auto" {...props}><code>{children}</code></pre>
+                                            </div>
+                                        );
+                                    },
+                                    strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                    em: ({ children }) => <em className="italic text-gray-300">{children}</em>,
+                                    h3: ({ children }) => <h3 className="text-lg font-bold mt-8 mb-4 text-white">{children}</h3>,
+                                    h4: ({ children }) => <h4 className="text-md font-bold mt-6 mb-3 text-white">{children}</h4>,
+                                    ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2">{children}</ul>,
+                                    li: ({ children }) => <li className="text-gray-300">{children}</li>
+                                }}
+                            >
+                                {currentQuestion.description}
+                            </ReactMarkdown>
                         </div>
                     </div>
-                </div>
 
+                    {/* HORIZONTAL DRAG HANDLE (desktop only) */}
+                    {!isCompactLayout && (
+                        <div
+                            onPointerDown={onHSplitterPointerDown}
+                            onPointerMove={onHSplitterPointerMove}
+                            onPointerUp={onHSplitterPointerUp}
+                            onLostPointerCapture={onHSplitterPointerUp}
+                            className="hidden lg:flex w-1.5 shrink-0 cursor-col-resize items-center justify-center hover:bg-[#ff4d20]/20 active:bg-[#ff4d20]/40 transition-colors group select-none"
+                            style={{ touchAction: 'none' }}
+                        >
+                            <div className="w-px h-12 rounded-full bg-[#ff4d20]/20 group-hover:bg-[#ff4d20]/60 transition-colors" />
+                        </div>
+                    )}
+
+                    {/* RIGHT: EDITOR */}
+                    <div className="flex flex-1 min-h-[70vh] min-w-0 flex-col" ref={editorColRef}>
+                        <div className="h-10 border-b border-[#ff4d20]/10 flex items-center justify-between px-4 bg-[#140a08]">
+                            <span className="text-xs font-bold text-white/30 uppercase tracking-widest">Compiler Matrix</span>
+                            <div className="flex items-center gap-2">
+                                <select
+                                    value={language}
+                                    onChange={(e) => { setLanguage(e.target.value); saveLastLanguage(e.target.value); }}
+                                    className="bg-black/50 text-xs text-[#ff4d20] font-bold tracking-wider px-3 py-1 rounded border border-[#ff4d20]/20 focus:outline-none uppercase"
+                                >
+                                    <option value="python">Python</option>
+                                    <option value="c">C</option>
+                                    <option value="cpp">C++</option>
+                                    <option value="java">Java</option>
+                                    <option value="go">Go</option>
+                                </select>
+                                <button
+                                    onClick={handleResetCode}
+                                    disabled={isRunning}
+                                    title="Reset to default boilerplate"
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#ff4d20]/20 text-white/40 hover:text-[#ff4d20] hover:border-[#ff4d20]/50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold uppercase tracking-wider"
+                                >
+                                    <FiRotateCcw className="text-xs" /> Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 bg-[#1e1e1e]">
+                            <Editor
+                                height="100%"
+                                language={language}
+                                theme="vs-dark"
+                                defaultValue={getCodeOrBoilerplate(STORAGE_PREFIX, currentQuestion.id, language)}
+                                onMount={(editor) => { editorRef.current = editor; }}
+                                onChange={(val) => {
+                                    setCodes(prev => ({
+                                        ...prev,
+                                        [currentQuestion.id]: { ...prev[currentQuestion.id], [language]: val }
+                                    }));
+                                    saveCode(STORAGE_PREFIX, currentQuestion.id, language, val);
+                                }}
+                                options={{
+                                    fontSize: 14,
+                                    minimap: { enabled: false },
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    padding: { top: 16 }
+                                }}
+                            />
+                        </div>
+
+                        {/* VERTICAL DRAG HANDLE */}
+                        <div
+                            onPointerDown={onVSplitterPointerDown}
+                            onPointerMove={onVSplitterPointerMove}
+                            onPointerUp={onVSplitterPointerUp}
+                            onLostPointerCapture={onVSplitterPointerUp}
+                            className="h-1.5 shrink-0 cursor-row-resize flex items-center justify-center hover:bg-[#ff4d20]/20 active:bg-[#ff4d20]/40 transition-colors group select-none border-t border-[#ff4d20]/20"
+                            style={{ touchAction: 'none' }}
+                        >
+                            <div className="h-px w-12 rounded-full bg-[#ff4d20]/20 group-hover:bg-[#ff4d20]/60 transition-colors" />
+                        </div>
+
+                        {/* CONSOLE */}
+                        <div className="bg-[#0d0605] border-t border-[#ff4d20]/20 flex flex-col shrink-0" style={{ height: consoleHeight + 'px' }}>
+                            <div className="h-10 bg-[#140a08] border-b border-[#ff4d20]/10 flex items-center px-4 justify-between">
+                                <div className="flex items-center gap-6">
+                                    <button
+                                        onClick={() => setRightTab("input")}
+                                        className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
+                                        ${rightTab === "input" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
+                                    >
+                                        Custom Input
+                                    </button>
+                                    <button
+                                        onClick={() => setRightTab("result")}
+                                        className={`text-xs font-bold uppercase tracking-widest transition h-full border-b-2 flex items-center
+                                        ${rightTab === "result" ? "border-[#ff4d20] text-[#ff4d20]" : "border-transparent text-white/30 hover:text-white"}`}
+                                    >
+                                        Output
+                                    </button>
+                                </div>
+
+                                {statusMessage && (
+                                    <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded 
+                                    ${statusMessage.includes("Accepted") ? "bg-green-500/20 text-green-400 border border-green-500/30" :
+                                            statusMessage.includes("Running") ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
+                                                "bg-[#ff4d20]/20 text-[#ff4d20] border border-[#ff4d20]/30"}`}>
+                                        {statusMessage}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex-1 overflow-hidden relative">
+                                {rightTab === "input" ? (
+                                    <textarea
+                                        value={customInput}
+                                        onChange={(e) => setCustomInput(e.target.value)}
+                                        placeholder="Enter test parameters..."
+                                        className="w-full h-full bg-[#0d0605] p-4 text-sm font-mono text-white/70 focus:outline-none resize-none placeholder:text-white/20"
+                                    />
+                                ) : (
+                                    <div className="absolute inset-0 p-4 font-mono text-sm overflow-auto text-white/70 bg-[#0d0605]">
+                                        {isRunning ? (
+                                            <div className="flex items-center gap-3 text-[#ff4d20]/50 italic animate-pulse">
+                                                <FiPlay className="animate-spin" /> Transmitting sequence...
+                                            </div>
+                                        ) : (
+                                            <pre className={`whitespace-pre-wrap ${statusMessage.includes("Wrong") || statusMessage.includes("Error") ? "text-[#ff4d20]" : statusMessage.includes("Accepted") ? "text-green-400" : ""}`}>
+                                                {output || <span className="opacity-30 italic text-white/30">System idle. Awaiting code execution.</span>}
+                                            </pre>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>{/* end inner container */}
             </div>
         </div>
     );

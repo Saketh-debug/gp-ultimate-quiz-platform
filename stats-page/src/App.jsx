@@ -6,6 +6,7 @@ import OverallStats from './components/OverallStats'
 import RapidfireStats from './components/RapidfireStats'
 import CascadeStats from './components/CascadeStats'
 import DSAStats from './components/DSAStats'
+import SolutionLinks from './components/SolutionLinks'
 
 export default function App() {
   const [selectedTeam, setSelectedTeam] = useState(null)
@@ -46,6 +47,8 @@ export default function App() {
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', letterSpacing: '0.06em' }}>
           Select a team to view detailed performance across all three rounds
         </p>
+
+        <SolutionLinks />
       </header>
 
       {/* ── Main ── */}
